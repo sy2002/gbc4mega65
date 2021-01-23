@@ -1,7 +1,8 @@
-## Gameboy_MiSTer port for MEGA65
+## Gameboy Color for MEGA65 (gbc4mega65)
 ##
 ## Signal mapping für MEGA65-R2
 ##
+## This machine is based on Gameboy_MiSTer
 ## MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 
 ## External clock signal (100 MHz)
