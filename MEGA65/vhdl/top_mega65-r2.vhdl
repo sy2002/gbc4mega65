@@ -108,7 +108,7 @@ signal vga_hs_int        : std_logic;
 signal vga_vs_int        : std_logic;
 
 -- debounced signals for the reset button and the joysticks; joystick signals are also inverted
-signal dbnce_reset       : std_logic;
+signal dbnce_reset_n     : std_logic;
 signal dbnce_joy1_up     : std_logic;
 signal dbnce_joy1_down   : std_logic;
 signal dbnce_joy1_left   : std_logic;
@@ -158,12 +158,16 @@ begin
    i_fast_boot       <= '1';
    i_joystick        <= x"FF";
    i_joystick_din    <= "1111";
-   i_reset           <= dbnce_reset;   
    i_dummy_0         <= '0';
    i_dummy_2bit_0    <= (others => '0');
    i_dummy_8bit_0    <= (others => '0');
    i_dummy_64bit_0   <= (others => '0');
    i_dummy_129bit_0  <= (others => '0');
+
+   -- TODO: Achieve timing closure also when using the debouncer   
+   --i_reset           <= not dbnce_reset_n;   
+   i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
+   
 
    gameboy : entity work.gb
       port map
@@ -338,14 +342,21 @@ begin
          gbmain_o          => main_clk       -- 50 MHz clock for the QNICE co-processor  
       );
 
-   dbnce : entity work.debouncer
+   -- debouncer for the RESET button as well as for the joysticks:
+   -- 40ms for the RESET button
+   -- 5ms for any joystick direction
+   -- 1ms for the fire button
+   do_dbnce_reset_n : entity work.debounce
+      generic map(clk_freq => 100_000_000, stable_time => 40)
+      port map (clk => clk, reset_n => '1', button => RESET_N, result => dbnce_reset_n);
+   do_dbnce_joysticks : entity work.debouncer
       generic map
       (
-         CLK_FREQ          => 32_000_000
+         CLK_FREQ          => 100_000_000
       )
       port map
       (
-         clk               => main_clk,
+         clk               => CLK,
          reset_n           => RESET_N,
 
          joy_1_up_n        => joy_1_up_n,
@@ -354,7 +365,6 @@ begin
          joy_1_right_n     => joy_1_right_n, 
          joy_1_fire_n      => joy_1_fire_n, 
            
-         dbnce_reset       => dbnce_reset, 
          dbnce_joy1_up     => dbnce_joy1_up,
          dbnce_joy1_down   => dbnce_joy1_down,
          dbnce_joy1_left   => dbnce_joy1_left,
@@ -384,7 +394,7 @@ begin
       port map
       (
          pixel_clk   =>	vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
-         reset_n     => not dbnce_reset,  -- active low asycnchronous reset
+         reset_n     => dbnce_reset_n,    -- active low asycnchronous reset
          h_sync      => vga_hs_int,       -- horiztonal sync pulse
          v_sync      => vga_vs_int,       -- vertical sync pulse
          disp_ena    => vga_disp_en,      -- display enable ('1' = display time, '0' = blanking time)
