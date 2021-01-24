@@ -132,14 +132,8 @@ signal lcd_vsync_1       : std_logic := '0';
 signal pixel_out_x       : integer range 0 to 159;
 signal pixel_out_y       : integer range 0 to 143;
 signal pixel_out_data    : std_logic_vector(14 downto 0);  
-signal pixel_out_we      : std_logic := '0';   
-
--- frame buffer
-type tPixelArray is array(0 to 23039) of std_logic_vector(14 downto 0);
-signal      frame_buffer               : tPixelArray;
-attribute   ram_style                  : string;
-attribute   ram_style of frame_buffer  : signal is "block";
-
+signal pixel_out_we      : std_logic := '0';
+signal frame_buffer_data : std_logic_vector(14 downto 0);
  
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -270,7 +264,29 @@ begin
          ce          => '1',
          address     => gbc_bios_addr,
          data        => gbc_bios_data
-      );             
+      );
+
+      
+   frame_buffer : entity work.dualport_2clk_ram
+      generic map
+      ( 
+         ADDR_WIDTH  => 15,
+         DATA_WIDTH  => 15
+      )
+      port map
+      (
+         clock_a     => main_clk,
+         address_a   => std_logic_vector(to_unsigned(pixel_out_y * 160 + pixel_out_x, 15)),
+         data_a      => pixel_out_data,
+         wren_a      => pixel_out_we,
+         q_a         => open,
+         
+         clock_b     => vga_pixelclk,
+         address_b   => std_logic_vector(to_unsigned(vga_row * 160 + vga_col, 15)),
+         data_b      => (others => '0'),
+         wren_b      => '0',
+         q_b         => frame_buffer_data
+      );
 
    lcd_to_pixels : process(main_clk)
    begin
@@ -309,16 +325,7 @@ begin
          
       end if;
    end process; 
-   
-   fill_frame_buffer : process(main_clk)
-   begin
-      if rising_edge(main_clk) then
-         if pixel_out_we = '1' then
-            frame_buffer(pixel_out_y * 160 + pixel_out_x) <= pixel_out_data;
-         end if;
-      end if;
-   end process;
-                 
+                    
    -- MMCME2_ADV clock generator:
    --    Core clock:          32 MHz
    --    Pixelclock:          25.175 MHz
@@ -388,19 +395,17 @@ begin
       );
    
    video_signal_latches : process(vga_pixelclk)
-   variable fbd : std_logic_vector(14 downto 0);
    begin
       if rising_edge(vga_pixelclk) then 
          if vga_disp_en then       
             if vga_col < 160 and vga_row < 144 then
-               fbd := frame_buffer(vga_row * 160 + vga_col);
-               VGA_RED   <= fbd(14 downto 10) & "000";
-               VGA_BLUE  <= fbd(9 downto 5) & "000";
-               VGA_GREEN <= fbd(4 downto 0) & "000";
+               VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
+               VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
+               VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
             else
                VGA_RED   <= (others => '0');
-               VGA_BLUE  <= (others => '1');
                VGA_GREEN <= (others => '0');
+               VGA_BLUE  <= (others => '1');
             end if;       
          
 --            -- debug output to test, if VGA and vga_col/vga_row works       
