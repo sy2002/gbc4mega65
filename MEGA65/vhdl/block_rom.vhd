@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- VHDLBoy port for MEGA65
+-- Gameboy Color for MEGA65 (gbc4mega65)
 --
 -- Block ROM (synchronous)
 --

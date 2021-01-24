@@ -56,7 +56,7 @@ begin
       end if;
    end process;
 
-   -- Port N
+   -- Port B
    write_b : process(clock_b)
    begin
       if rising_edge(clock_b) then
