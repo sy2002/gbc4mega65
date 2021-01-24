@@ -1,4 +1,5 @@
 Gameboy Color for MEGA65 aka gbc4mega65
+=======================================
 
 done in 2021 by sy2002
 
@@ -11,29 +12,31 @@ Parts of gbc4mega65 are licensed under other Free-software licenses as described
 Special thanks to Robert Peip for his incredibly valuable support.
 
 gbc4mega65:
+-----------
 
   gbc4mega65 is a port of Gameboy_MiSTer
-  done by MiSTer Development Team
-  Original GitHub Repository: https://github.com/MiSTer-devel/Gameboy_MiSTer
-  Significant contributors:
-  * brNX
-  * sorgelig
-  * paulb-nl
-  * Kitrinx
-  * RobertPeip
+      done by MiSTer Development Team
+      Original GitHub Repository: https://github.com/MiSTer-devel/Gameboy_MiSTer
+      Significant contributors:
+      * brNX
+      * sorgelig
+      * paulb-nl
+      * Kitrinx
+      * RobertPeip
 
   Gameboy_MiSTer is a port of MiST's Game Boy core
-  done by the MiST Development Team
-  Original GitHub Repository: https://github.com/mist-devel/gameboy
-  Significant contributors:
-  * Till Harbaum (original creator)
-  * gyurco
+      done by the MiST Development Team
+      Original GitHub Repository: https://github.com/mist-devel/gameboy
+      Significant contributors:
+      * Till Harbaum (original creator)
+      * gyurco
 
   The Z80 processor is based on T80
-  done by Daniel Wallner
-  improved by MikeJ, Sean Riddle, TobiFlex, RobertPeip, sorgelig, paulb-nl, brNX
+      done by Daniel Wallner
+      improved by MikeJ, Sean Riddle, TobiFlex, RobertPeip, sorgelig, paulb-nl, brNX
 
-Other than that and own work, gbc4mega65 uses:
+Other than that and my own work, gbc4mega65 uses:
+-------------------------------------------------
   
   * Various MEGA65 drivers taken from the MEGA65 VHDL source by Paul Gardner-Stephen
     https://github.com/MEGA65/mega65-core    
