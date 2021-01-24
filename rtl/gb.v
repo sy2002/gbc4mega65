@@ -282,17 +282,17 @@ GBse cpu (
 // --------------------------- Cheat Engine ---------------------------
 // --------------------------------------------------------------------
 
-CODES codes (
-	.clk        (clk_sys),
-	.reset      (gg_reset),
-	.enable     (gg_en),
-	.addr_in    (cpu_addr),
-	.data_in    (cpu_di),
-	.available  (gg_available),
-	.code       (gg_code),
-	.genie_ovr  (genie_ovr),
-	.genie_data (genie_data)
-);
+//CODES codes (
+//	.clk        (clk_sys),
+//	.reset      (gg_reset),
+//	.enable     (gg_en),
+//	.addr_in    (cpu_addr),
+//	.data_in    (cpu_di),
+//	.available  (gg_available),
+//	.code       (gg_code),
+//	.genie_ovr  (genie_ovr),
+//	.genie_data (genie_data)
+//);
 
 
 // --------------------------------------------------------------------
@@ -603,7 +603,7 @@ wire [12:0] vram_addr = video_rd?video_addr:(hdma_rd&&isGBC)?hdma_target_addr[12
 
 wire [7:0] Savestate_RAMReadData_VRAM0, Savestate_RAMReadData_VRAM1;
 
-dpram #(13) vram0 (
+dualport_2clk_ram #(13) vram0 (
 	.clock_a   (clk_cpu  ),
 	.address_a (vram_addr),
 	.wren_a    (vram_wren),
@@ -618,7 +618,7 @@ dpram #(13) vram0 (
 );
 
 //separate 8k for vbank1 for gbc because of BG reads
-dpram #(13) vram1 (
+dualport_2clk_ram #(13) vram1 (
 	.clock_a   (clk_cpu   ),
 	.address_a (vram_addr ),
 	.wren_a    (vram1_wren),
@@ -688,7 +688,7 @@ assign HDMA_on = hdma_active;
 // 127 bytes internal zero page ram from $ff80 to $fffe
 wire cpu_wr_zpram = sel_zpram && !cpu_wr_n;
 
-dpram #(7) zpram (
+dualport_2clk_ram #(7) zpram (
 	.clock_a   (clk_cpu      ),
 	.address_a (cpu_addr[6:0]),
 	.wren_a    (cpu_wr_zpram ),
@@ -719,7 +719,7 @@ wire [14:0] iram_addr = (isGBC&&hdma_rd&&hdma_sel_iram)?               //hdma tr
 								(cpu_addr[12])?{iram_bank,cpu_addr[11:0]}:	  //bank 1-7
 								{3'd0,cpu_addr[11:0]};						  		  //bank 0				
 								
-dpram #(15) iram (
+dualport_2clk_ram #(15) iram (
 	.clock_a   (clk_cpu),
 	.address_a (iram_addr),
 	.wren_a    (iram_wren),

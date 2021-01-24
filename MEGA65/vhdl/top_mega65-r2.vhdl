@@ -104,9 +104,6 @@ signal vga_pixelclk      : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
 signal vga_disp_en       : std_logic;
 signal vga_col           : integer range 0 to 639;
 signal vga_row           : integer range 0 to 479;
-signal vga_red_int       : std_logic_vector(4 downto 0);
-signal vga_green_int     : std_logic_vector(4 downto 0);
-signal vga_blue_int      : std_logic_vector(4 downto 0);
 signal vga_hs_int        : std_logic;
 signal vga_vs_int        : std_logic;
 
@@ -118,8 +115,207 @@ signal dbnce_joy1_left   : std_logic;
 signal dbnce_joy1_right  : std_logic;
 signal dbnce_joy1_fire   : std_logic;
 
+-- Game Boy
+signal global_ce         : std_logic;
+signal is_CGB            : std_logic;
+signal gbc_bios_addr     : std_logic_vector(11 downto 0);
+signal gbc_bios_data     : std_logic_vector(7 downto 0);
+
+-- LCD interface
+signal lcd_clkena        : std_logic;
+signal lcd_data          : std_logic_vector(14 downto 0);
+signal lcd_mode          : std_logic_vector(1 downto 0);
+signal lcd_mode_1        : std_logic_vector(1 downto 0);
+signal lcd_on            : std_logic;
+signal lcd_vsync         : std_logic;
+signal lcd_vsync_1       : std_logic := '0';
+signal pixel_out_x       : integer range 0 to 159;
+signal pixel_out_y       : integer range 0 to 143;
+signal pixel_out_data    : std_logic_vector(14 downto 0);  
+signal pixel_out_we      : std_logic := '0';   
+
+-- frame buffer
+type tPixelArray is array(0 to 23039) of std_logic_vector(14 downto 0);
+signal frame_buffer      : tPixelArray := (others => (others => '0'));
+ 
+-- signals neccessary due to Verilog in VHDL embedding
+-- otherwise, when wiring constants directly to the entity, then Vivado throws an error
+signal i_ce_2x           : std_logic;
+signal i_fast_boot       : std_logic;
+signal i_joystick        : std_logic_vector(7 downto 0);
+signal i_joystick_din    : std_logic_vector(3 downto 0);
+signal i_reset           : std_logic;
+signal i_dummy_0         : std_logic;
+signal i_dummy_2bit_0    : std_logic_vector(1 downto 0);
+signal i_dummy_8bit_0    : std_logic_vector(7 downto 0);
+signal i_dummy_64bit_0   : std_logic_vector(63 downto 0);
+signal i_dummy_129bit_0  : std_logic_vector(128 downto 0);
+ 
 begin
-                              
+
+   is_CGB <= '1';
+   global_ce <= '1';
+   
+   -- signals neccessary due to Verilog in VHDL embedding
+   i_ce_2x           <= '0';
+   i_fast_boot       <= '1';
+   i_joystick        <= x"FF";
+   i_joystick_din    <= "1111";
+   i_reset           <= not dbnce_reset_n;   
+   i_dummy_0         <= '0';
+   i_dummy_2bit_0    <= (others => '0');
+   i_dummy_8bit_0    <= (others => '0');
+   i_dummy_64bit_0   <= (others => '0');
+   i_dummy_129bit_0  <= (others => '0');
+
+   gameboy : entity work.gb
+      port map
+      (
+         reset                   => i_reset,
+                     
+         clk_sys                 => main_clk,
+         ce                      => global_ce,
+         ce_2x                   => i_ce_2x,
+                  
+         fast_boot               => i_fast_boot,
+         joystick                => i_joystick,
+         isGBC                   => is_CGB,
+         isGBC_game              => false,
+      
+         -- cartridge interface
+         -- can adress up to 1MB ROM
+         cart_addr               => open,
+         cart_rd                 => open,  
+         cart_wr                 => open, 
+         cart_di                 => open,  
+         cart_do                 => i_dummy_8bit_0,  
+         
+         --gbc bios interface
+         gbc_bios_addr           => gbc_bios_addr,
+         gbc_bios_do             => gbc_bios_data,
+               
+         -- audio    
+         audio_l                 => open,
+         audio_r                 => open,
+               
+         -- lcd interface     
+         lcd_clkena              => lcd_clkena,
+         lcd_data                => lcd_data,  
+         lcd_mode                => lcd_mode,  
+         lcd_on                  => lcd_on,    
+         lcd_vsync               => lcd_vsync, 
+            
+         joy_p54                 => open,
+         joy_din                 => i_joystick_din,
+                  
+         speed                   => open,   --GBC
+         HDMA_on                 => open,
+                  
+         gg_reset                => i_reset,
+         gg_en                   => i_dummy_0,
+         gg_code                 => i_dummy_129bit_0,
+         gg_available            => open,
+            
+         --serial port     
+         sc_int_clock2           => open,
+         serial_clk_in           => i_dummy_0,
+         serial_clk_out          => open,
+         serial_data_in          => i_dummy_0,
+         serial_data_out         => open,
+               
+         -- save states
+         cart_ram_size           => i_dummy_8bit_0,
+         save_state              => i_dummy_0,
+         load_state              => i_dummy_0,
+         sleep_savestate         => open,
+         savestate_number        => i_dummy_2bit_0,
+               
+         SaveStateExt_Din        => open, 
+         SaveStateExt_Adr        => open, 
+         SaveStateExt_wren       => open,
+         SaveStateExt_rst        => open, 
+         SaveStateExt_Dout       => i_dummy_64bit_0,
+         SaveStateExt_load       => open,
+         
+         Savestate_CRAMAddr      => open,     
+         Savestate_CRAMRWrEn     => open,    
+         Savestate_CRAMWriteData => open,
+         Savestate_CRAMReadData  => i_dummy_8bit_0, 
+                  
+         SAVE_out_Din            => open,   
+         SAVE_out_Dout           => i_dummy_64bit_0,
+         SAVE_out_Adr            => open,   
+         SAVE_out_rnw            => open,   
+         SAVE_out_ena            => open,   
+         SAVE_out_done           => i_dummy_0,
+               
+         rewind_on               => i_dummy_0,
+         rewind_active           => i_dummy_0
+      );
+          
+   -- BIOS ROM / BOOT ROM
+   boot_rom : entity work.BROM
+      generic map
+      (
+         FILE_NAME   => "../../rom/cgb_bios.rom",
+         ADDR_WIDTH  => 12,
+         DATA_WIDTH  => 8
+      )
+      port map
+      (
+         CLK         => main_clk,
+         ce          => '1',
+         address     => gbc_bios_addr,
+         data        => gbc_bios_data
+      );             
+
+   lcd_to_pixels : process(main_clk)
+   begin
+      if rising_edge(main_clk) then
+         pixel_out_we <= '0';
+         lcd_vsync_1   <= lcd_vsync;
+         lcd_mode_1    <= lcd_mode;
+         if (lcd_on = '1') then
+            if (lcd_vsync = '1' and lcd_vsync_1 = '0') then
+               pixel_out_x <= 0;
+               pixel_out_y <= 0;
+            elsif (lcd_mode_1 /= "11" and lcd_mode = "11") then
+               pixel_out_x  <= 0;
+               if (pixel_out_y < 143) then
+                  pixel_out_y <= pixel_out_y + 1;
+               end if;
+            elsif (lcd_clkena = '1' and global_ce = '1') then
+               if (pixel_out_x < 159) then
+                  pixel_out_x  <= pixel_out_x + 1;
+               end if;
+               pixel_out_we <= '1';
+            end if;
+         end if;
+         
+         if (is_CGB = '0') then
+            case (lcd_data(1 downto 0)) is
+               when "00"   => pixel_out_data <= "11111" & "11111" & "11111";
+               when "01"   => pixel_out_data <= "10000" & "10000" & "10000";
+               when "10"   => pixel_out_data <= "01000" & "01000" & "01000";
+               when "11"   => pixel_out_data <= "00000" & "00000" & "00000";
+               when others => pixel_out_data <= "00000" & "00000" & "11111";
+            end case;
+         else
+            pixel_out_data <= lcd_data(4 downto 0) & lcd_data(9 downto 5) & lcd_data(14 downto 10);
+         end if;
+         
+      end if;
+   end process; 
+   
+   fill_frame_buffer : process(main_clk)
+   begin
+      if rising_edge(main_clk) then
+         if pixel_out_we = '1' then
+            frame_buffer(pixel_out_y * 160 + pixel_out_x) <= pixel_out_data;
+         end if;
+      end if;
+   end process;
+                 
    -- MMCME2_ADV clock generator:
    --    Core clock:          32 MHz
    --    Pixelclock:          25.175 MHz
@@ -128,7 +324,8 @@ begin
       port map
       (
          sys_clk_i         => CLK,
-         pixelclk_o        => vga_pixelclk   -- 25.175 MHz pixelclock for VGA 640x480 @ 60 Hz         
+         pixelclk_o        => vga_pixelclk,  -- 25.175 MHz pixelclock for VGA 640x480 @ 60 Hz
+         gbmain_o          => main_clk       -- 50 MHz clock for the QNICE co-processor  
       );
 
    -- VGA 640x480 @ 60 Hz      
@@ -164,14 +361,30 @@ begin
       );
    
    video_signal_latches : process(vga_pixelclk)
+   variable fbd : std_logic_vector(14 downto 0);
    begin
       if rising_edge(vga_pixelclk) then 
          if vga_disp_en then       
          
-            -- debug output to test, if VGA and vga_col/vga_row works       
-            VGA_RED   <= std_logic_vector(to_unsigned(vga_col + vga_row, 32)(7 downto 0));
-            VGA_BLUE  <= std_logic_vector(to_unsigned(vga_row, 9)(8 downto 3)) & "11";
-            VGA_GREEN <= std_logic_vector(to_unsigned(vga_col, 10)(9 downto 4)) & "11";
+            if vga_col < 160 and vga_row < 144 then
+               fbd := frame_buffer(vga_row * 160 + pixel_out_x);
+               VGA_RED   <= fbd(14 downto 10) & "000";
+               VGA_BLUE  <= fbd(9 downto 5) & "000";
+               VGA_GREEN <= fbd(4 downto 0) & "000";
+            else
+               VGA_RED   <= (others => '0');
+               VGA_BLUE  <= (others => '1');
+               VGA_GREEN <= (others => '0');
+            end if;       
+         
+--            -- debug output to test, if VGA and vga_col/vga_row works       
+--            VGA_RED   <= std_logic_vector(to_unsigned(vga_col + vga_row, 32)(7 downto 0));
+--            VGA_BLUE  <= std_logic_vector(to_unsigned(vga_row, 9)(8 downto 3)) & "11";
+--            VGA_GREEN <= std_logic_vector(to_unsigned(vga_col, 10)(9 downto 4)) & "11";
+
+         -- for some reason, the VDAC does not like non-zero values outside the visible window
+         -- maybe "vdac_sync_n <= '0';" activates sync-on-green?
+         -- TODO: check that
          else
             VGA_RED   <= (others => '0');
             VGA_BLUE  <= (others => '0');
