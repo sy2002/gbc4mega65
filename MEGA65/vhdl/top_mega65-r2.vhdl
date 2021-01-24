@@ -136,7 +136,10 @@ signal pixel_out_we      : std_logic := '0';
 
 -- frame buffer
 type tPixelArray is array(0 to 23039) of std_logic_vector(14 downto 0);
-signal frame_buffer      : tPixelArray := (others => (others => '0'));
+signal      frame_buffer               : tPixelArray := (others => (others => '0'));
+attribute   ram_style                  : string;
+attribute   ram_style of frame_buffer  : signal is "block";
+
  
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
