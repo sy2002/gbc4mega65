@@ -108,7 +108,7 @@ signal vga_hs_int        : std_logic;
 signal vga_vs_int        : std_logic;
 
 -- debounced signals for the reset button and the joysticks; joystick signals are also inverted
-signal dbnce_reset_n     : std_logic;
+signal dbnce_reset       : std_logic;
 signal dbnce_joy1_up     : std_logic;
 signal dbnce_joy1_down   : std_logic;
 signal dbnce_joy1_left   : std_logic;
@@ -136,7 +136,7 @@ signal pixel_out_we      : std_logic := '0';
 
 -- frame buffer
 type tPixelArray is array(0 to 23039) of std_logic_vector(14 downto 0);
-signal      frame_buffer               : tPixelArray := (others => (others => '0'));
+signal      frame_buffer               : tPixelArray;
 attribute   ram_style                  : string;
 attribute   ram_style of frame_buffer  : signal is "block";
 
@@ -164,7 +164,7 @@ begin
    i_fast_boot       <= '1';
    i_joystick        <= x"FF";
    i_joystick_din    <= "1111";
-   i_reset           <= not dbnce_reset_n;   
+   i_reset           <= dbnce_reset;   
    i_dummy_0         <= '0';
    i_dummy_2bit_0    <= (others => '0');
    i_dummy_8bit_0    <= (others => '0');
@@ -331,36 +331,60 @@ begin
          gbmain_o          => main_clk       -- 50 MHz clock for the QNICE co-processor  
       );
 
+   dbnce : entity work.debouncer
+      generic map
+      (
+         CLK_FREQ          => 32_000_000
+      )
+      port map
+      (
+         clk               => main_clk,
+         reset_n           => RESET_N,
+
+         joy_1_up_n        => joy_1_up_n,
+         joy_1_down_n      => joy_1_down_n, 
+         joy_1_left_n      => joy_1_left_n, 
+         joy_1_right_n     => joy_1_right_n, 
+         joy_1_fire_n      => joy_1_fire_n, 
+           
+         dbnce_reset       => dbnce_reset, 
+         dbnce_joy1_up     => dbnce_joy1_up,
+         dbnce_joy1_down   => dbnce_joy1_down,
+         dbnce_joy1_left   => dbnce_joy1_left,
+         dbnce_joy1_right  => dbnce_joy1_right,
+         dbnce_joy1_fire   => dbnce_joy1_fire
+      );
+
    -- VGA 640x480 @ 60 Hz      
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)      
    -- Timings taken from http://tinyvga.com/vga-timing/640x480@60Hz
    vga_pixels_and_timing : entity work.vga_controller
       generic map
       (
-         h_pixels    => 640,           -- horiztonal display width in pixels
-         v_pixels    => 480,           -- vertical display width in rows
+         h_pixels    => 640,              -- horiztonal display width in pixels
+         v_pixels    => 480,              -- vertical display width in rows
          
-         h_pulse     => 96,            -- horiztonal sync pulse width in pixels
-         h_bp        => 48,            -- horiztonal back porch width in pixels
-         h_fp        => 16,            -- horiztonal front porch width in pixels
-         h_pol       => '0',           -- horizontal sync pulse polarity (1 = positive, 0 = negative)
+         h_pulse     => 96,               -- horiztonal sync pulse width in pixels
+         h_bp        => 48,               -- horiztonal back porch width in pixels
+         h_fp        => 16,               -- horiztonal front porch width in pixels
+         h_pol       => '0',              -- horizontal sync pulse polarity (1 = positive, 0 = negative)
          
-         v_pulse     => 2,             -- vertical sync pulse width in rows
-         v_bp        => 33,            -- vertical back porch width in rows
-         v_fp        => 10,            -- vertical front porch width in rows
-         v_pol       => '0'            -- vertical sync pulse polarity (1 = positive, 0 = negative)         
+         v_pulse     => 2,                -- vertical sync pulse width in rows
+         v_bp        => 33,               -- vertical back porch width in rows
+         v_fp        => 10,               -- vertical front porch width in rows
+         v_pol       => '0'               -- vertical sync pulse polarity (1 = positive, 0 = negative)         
       )
       port map
       (
-         pixel_clk   =>	vga_pixelclk,  -- pixel clock at frequency of VGA mode being used
-         reset_n     => dbnce_reset_n, -- active low asycnchronous reset
-         h_sync      => vga_hs_int,    -- horiztonal sync pulse
-         v_sync      => vga_vs_int,    -- vertical sync pulse
-         disp_ena    => vga_disp_en,   -- display enable ('1' = display time, '0' = blanking time)
-         column      => vga_col,       -- horizontal pixel coordinate
-         row         => vga_row,       -- vertical pixel coordinate
-         n_blank     => open,          -- direct blacking output to DAC
-         n_sync      => open           -- sync-on-green output to DAC      
+         pixel_clk   =>	vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
+         reset_n     => not dbnce_reset,  -- active low asycnchronous reset
+         h_sync      => vga_hs_int,       -- horiztonal sync pulse
+         v_sync      => vga_vs_int,       -- vertical sync pulse
+         disp_ena    => vga_disp_en,      -- display enable ('1' = display time, '0' = blanking time)
+         column      => vga_col,          -- horizontal pixel coordinate
+         row         => vga_row,          -- vertical pixel coordinate
+         n_blank     => open,             -- direct blacking output to DAC
+         n_sync      => open              -- sync-on-green output to DAC      
       );
    
    video_signal_latches : process(vga_pixelclk)
@@ -368,7 +392,6 @@ begin
    begin
       if rising_edge(vga_pixelclk) then 
          if vga_disp_en then       
-         
             if vga_col < 160 and vga_row < 144 then
                fbd := frame_buffer(vga_row * 160 + vga_col);
                VGA_RED   <= fbd(14 downto 10) & "000";
@@ -404,32 +427,4 @@ begin
    vdac_sync_n <= '0';
    vdac_blank_n <= '1';   
    vdac_clk <= not vga_pixelclk; -- inverting the clock leads to a sharper signal for some reason
-   
-   -- debouncer for the RESET button as well as for the joysticks:
-   -- 40ms for the RESET button
-   -- 5ms for any joystick direction
-   -- 1ms for the fire button
-   do_dbnce_reset_n : entity work.debounce
-      generic map(clk_freq => 100_000_000, stable_time => 40)
-      port map (clk => CLK, reset_n => '1', button => RESET_N, result => dbnce_reset_n);
-      
-   do_dbnce_joy1_up : entity work.debounce
-      generic map(clk_freq => 100_000_000, stable_time => 5)
-      port map (clk => CLK, reset_n => dbnce_reset_n, button => not joy_1_up_n, result => dbnce_joy1_up);
-
-   do_dbnce_joy1_down : entity work.debounce
-      generic map(clk_freq => 100_000_000, stable_time => 5)
-      port map (clk => CLK, reset_n => dbnce_reset_n, button => not joy_1_down_n, result => dbnce_joy1_down);
-
-   do_dbnce_joy1_left : entity work.debounce
-      generic map(clk_freq => 100_000_000, stable_time => 5)
-      port map (clk => CLK, reset_n => dbnce_reset_n, button => not joy_1_left_n, result => dbnce_joy1_left);
-
-   do_dbnce_joy1_right : entity work.debounce
-      generic map(clk_freq => 100_000_000, stable_time => 5)
-      port map (clk => CLK, reset_n => dbnce_reset_n, button => not joy_1_right_n, result => dbnce_joy1_right);
-
-   do_dbnce_joy1_fire : entity work.debounce
-      generic map(clk_freq => 100_000_000, stable_time => 1)
-      port map (clk => CLK, reset_n => dbnce_reset_n, button => not joy_1_fire_n, result => dbnce_joy1_fire);
 end beh;
