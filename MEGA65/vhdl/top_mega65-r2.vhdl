@@ -370,7 +370,7 @@ begin
          if vga_disp_en then       
          
             if vga_col < 160 and vga_row < 144 then
-               fbd := frame_buffer(vga_row * 160 + pixel_out_x);
+               fbd := frame_buffer(vga_row * 160 + vga_col);
                VGA_RED   <= fbd(14 downto 10) & "000";
                VGA_BLUE  <= fbd(9 downto 5) & "000";
                VGA_GREEN <= fbd(4 downto 0) & "000";
