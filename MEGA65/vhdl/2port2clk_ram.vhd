@@ -17,17 +17,17 @@ entity dualport_2clk_ram is
 	); 
 	port
 	(
-		clock_a		: IN STD_LOGIC;
-		address_a	: IN STD_LOGIC_VECTOR (addr_width-1 DOWNTO 0);
-		data_a		: IN STD_LOGIC_VECTOR (data_width-1 DOWNTO 0);
-		wren_a		: IN STD_LOGIC := '0';
-		q_a			: OUT STD_LOGIC_VECTOR (data_width-1 DOWNTO 0);
+		clock_a      : IN STD_LOGIC;
+		address_a    : IN STD_LOGIC_VECTOR (addr_width-1 DOWNTO 0);
+		data_a       : IN STD_LOGIC_VECTOR (data_width-1 DOWNTO 0);
+		wren_a       : IN STD_LOGIC := '0';
+		q_a          : OUT STD_LOGIC_VECTOR (data_width-1 DOWNTO 0);
 
-		clock_b		: IN STD_LOGIC;
-		address_b	: IN STD_LOGIC_VECTOR (addr_width-1 DOWNTO 0);
-		data_b		: IN STD_LOGIC_VECTOR (data_width-1 DOWNTO 0) := (others => '0');
-		wren_b		: IN STD_LOGIC := '0';
-		q_b			: OUT STD_LOGIC_VECTOR (data_width-1 DOWNTO 0)
+		clock_b      : IN STD_LOGIC;
+		address_b    : IN STD_LOGIC_VECTOR (addr_width-1 DOWNTO 0);
+		data_b       : IN STD_LOGIC_VECTOR (data_width-1 DOWNTO 0) := (others => '0');
+		wren_b       : IN STD_LOGIC := '0';
+		q_b          : OUT STD_LOGIC_VECTOR (data_width-1 DOWNTO 0)
 	);
 end dualport_2clk_ram;
 
