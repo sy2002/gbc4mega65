@@ -97,66 +97,66 @@ end MEGA65_R2;
 architecture beh of MEGA65_R2 is
 
 -- clocks
-signal main_clk          : std_logic;  -- Game Boy core main clock @ 32 MHz
-signal vga_pixelclk      : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
+signal main_clk            : std_logic;  -- Game Boy core main clock @ 32 MHz
+signal vga_pixelclk        : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
 
 -- VGA signals
-signal vga_disp_en       : std_logic;
-signal vga_col           : integer range 0 to 639;
-signal vga_row           : integer range 0 to 479;
-signal vga_hs_int        : std_logic;
-signal vga_vs_int        : std_logic;
+signal vga_disp_en         : std_logic;
+signal vga_col             : integer range 0 to 639;
+signal vga_row             : integer range 0 to 479;
+signal vga_hs_int          : std_logic;
+signal vga_vs_int          : std_logic;
 
 -- debounced signals for the reset button and the joysticks; joystick signals are also inverted
-signal dbnce_reset_n     : std_logic;
-signal dbnce_joy1_up     : std_logic;
-signal dbnce_joy1_down   : std_logic;
-signal dbnce_joy1_left   : std_logic;
-signal dbnce_joy1_right  : std_logic;
-signal dbnce_joy1_fire   : std_logic;
+signal dbnce_reset_n       : std_logic;
+signal dbnce_joy1_up_n     : std_logic;
+signal dbnce_joy1_down_n   : std_logic;
+signal dbnce_joy1_left_n   : std_logic;
+signal dbnce_joy1_right_n  : std_logic;
+signal dbnce_joy1_fire_n   : std_logic;
 
 -- Game Boy
-signal is_CGB            : std_logic;
-signal gbc_bios_addr     : std_logic_vector(11 downto 0);
-signal gbc_bios_data     : std_logic_vector(7 downto 0);
+signal is_CGB              : std_logic;
+signal gbc_bios_addr       : std_logic_vector(11 downto 0);
+signal gbc_bios_data       : std_logic_vector(7 downto 0);
 
 -- LCD interface
-signal lcd_clkena        : std_logic;
-signal lcd_data          : std_logic_vector(14 downto 0);
-signal lcd_mode          : std_logic_vector(1 downto 0);
-signal lcd_mode_1        : std_logic_vector(1 downto 0);
-signal lcd_on            : std_logic;
-signal lcd_vsync         : std_logic;
-signal lcd_vsync_1       : std_logic := '0';
-signal pixel_out_x       : integer range 0 to 159;
-signal pixel_out_y       : integer range 0 to 143;
-signal pixel_out_data    : std_logic_vector(14 downto 0);  
-signal pixel_out_we      : std_logic := '0';
-signal frame_buffer_data : std_logic_vector(14 downto 0);
+signal lcd_clkena          : std_logic;
+signal lcd_data            : std_logic_vector(14 downto 0);
+signal lcd_mode            : std_logic_vector(1 downto 0);
+signal lcd_mode_1          : std_logic_vector(1 downto 0);
+signal lcd_on              : std_logic;
+signal lcd_vsync           : std_logic;
+signal lcd_vsync_1         : std_logic := '0';
+signal pixel_out_x         : integer range 0 to 159;
+signal pixel_out_y         : integer range 0 to 143;
+signal pixel_out_data      : std_logic_vector(14 downto 0);  
+signal pixel_out_we        : std_logic := '0';
+signal frame_buffer_data   : std_logic_vector(14 downto 0);
  
  -- speed control
-signal sc_ce             : std_logic;
-signal sc_ce_2x          : std_logic;
-signal HDMA_on           : std_logic;
+signal sc_ce               : std_logic;
+signal sc_ce_2x            : std_logic;
+signal HDMA_on             : std_logic;
    
 -- cartridge signals
-signal cart_addr         : std_logic_vector(15 downto 0);
-signal cart_rd           : std_logic;
-signal cart_wr           : std_logic;
-signal cart_do           : std_logic_vector(7 downto 0);
-signal cart_di           : std_logic_vector(7 downto 0);
+signal cart_addr           : std_logic_vector(15 downto 0);
+signal cart_rd             : std_logic;
+signal cart_wr             : std_logic;
+signal cart_do             : std_logic_vector(7 downto 0);
+signal cart_di             : std_logic_vector(7 downto 0);
  
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
-signal i_fast_boot       : std_logic;
-signal i_joystick        : std_logic_vector(7 downto 0);
-signal i_joystick_din    : std_logic_vector(3 downto 0);
-signal i_reset           : std_logic;
-signal i_dummy_0         : std_logic;
-signal i_dummy_2bit_0    : std_logic_vector(1 downto 0);
-signal i_dummy_8bit_0    : std_logic_vector(7 downto 0);
-signal i_dummy_64bit_0   : std_logic_vector(63 downto 0);
-signal i_dummy_129bit_0  : std_logic_vector(128 downto 0);
+signal i_fast_boot         : std_logic;
+signal i_joystick          : std_logic_vector(7 downto 0);
+signal i_joystick_din      : std_logic_vector(3 downto 0);
+signal i_reset             : std_logic;
+signal i_dummy_0           : std_logic;
+signal i_dummy_2bit_0      : std_logic_vector(1 downto 0);
+signal i_dummy_8bit_0      : std_logic_vector(7 downto 0);
+signal i_dummy_64bit_0     : std_logic_vector(63 downto 0);
+signal i_dummy_129bit_0    : std_logic_vector(128 downto 0);
  
 begin
 
@@ -165,7 +165,7 @@ begin
    -- signals neccessary due to Verilog in VHDL embedding
    i_fast_boot       <= '0';
    i_joystick        <= x"FF";
-   i_joystick_din    <= "1111";
+   i_joystick_din    <= x"1111";
    i_dummy_0         <= '0';
    i_dummy_2bit_0    <= (others => '0');
    i_dummy_8bit_0    <= (others => '0');
@@ -393,24 +393,24 @@ begin
    do_dbnce_joysticks : entity work.debouncer
       generic map
       (
-         CLK_FREQ          => 100_000_000
+         CLK_FREQ             => 100_000_000
       )
       port map
       (
-         clk               => CLK,
-         reset_n           => RESET_N,
+         clk                  => CLK,
+         reset_n              => RESET_N,
 
-         joy_1_up_n        => joy_1_up_n,
-         joy_1_down_n      => joy_1_down_n, 
-         joy_1_left_n      => joy_1_left_n, 
-         joy_1_right_n     => joy_1_right_n, 
-         joy_1_fire_n      => joy_1_fire_n, 
+         joy_1_up_n           => joy_1_up_n,
+         joy_1_down_n         => joy_1_down_n, 
+         joy_1_left_n         => joy_1_left_n, 
+         joy_1_right_n        => joy_1_right_n, 
+         joy_1_fire_n         => joy_1_fire_n, 
            
-         dbnce_joy1_up     => dbnce_joy1_up,
-         dbnce_joy1_down   => dbnce_joy1_down,
-         dbnce_joy1_left   => dbnce_joy1_left,
-         dbnce_joy1_right  => dbnce_joy1_right,
-         dbnce_joy1_fire   => dbnce_joy1_fire
+         dbnce_joy1_up_n      => dbnce_joy1_up_n,
+         dbnce_joy1_down_n    => dbnce_joy1_down_n,
+         dbnce_joy1_left_n    => dbnce_joy1_left_n,
+         dbnce_joy1_right_n   => dbnce_joy1_right_n,
+         dbnce_joy1_fire_n    => dbnce_joy1_fire_n
       );
 
    -- VGA 640x480 @ 60 Hz      
