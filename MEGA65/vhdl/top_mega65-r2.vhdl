@@ -99,7 +99,6 @@ architecture beh of MEGA65_R2 is
 -- clocks
 signal main_clk          : std_logic;  -- Game Boy core main clock @ 32 MHz
 signal vga_pixelclk      : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
-signal global_ce         : std_logic;
 
 -- VGA signals
 signal vga_disp_en       : std_logic;
@@ -162,7 +161,6 @@ signal i_dummy_129bit_0  : std_logic_vector(128 downto 0);
 begin
 
    is_CGB <= '1';
-   global_ce <= '1';
    
    -- signals neccessary due to Verilog in VHDL embedding
    i_fast_boot       <= '0';
@@ -173,7 +171,7 @@ begin
    i_dummy_8bit_0    <= (others => '0');
    i_dummy_64bit_0   <= (others => '0');
    i_dummy_129bit_0  <= (others => '0');
-
+   
    -- TODO: Achieve timing closure also when using the debouncer   
    --i_reset           <= not dbnce_reset_n;   
    i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
@@ -337,7 +335,7 @@ begin
                if (pixel_out_y < 143) then
                   pixel_out_y <= pixel_out_y + 1;
                end if;
-            elsif (lcd_clkena = '1' and global_ce = '1') then
+            elsif (lcd_clkena = '1' and sc_ce = '1') then
                if (pixel_out_x < 159) then
                   pixel_out_x  <= pixel_out_x + 1;
                end if;
