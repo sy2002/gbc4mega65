@@ -193,11 +193,11 @@ begin
       
          -- cartridge interface
          -- can adress up to 1MB ROM
-         cart_addr               => open,
-         cart_rd                 => open,  
-         cart_wr                 => open, 
+         cart_addr               => cart_addr,
+         cart_rd                 => cart_rd,  
+         cart_wr                 => cart_wr, 
          cart_di                 => open,  
-         cart_do                 => i_dummy_8bit_0,  
+         cart_do                 => cart_do,  
          
          --gbc bios interface
          gbc_bios_addr           => gbc_bios_addr,
@@ -276,10 +276,7 @@ begin
          refresh                 => open,
          ff_on                   => open         
       );
-      
-   cart_rd <= '0';
-   cart_wr <= '0';
-          
+                
    -- BIOS ROM / BOOT ROM
    boot_rom : entity work.BROM
       generic map
@@ -294,6 +291,22 @@ begin
          ce          => '1',
          address     => gbc_bios_addr,
          data        => gbc_bios_data
+      );
+      
+   tetris_test : entity work.BROM
+      generic map
+      (
+         FILE_NAME   => "../../rom/tetris.rom",
+         ADDR_WIDTH  => 16,
+         DATA_WIDTH  => 8
+      )
+      port map
+      (
+         CLK         => main_clk,
+         ce          => '1',
+         latch_addr  => cart_rd,
+         address     => cart_addr,
+         data        => cart_do   
       );
 
    -- Dual clock & dual port RAM that acts as framebuffer: the LCD display of the gameboy is

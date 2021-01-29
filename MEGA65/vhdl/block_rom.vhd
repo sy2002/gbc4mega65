@@ -22,6 +22,7 @@ generic (
 port (
    clk          : in std_logic;                        -- read and write on rising clock edge
    ce           : in std_logic;                        -- chip enable, when low then zero on output
+   latch_addr   : in std_logic := '1';                 -- latch address (game rom logic needs that)
 
    address      : in std_logic_vector(ADDR_WIDTH - 1 downto 0);   -- address
    data         : out std_logic_vector(DATA_WIDTH - 1 downto 0)   -- read data
@@ -30,6 +31,7 @@ end BROM;
 
 architecture beh of BROM is
 
+signal addr_i : std_logic_vector(ADDR_WIDTH - 1 downto 0);
 signal output : std_logic_vector(DATA_WIDTH - 1 downto 0);
 
 impure function get_lines_in_romfile(rom_file_name : in string) return natural is
@@ -66,11 +68,20 @@ signal brom : brom_t := read_romfile(FILE_NAME);
 
 begin
 
+   latch_address : process(clk)
+   begin
+      if rising_edge(clk) then
+         if latch_addr = '1' then
+            addr_i <= address;
+         end if;
+      end if;
+   end process;
+   
    rom_read : process (clk)
    begin
       if falling_edge(clk) then
          if ce = '1' then
-            output <= to_stdlogicvector(brom(conv_integer(address)));
+            output <= to_stdlogicvector(brom(conv_integer(addr_i)));
          else
             output <= (others => 'U');
          end if;

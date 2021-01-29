@@ -4,6 +4,8 @@ This is a work-in-progress (WIP) porting experiment of MiSTer's Game Boy and Gam
 
 done by sy2002 in 2021
 
+Special thanks to Robert Peip for his invaluable support.
+
 # [Gameboy](https://en.wikipedia.org/wiki/Game_Boy)  / [Gameboy Color](https://en.wikipedia.org/wiki/Game_Boy_Color) for MiSTer Platform
 
 This is port of [Gameboy for MiST](https://github.com/mist-devel/mist-board/tree/master/cores/gameboy)
