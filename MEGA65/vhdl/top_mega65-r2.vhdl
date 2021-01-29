@@ -269,7 +269,7 @@ begin
       port map
       (
          clk_sys                 => main_clk,
-         pause                   => not global_ce,
+         pause                   => '0',
          speedup                 => '0',
          cart_act                => cart_rd or cart_wr,
          HDMA_on                 => HDMA_on,
@@ -369,7 +369,7 @@ begin
       (
          sys_clk_i         => CLK,
          pixelclk_o        => vga_pixelclk,  -- 25.175 MHz pixelclock for VGA 640x480 @ 60 Hz
-         gbmain_o          => main_clk       -- 50 MHz clock for the QNICE co-processor  
+         gbmain_o          => main_clk       -- Game Boy's 32 MHz main clock
       );
 
    -- debouncer for the RESET button as well as for the joysticks:
