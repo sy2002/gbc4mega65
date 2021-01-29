@@ -99,6 +99,7 @@ architecture beh of MEGA65_R2 is
 -- clocks
 signal main_clk          : std_logic;  -- Game Boy core main clock @ 32 MHz
 signal vga_pixelclk      : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
+signal global_ce         : std_logic;
 
 -- VGA signals
 signal vga_disp_en       : std_logic;
@@ -116,7 +117,6 @@ signal dbnce_joy1_right  : std_logic;
 signal dbnce_joy1_fire   : std_logic;
 
 -- Game Boy
-signal global_ce         : std_logic;
 signal is_CGB            : std_logic;
 signal gbc_bios_addr     : std_logic_vector(11 downto 0);
 signal gbc_bios_data     : std_logic_vector(7 downto 0);
@@ -135,9 +135,20 @@ signal pixel_out_data    : std_logic_vector(14 downto 0);
 signal pixel_out_we      : std_logic := '0';
 signal frame_buffer_data : std_logic_vector(14 downto 0);
  
+ -- speed control
+signal sc_ce             : std_logic;
+signal sc_ce_2x          : std_logic;
+signal HDMA_on           : std_logic;
+   
+-- cartridge signals
+signal cart_addr         : std_logic_vector(15 downto 0);
+signal cart_rd           : std_logic;
+signal cart_wr           : std_logic;
+signal cart_do           : std_logic_vector(7 downto 0);
+signal cart_di           : std_logic_vector(7 downto 0);
+ 
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
-signal i_ce_2x           : std_logic;
 signal i_fast_boot       : std_logic;
 signal i_joystick        : std_logic_vector(7 downto 0);
 signal i_joystick_din    : std_logic_vector(3 downto 0);
@@ -154,8 +165,7 @@ begin
    global_ce <= '1';
    
    -- signals neccessary due to Verilog in VHDL embedding
-   i_ce_2x           <= '0';
-   i_fast_boot       <= '1';
+   i_fast_boot       <= '0';
    i_joystick        <= x"FF";
    i_joystick_din    <= "1111";
    i_dummy_0         <= '0';
@@ -168,15 +178,15 @@ begin
    --i_reset           <= not dbnce_reset_n;   
    i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
    
-
+   -- The actual machine (GB/GBC core)
    gameboy : entity work.gb
       port map
       (
          reset                   => i_reset,
                      
          clk_sys                 => main_clk,
-         ce                      => global_ce,
-         ce_2x                   => i_ce_2x,
+         ce                      => sc_ce,
+         ce_2x                   => sc_ce_2x,
                   
          fast_boot               => i_fast_boot,
          joystick                => i_joystick,
@@ -210,7 +220,7 @@ begin
          joy_din                 => i_joystick_din,
                   
          speed                   => open,   --GBC
-         HDMA_on                 => open,
+         HDMA_on                 => HDMA_on,
                   
          gg_reset                => i_reset,
          gg_en                   => i_dummy_0,
@@ -253,6 +263,24 @@ begin
          rewind_on               => i_dummy_0,
          rewind_active           => i_dummy_0
       );
+
+   -- Speed control is mainly a clock divider and it also manages pause/resume/fast-forward/etc.
+   clk_ctrl : entity work.speedcontrol
+      port map
+      (
+         clk_sys                 => main_clk,
+         pause                   => not global_ce,
+         speedup                 => '0',
+         cart_act                => cart_rd or cart_wr,
+         HDMA_on                 => HDMA_on,
+         ce                      => sc_ce,
+         ce_2x                   => sc_ce_2x,
+         refresh                 => open,
+         ff_on                   => open         
+      );
+      
+   cart_rd <= '0';
+   cart_wr <= '0';
           
    -- BIOS ROM / BOOT ROM
    boot_rom : entity work.BROM
@@ -270,7 +298,9 @@ begin
          data        => gbc_bios_data
       );
 
-      
+   -- Dual clock & dual port RAM that acts as framebuffer: the LCD display of the gameboy is
+   -- written here by the GB core (using its local clock) and the VGA/HDMI display is being fed
+   -- using the pixel clock 
    frame_buffer : entity work.dualport_2clk_ram
       generic map
       ( 
