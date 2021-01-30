@@ -369,18 +369,35 @@ begin
          q_b         => frame_buffer_data
       );
    
-   -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
-   -- to always address one pixel ahead of were we currently stand
-   render_pipeline : process(vga_col, vga_row)
-   begin
-      if vga_col < GB_DX - 1 then
-         vga_col_next <= vga_col + 1;
+   -- Scaler: 160 x 144 => 4x => 640 x 576
+   -- Scaling by 4 is a convenient special case: We just need to use a SHR operation.
+   -- We are doing this by taking the bits "9 downto 2" from the current column and row.
+   -- This is a hardcoded and very fast operation.
+   scaler : process(vga_col, vga_row)
+      variable src_x: std_logic_vector(9 downto 0);
+      variable src_y: std_logic_vector(9 downto 0);
+      variable dst_x: std_logic_vector(7 downto 0);
+      variable dst_y: std_logic_vector(7 downto 0);
+      variable dst_x_i: integer range 0 to 199;
+      variable dst_y_i: integer range 0 to 149;  
+   begin    
+      src_x    := std_logic_vector(to_unsigned(vga_col, 10));
+      src_y    := std_logic_vector(to_unsigned(vga_row, 10));      
+      dst_x    := src_x(9 downto 2);
+      dst_y    := src_y(9 downto 2);
+      dst_x_i  := to_integer(unsigned(dst_x));
+      dst_y_i  := to_integer(unsigned(dst_y));
+      
+      -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
+      -- to always address one pixel ahead of were we currently stand      
+      if dst_x_i < GB_DX - 1 then
+         vga_col_next <= dst_x_i + 1;
       else
          vga_col_next <= 0;
       end if;
       
-      if vga_row < GB_DY - 1 then
-         vga_row_next <= vga_row + 1;
+      if dst_y_i < GB_DY - 1 then
+         vga_row_next <= dst_y_i + 1;
       else
          vga_row_next <= 0;
       end if;
@@ -505,8 +522,8 @@ begin
    video_signal_latches : process(vga_pixelclk)
    begin
       if rising_edge(vga_pixelclk) then 
-         if vga_disp_en then       
-            if vga_col < GB_DX and vga_row < GB_DY then
+         if vga_disp_en then
+            if vga_col < GB_DX * GB_TO_VGA_SCALE and vga_row < GB_DY * GB_TO_VGA_SCALE then
                VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
                VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
                VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
