@@ -563,6 +563,22 @@ begin
    vdac_blank_n <= '1';   
    vdac_clk <= not vga_pixelclk; -- inverting the clock leads to a sharper signal for some reason
    
-   -- QNICE Co-Processor for ROM loading and On-Screen-Menu
-   
+   -- QNICE Co-Processor (System-on-a-Chip) for ROM loading and On-Screen-Menu
+   QNICE_SOC : entity work.QNICE
+      port map
+      (
+         CLK50       => qnice_clk,        -- 50 MHz clock                                    
+         RESET_N     => RESET_N,
+         
+         -- serial communication (rxd, txd only; rts/cts are not available)
+         -- 115.200 baud, 8-N-1
+         UART_RXD    => UART_RXD,         -- receive data
+         UART_TXD    => UART_TXD,         -- send data   
+                 
+         -- SD Card
+         SD_RESET    => SD_RESET,
+         SD_CLK      => SD_CLK,
+         SD_MOSI     => SD_MOSI,
+         SD_MISO     => SD_MISO         
+      );   
 end beh;
