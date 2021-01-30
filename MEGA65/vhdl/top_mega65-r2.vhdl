@@ -95,6 +95,10 @@ end MEGA65_R2;
 
 architecture beh of MEGA65_R2 is
 
+-- rendering constants
+constant GB_DX             : integer := 160;       -- Game Boy's X pixel resolution
+constant GB_DY             : integer := 144;       -- ditto Y
+
 -- clocks
 signal main_clk            : std_logic;  -- Game Boy core main clock @ 32 MHz
 signal vga_pixelclk        : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
@@ -103,6 +107,8 @@ signal vga_pixelclk        : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
 signal vga_disp_en         : std_logic;
 signal vga_col             : integer range 0 to 639;
 signal vga_row             : integer range 0 to 479;
+signal vga_col_next        : integer range 0 to 639;
+signal vga_row_next        : integer range 0 to 479;
 signal vga_hs_int          : std_logic;
 signal vga_vs_int          : std_logic;
 
@@ -193,15 +199,14 @@ begin
          isGBC                   => is_CGB,
          isGBC_game              => false,
       
-         -- cartridge interface
-         -- can adress up to 1MB ROM
+         -- Cartridge interface: Connects with the Memory Management Unit (MMU) 
          cart_addr               => cart_addr,
          cart_rd                 => cart_rd,  
          cart_wr                 => cart_wr, 
          cart_di                 => open,  
          cart_do                 => cart_do,  
          
-         --gbc bios interface
+         -- Game Boy BIOS interface
          gbc_bios_addr           => gbc_bios_addr,
          gbc_bios_do             => gbc_bios_data,
                
@@ -222,44 +227,41 @@ begin
          speed                   => open,   --GBC
          HDMA_on                 => HDMA_on,
                   
+         -- cheating/game code engine: not supported on MEGA65 
          gg_reset                => i_reset,
          gg_en                   => i_dummy_0,
          gg_code                 => i_dummy_129bit_0,
          gg_available            => open,
             
-         --serial port     
+         -- serial port: not supported on MEGA65
          sc_int_clock2           => open,
          serial_clk_in           => i_dummy_0,
          serial_clk_out          => open,
          serial_data_in          => i_dummy_0,
          serial_data_out         => open,
                
-         -- save states
+         -- MiSTer's save states & rewind feature: not supported on MEGA65
          cart_ram_size           => i_dummy_8bit_0,
          save_state              => i_dummy_0,
          load_state              => i_dummy_0,
          sleep_savestate         => open,
-         savestate_number        => i_dummy_2bit_0,
-               
+         savestate_number        => i_dummy_2bit_0,               
          SaveStateExt_Din        => open, 
          SaveStateExt_Adr        => open, 
          SaveStateExt_wren       => open,
          SaveStateExt_rst        => open, 
          SaveStateExt_Dout       => i_dummy_64bit_0,
-         SaveStateExt_load       => open,
-         
+         SaveStateExt_load       => open,         
          Savestate_CRAMAddr      => open,     
          Savestate_CRAMRWrEn     => open,    
          Savestate_CRAMWriteData => open,
-         Savestate_CRAMReadData  => i_dummy_8bit_0, 
-                  
+         Savestate_CRAMReadData  => i_dummy_8bit_0,                   
          SAVE_out_Din            => open,   
          SAVE_out_Dout           => i_dummy_64bit_0,
          SAVE_out_Adr            => open,   
          SAVE_out_rnw            => open,   
          SAVE_out_ena            => open,   
-         SAVE_out_done           => i_dummy_0,
-               
+         SAVE_out_done           => i_dummy_0,               
          rewind_on               => i_dummy_0,
          rewind_active           => i_dummy_0
       );
@@ -325,18 +327,36 @@ begin
       port map
       (
          clock_a     => main_clk,
-         address_a   => std_logic_vector(to_unsigned(pixel_out_y * 160 + pixel_out_x, 15)),
+         address_a   => std_logic_vector(to_unsigned(pixel_out_y * GB_DX + pixel_out_x, 15)),
          data_a      => pixel_out_data,
          wren_a      => pixel_out_we,
          q_a         => open,
          
          clock_b     => vga_pixelclk,
-         address_b   => std_logic_vector(to_unsigned(vga_row * 160 + vga_col, 15)),
+         address_b   => std_logic_vector(to_unsigned(vga_row_next * GB_DX + vga_col_next, 15)),
          data_b      => (others => '0'),
          wren_b      => '0',
          q_b         => frame_buffer_data
       );
+   
+   -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
+   -- to always address one pixel ahead of were we currently stand
+   render_pipeline : process(vga_col, vga_row)
+   begin
+      if vga_col < GB_DX - 1 then
+         vga_col_next <= vga_col + 1;
+      else
+         vga_col_next <= 0;
+      end if;
+      
+      if vga_row < GB_DY - 1 then
+         vga_row_next <= vga_row + 1;
+      else
+         vga_row_next <= 0;
+      end if;
+   end process;               
 
+   -- Generate the signals necessary to store the LCD output into the frame buffer
    lcd_to_pixels : process(main_clk)
    begin
       if rising_edge(main_clk) then
@@ -349,11 +369,11 @@ begin
                pixel_out_y <= 0;
             elsif (lcd_mode_1 /= "11" and lcd_mode = "11") then
                pixel_out_x  <= 0;
-               if (pixel_out_y < 143) then
+               if (pixel_out_y < GB_DY - 1) then
                   pixel_out_y <= pixel_out_y + 1;
                end if;
             elsif (lcd_clkena = '1' and sc_ce = '1') then
-               if (pixel_out_x < 159) then
+               if (pixel_out_x < GB_DX - 1) then
                   pixel_out_x  <= pixel_out_x + 1;
                end if;
                pixel_out_we <= '1';
@@ -370,8 +390,7 @@ begin
             end case;
          else
             pixel_out_data <= lcd_data(4 downto 0) & lcd_data(9 downto 5) & lcd_data(14 downto 10);
-         end if;
-         
+         end if;         
       end if;
    end process; 
                     
@@ -469,7 +488,7 @@ begin
    begin
       if rising_edge(vga_pixelclk) then 
          if vga_disp_en then       
-            if vga_col < 160 and vga_row < 144 then
+            if vga_col < GB_DX and vga_row < GB_DY then
                VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
                VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
                VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
