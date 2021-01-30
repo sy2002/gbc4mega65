@@ -49,3 +49,12 @@ Other than that and my own work, gbc4mega65 uses:
 
   * Debouncer: I/O debouncing used for the joysticks, done by Scott Larson
     https://www.digikey.com/eewiki/pages/viewpage.action?pageId=4980758
+
+  * Anikki-16x16 font, archived and provided by k80w
+    https://github.com/k80w/consolefonts
+
+  * PSF font to text file converter nafe-0.1 by Corvus Corax
+    https://sourceforge.net/projects/nafe/
+
+  * PSF font to C include file converter psftools-1.1.1 by John Elliott
+    https://www.seasip.info/Unix/PSF/
