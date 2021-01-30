@@ -19,6 +19,11 @@ entity MEGA65_R2 is
 port (
    CLK            : in std_logic;                  -- 100 MHz clock
    RESET_N        : in std_logic;                  -- CPU reset button
+   
+   -- serial communication (rxd, txd only; rts/cts are not available)
+   -- 115.200 baud, 8-N-1
+   UART_RXD       : in std_logic;                  -- receive data
+   UART_TXD       : out std_logic;                 -- send data   
         
    -- VGA
    VGA_RED        : out std_logic_vector(7 downto 0);
@@ -38,10 +43,10 @@ port (
    kb_io2         : in std_logic;                  -- data input from keyboard   
    
    -- SD Card
---   SD_RESET       : out std_logic;
---   SD_CLK         : out std_logic;
---   SD_MOSI        : out std_logic;
---   SD_MISO        : in std_logic;
+   SD_RESET       : out std_logic;
+   SD_CLK         : out std_logic;
+   SD_MOSI        : out std_logic;
+   SD_MISO        : in std_logic;
    
    -- Joysticks
    joy_1_up_n     : in std_logic;
@@ -557,4 +562,7 @@ begin
    vdac_sync_n <= '0';
    vdac_blank_n <= '1';   
    vdac_clk <= not vga_pixelclk; -- inverting the clock leads to a sharper signal for some reason
+   
+   -- QNICE Co-Processor for ROM loading and On-Screen-Menu
+   
 end beh;

@@ -39,7 +39,10 @@ Other than that and my own work, gbc4mega65 uses:
 -------------------------------------------------
   
   * Various MEGA65 drivers taken from the MEGA65 VHDL source by Paul Gardner-Stephen
-    https://github.com/MEGA65/mega65-core    
+    https://github.com/MEGA65/mega65-core
+
+  * QNICE Co-Processor for ROM loading and On-Screen-Menu by The QNICE Development Team
+    https://github.com/sy2002/QNICE-FPGA
 
   * VGA Timing Generator, done by Scott Larson
     https://www.digikey.com/eewiki/pages/viewpage.action?pageId=15925278
