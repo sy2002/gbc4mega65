@@ -1,8 +1,7 @@
 -- Original MEGA65 keyboard driver file by Paul Gardner-Stephen
--- see README.md for details and license
+-- see AUTHORS details and license
 --
--- Modified for QNICE-FPGA by sy2002 in April 2020:
---   commented out debugtools and report outputs
+-- Modified for gbc4mega65 by sy2002 in January 2021
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;

@@ -1,11 +1,7 @@
 -- Original MEGA65 keyboard driver file by Paul Gardner-Stephen
--- see README.md for details and license
+-- see AUTHORS details and license
 --
--- Modified for ZX-Uno by sy2002 in December 2020:
---
--- Transformed the whole module from "matrix_to_ascii" into a
--- module that delivers the debounced key press info and the key number
--- while the key number steadily goes from zero to MAXKEY
+-- Modified for gbc4mega65 by sy2002 in January 2021
 
 use WORK.ALL;
 
