@@ -7,7 +7,6 @@
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
-
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;

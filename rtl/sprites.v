@@ -1,3 +1,15 @@
+// Game Boy Color for MEGA65 (gbc4mega65)
+//
+// This machine is based on Gameboy_MiSTer
+// MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
+
+// Updating notes:
+// This file is nearly 1-to-1 identical with the original MiSTer
+// source. When updating to a newer version, here are the changes
+// that need to be applied:
+//
+// Replace "reg [7:0] oam_q" with "wire [7:0] oam_q".
+
 //
 // sprites.v
 //
