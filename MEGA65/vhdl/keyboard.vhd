@@ -27,10 +27,9 @@ port (
    kio9        : out std_logic;        -- data output to keyboard
    kio10       : in std_logic;         -- data input from keyboard
    
-   -- joystick input in the bit order described below with the button in bit 4;
-   -- TODO: define another input port that defines the mapping of the buttons A and B
-   -- for example in Super Mario Land, UP can be button A (jump)
-   --joystick    : in std_logic_vector(4 downto 0);
+   -- joystick input with variable mapping (bit order as described below, bit 4 = fire)
+--   joystick    : in std_logic_vector(4 downto 0);
+--   joy_up_a    : std_logic;            -- joystick up = A, fire = B, otherwise fire = A and no B on joystick
       
    -- interface to the GBC's internal logic (low active)
    -- joypad:   
