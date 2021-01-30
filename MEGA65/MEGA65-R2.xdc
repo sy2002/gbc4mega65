@@ -15,11 +15,11 @@ set_clock_groups -asynchronous \
      -group { CLK main_clk gbmain_mmcm qnice_mmcm} \
      -group [get_clocks -of_objects [get_pins clk_pixel/pixelclk_o]]
      
-## EAE's combinatorial division networks take longer than
+## QNICE's EAE combinatorial division networks take longer than
 ## the regular clock period, so we specify a multicycle path
 ## see also the comments in EAE.vhd and explanations in UG903/chapter 5/Multicycle Paths as well as ug911/page 25
-set_multicycle_path -from [get_cells {{eae_inst/op0_reg[*]} {eae_inst/op1_reg[*]}}] -to [get_cells {eae_inst/res_reg[*]}] -setup 3
-set_multicycle_path -from [get_cells {{eae_inst/op0_reg[*]} {eae_inst/op1_reg[*]}}] -to [get_cells {eae_inst/res_reg[*]}] -hold 2     
+set_multicycle_path -from [get_cells {{QNICE_SOC/eae_inst/op0_reg[*]} {QNICE_SOC/eae_inst/op1_reg[*]}}] -to [get_cells {QNICE_SOC/eae_inst/res_reg[*]}] -setup 3
+set_multicycle_path -from [get_cells {{QNICE_SOC/eae_inst/op0_reg[*]} {QNICE_SOC/eae_inst/op1_reg[*]}}] -to [get_cells {QNICE_SOC/eae_inst/res_reg[*]}] -hold 2     
      
 ## Reset button
 set_property -dict {PACKAGE_PIN M13 IOSTANDARD LVCMOS33} [get_ports RESET_N]
