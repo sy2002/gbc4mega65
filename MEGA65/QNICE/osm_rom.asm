@@ -46,9 +46,6 @@
 
 ANOTHER_LABEL   HALT                            ; execution never reaches this
 
-A_VALUE         .EQU 0x0023
-A_VARIABLE      .DW 0x0000, 0x0001, 0x0002      ; 3-word pre-initialized var.
-
 TEST_STR1       .ASCII_W "GBC is reset and paused\n"
 TEST_STR2       .ASCII_W "GBC is running\n"
 TEST_STR3       .ASCII_W "GBC is paused\n"
