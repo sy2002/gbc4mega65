@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Gameboy Color for MEGA65 (gbc4mega65)
+-- Game Boy Color for MEGA65 (gbc4mega65)
 --
 -- Block ROM (synchronous)
 --

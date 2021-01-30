@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Gameboy Color for MEGA65 (gbc4mega65)
+-- Game Boy Color for MEGA65 (gbc4mega65)
 --
 -- Clock generator using the Xilinx specific MMCME2_ADV 
 --

@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Gameboy Color for MEGA65 (gbc4mega65)
+-- Game Boy Color for MEGA65 (gbc4mega65)
 --
 -- Debouncer for the joystick ports
 --

@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------
--- Gameboy Color for MEGA65 (gbc4mega65)
+-- Game Boy Color for MEGA65 (gbc4mega65)
 --
 -- R2-Version: Top Module for synthesizing the whole machine
 --
@@ -30,9 +30,9 @@ port (
    vdac_blank_n   : out std_logic;
    
    -- MEGA65 smart keyboard controller
---   kb_io0         : out std_logic;                 -- clock to keyboard
---   kb_io1         : out std_logic;                 -- data output to keyboard
---   kb_io2         : in std_logic;                  -- data input from keyboard   
+   kb_io0         : out std_logic;                 -- clock to keyboard
+   kb_io1         : out std_logic;                 -- data output to keyboard
+   kb_io2         : in std_logic;                  -- data input from keyboard   
    
    -- SD Card
 --   SD_RESET       : out std_logic;
@@ -145,12 +145,16 @@ signal cart_rd             : std_logic;
 signal cart_wr             : std_logic;
 signal cart_do             : std_logic_vector(7 downto 0);
 signal cart_di             : std_logic_vector(7 downto 0);
+
+-- joypad: p54 selects matrix entry and data contains either
+-- the direction keys or the other buttons
+signal joypad_p54          : std_logic_vector(1 downto 0);
+signal joypad_data         : std_logic_vector(3 downto 0);
  
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
 signal i_fast_boot         : std_logic;
 signal i_joystick          : std_logic_vector(7 downto 0);
-signal i_joystick_din      : std_logic_vector(3 downto 0);
 signal i_reset             : std_logic;
 signal i_dummy_0           : std_logic;
 signal i_dummy_2bit_0      : std_logic_vector(1 downto 0);
@@ -165,7 +169,6 @@ begin
    -- signals neccessary due to Verilog in VHDL embedding
    i_fast_boot       <= '0';
    i_joystick        <= x"FF";
-   i_joystick_din    <= x"1111";
    i_dummy_0         <= '0';
    i_dummy_2bit_0    <= (others => '0');
    i_dummy_8bit_0    <= (others => '0');
@@ -214,8 +217,8 @@ begin
          lcd_on                  => lcd_on,    
          lcd_vsync               => lcd_vsync, 
             
-         joy_p54                 => open,
-         joy_din                 => i_joystick_din,
+         joy_p54                 => joypad_p54,
+         joy_din                 => joypad_data,
                   
          speed                   => open,   --GBC
          HDMA_on                 => HDMA_on,
@@ -292,7 +295,9 @@ begin
          address     => gbc_bios_addr,
          data        => gbc_bios_data
       );
-      
+     
+   -- only for testing purposes
+   -- TODO: needs to be removed and replaced by cartridge RAM and a cartridge loader
    tetris_test : entity work.BROM
       generic map
       (
@@ -382,22 +387,38 @@ begin
          pixelclk_o        => vga_pixelclk,  -- 25.175 MHz pixelclock for VGA 640x480 @ 60 Hz
          gbmain_o          => main_clk       -- Game Boy's 32 MHz main clock
       );
-
+      
+   -- MEGA65 keyboard
+   kbd : entity work.keyboard
+      generic map
+      (
+         CLOCK_SPEED       => 32_000_000
+      )
+      port map
+      (
+         clk               => main_clk,
+         kio8              => kb_io0,
+         kio9              => kb_io1,
+         kio10             => kb_io2,
+         p54               => joypad_p54,
+         joypad            => joypad_data
+      );
+   
    -- debouncer for the RESET button as well as for the joysticks:
    -- 40ms for the RESET button
    -- 5ms for any joystick direction
    -- 1ms for the fire button
    do_dbnce_reset_n : entity work.debounce
-      generic map(clk_freq => 100_000_000, stable_time => 40)
-      port map (clk => clk, reset_n => '1', button => RESET_N, result => dbnce_reset_n);
+      generic map(clk_freq => 32_000_000, stable_time => 40)
+      port map (clk => main_clk, reset_n => '1', button => RESET_N, result => dbnce_reset_n);
    do_dbnce_joysticks : entity work.debouncer
       generic map
       (
-         CLK_FREQ             => 100_000_000
+         CLK_FREQ             => 32_000_000
       )
       port map
       (
-         clk                  => CLK,
+         clk                  => main_clk,
          reset_n              => RESET_N,
 
          joy_1_up_n           => joy_1_up_n,
