@@ -134,7 +134,7 @@ begin
    end process;
 
    -- return matrix to Game Boy
-   read_matrix : process(p54)
+   read_matrix : process(p54, matrix)
    begin
       case p54 is
          when "01"   => joypad <= matrix(1);

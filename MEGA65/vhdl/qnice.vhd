@@ -15,19 +15,29 @@ use work.env1_globals.all;
 
 entity QNICE is
 port (
-   CLK50          : in std_logic;                  -- 50 MHz clock                                    
-   RESET_N        : in std_logic;                  -- CPU reset button
+   -- QNICE MEGA65 hardware interface
+   CLK50             : in std_logic;                  -- 50 MHz clock                                    
+   RESET_N           : in std_logic;                  -- CPU reset button
+      
+   UART_RXD          : in std_logic;                  -- receive data, 115.200 baud, 8-N-1, rxd, txd only; rts/cts are not available
+   UART_TXD          : out std_logic;                 -- send data, ditto
    
-   -- serial communication (rxd, txd only; rts/cts are not available)
-   -- 115.200 baud, 8-N-1
-   UART_RXD       : in std_logic;                  -- receive data
-   UART_TXD       : out std_logic;                 -- send data   
-           
-   -- SD Card
-   SD_RESET       : out std_logic;
-   SD_CLK         : out std_logic;
-   SD_MOSI        : out std_logic;
-   SD_MISO        : in std_logic   
+   SD_RESET          : out std_logic;
+   SD_CLK            : out std_logic;
+   SD_MOSI           : out std_logic;
+   SD_MISO           : in std_logic;
+   
+   -- Information about the current game cartridge
+   cart_cgb_flag     : out std_logic_vector(7 downto 0);
+   cart_sgb_flag     : out std_logic_vector(7 downto 0);
+   cart_mbc_type     : out std_logic_vector(7 downto 0);
+   cart_rom_size     : out std_logic_vector(7 downto 0);
+   cart_ram_size     : out std_logic_vector(7 downto 0);
+   cart_old_licensee : out std_logic_vector(7 downto 0);
+
+   -- Control and status register
+   gbc_reset         : out std_logic;
+   gbc_pause         : out std_logic
 ); 
 end QNICE;
 
@@ -47,7 +57,7 @@ signal reset_ctl              : std_logic;
 signal reset_pre_pore         : std_logic;
 signal reset_post_pore        : std_logic;
 
--- MMIO signals
+-- QNICE standard MMIO signals
 signal rom_en                 : std_logic;
 signal rom_data_out           : std_logic_vector(15 downto 0);
 signal ram_en                 : std_logic;
@@ -68,6 +78,21 @@ signal sd_we                  : std_logic;
 signal sd_reg                 : std_logic_vector(2 downto 0);
 signal sd_data_out            : std_logic_vector(15 downto 0);
 
+-- GBC specific MMIO signals
+signal csr_en                 : std_logic;
+signal csr_we                 : std_logic;
+signal csr_data_out           : std_logic_vector(15 downto 0);
+
+attribute mark_debug                      : boolean;
+attribute mark_debug of reset_ctl         : signal is true;
+attribute mark_debug of cpu_addr          : signal is true;
+attribute mark_debug of cpu_data_in       : signal is true;
+attribute mark_debug of cpu_data_out      : signal is true;
+attribute mark_debug of cpu_data_dir      : signal is true;
+attribute mark_debug of cpu_data_valid    : signal is true;
+attribute mark_debug of cpu_wait_for_data : signal is true;
+attribute mark_debug of cpu_halt          : signal is true;
+
 begin
 
    -- Merge data outputs from all devices into a single data input to the CPU.
@@ -77,8 +102,9 @@ begin
                   switch_data_out   or
                   uart_data_out     or
                   eae_data_out      or
-                  sd_data_out;
-                  
+                  sd_data_out       or
+                  csr_data_out;
+                                    
    -- generate the general reset signal
    reset_ctl <= '1' when (reset_pre_pore = '1' or reset_post_pore = '1') else '0';                     
                   
@@ -181,8 +207,8 @@ begin
          sd_miso              => SD_MISO
       );
     
-    -- MMIO controller  
-   mmio : entity work.mmio_mux
+    -- Standard QNICE-FPGA MMIO controller  
+   mmio_std : entity work.mmio_mux
       generic map (
          GD_TIL               => false,
          GD_SWITCHES          => true,
@@ -191,7 +217,7 @@ begin
       )
       port map (
          -- input from hardware
-         HW_RESET             => RESET_N,
+         HW_RESET             => not RESET_N,
          CLK                  => CLK50,
       
          -- input from CPU
@@ -260,6 +286,25 @@ begin
          hram_reg             => open, 
          hram_cpu_ws          => '0'          
       );
+      
+   -- Additional gbc4mega65 specific MMIO
+   csr_en             <= '1' when cpu_addr(15 downto 3) = x"FFE0" else '0';
+   csr_we             <= csr_en and cpu_data_dir and cpu_data_valid;
+   csr_data_out       <= "00000000000000" & gbc_pause & gbc_reset when csr_en = '1' else (others => '0');      
+      
+   -- Control and status register: Reset & Pause
+   gbc_csr : process(clk50)
+   begin
+      if rising_edge(clk50) then
+         if reset_ctl = '1' then
+            gbc_reset <= '1';
+            gbc_pause <= '1';
+         elsif csr_we = '1' then
+            gbc_reset <= cpu_data_out(0);
+            gbc_pause <= cpu_data_out(1);
+         end if;
+      end if;
+   end process;
    
    -- emulate the toggle switches as described in QNICE-FPGA's doc/README.md
    -- all zero: STDIN = STDOUT = UART

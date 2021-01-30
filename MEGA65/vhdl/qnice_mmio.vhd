@@ -314,7 +314,7 @@ begin
    end process;
 
    -- PORE ROM is used in all global states other than gsRun
-   use_pore_rom_i <= '0' when cpu_igrant_n = '0' or 
+   use_pore_rom_i <= '0' when cpu_igrant_n = '0' or (GD_PORE = false) or
                               (global_state = gsPostPoreReset or
                                global_state = gsPostPoreReset_execute or
                                global_state = gsRun)
