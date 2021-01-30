@@ -3,6 +3,10 @@
 --
 -- R2-Version: Top Module for synthesizing the whole machine
 --
+-- Screen resolution:
+-- VGA out runs at SVGA mode 800 x 600 @ 60 Hz. This is a compromise between
+-- the optimal usage of screen real estate and compatibility to older CRTs 
+--
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ----------------------------------------------------------------------------------
@@ -95,20 +99,28 @@ end MEGA65_R2;
 
 architecture beh of MEGA65_R2 is
 
+-- clock speeds
+constant GB_CLK_SPEED      : integer := 33_554_432;
+constant QNICE_CLK_SPEED   : integer := 50_000_000;
+
 -- rendering constants
 constant GB_DX             : integer := 160;       -- Game Boy's X pixel resolution
 constant GB_DY             : integer := 144;       -- ditto Y
+constant VGA_DX            : integer := 800;       -- SVGA mode 800 x 600 @ 60 Hz
+constant VGA_DY            : integer := 600;       -- ditto
+constant GB_TO_VGA_SCALE   : integer := 4;         -- 160 x 144 => 4x => 640 x 576
 
 -- clocks
-signal main_clk            : std_logic;  -- Game Boy core main clock @ 32 MHz
-signal vga_pixelclk        : std_logic;  -- 640x480 @ 60 Hz clock: 27.175 MHz
+signal main_clk            : std_logic;            -- Game Boy core main clock @ 33.554432 MHz
+signal vga_pixelclk        : std_logic;            -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
+signal qnice_clk           : std_logic;            -- QNICE main clock @ 50 MHz
 
 -- VGA signals
 signal vga_disp_en         : std_logic;
-signal vga_col             : integer range 0 to 639;
-signal vga_row             : integer range 0 to 479;
-signal vga_col_next        : integer range 0 to 639;
-signal vga_row_next        : integer range 0 to 479;
+signal vga_col             : integer range 0 to VGA_DX - 1;
+signal vga_row             : integer range 0 to VGA_DY - 1;
+signal vga_col_next        : integer range 0 to VGA_DX - 1;
+signal vga_row_next        : integer range 0 to VGA_DY - 1;
 signal vga_hs_int          : std_logic;
 signal vga_vs_int          : std_logic;
 
@@ -133,8 +145,8 @@ signal lcd_mode_1          : std_logic_vector(1 downto 0);
 signal lcd_on              : std_logic;
 signal lcd_vsync           : std_logic;
 signal lcd_vsync_1         : std_logic := '0';
-signal pixel_out_x         : integer range 0 to 159;
-signal pixel_out_y         : integer range 0 to 143;
+signal pixel_out_x         : integer range 0 to GB_DX - 1;
+signal pixel_out_y         : integer range 0 to GB_DY - 1;
 signal pixel_out_data      : std_logic_vector(14 downto 0);  
 signal pixel_out_we        : std_logic := '0';
 signal frame_buffer_data   : std_logic_vector(14 downto 0);
@@ -169,7 +181,23 @@ signal i_dummy_129bit_0    : std_logic_vector(128 downto 0);
  
 begin
 
-   is_CGB <= '1';
+   -- MMCME2_ADV clock generators:
+   --    Core clock:          33.554432 MHz
+   --    Pixelclock:          34.96 MHz
+   --    QNICE co-processor:  50 MHz   
+   clk_gen : entity work.clk_m
+      port map
+      (
+         sys_clk_i         => CLK,
+         gbmain_o          => main_clk,         -- Game Boy's 33.554432 MHz main clock
+         qnice_o           => qnice_clk         -- QNICE's 50 MHz main clock
+      );
+   clk_pixel : entity work.clk_p
+      port map
+      (
+         sys_clk_i         => CLK,
+         pixelclk_o        => vga_pixelclk      -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+      );
    
    -- signals neccessary due to Verilog in VHDL embedding
    i_fast_boot       <= '0';
@@ -183,6 +211,8 @@ begin
    -- TODO: Achieve timing closure also when using the debouncer   
    --i_reset           <= not dbnce_reset_n;   
    i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
+
+   is_CGB <= '1';
    
    -- The actual machine (GB/GBC core)
    gameboy : entity work.gb
@@ -267,7 +297,7 @@ begin
       );
 
    -- Speed control is mainly a clock divider and it also manages pause/resume/fast-forward/etc.
-   clk_ctrl : entity work.speedcontrol
+   gb_clk_ctrl : entity work.speedcontrol
       port map
       (
          clk_sys                 => main_clk,
@@ -393,24 +423,12 @@ begin
          end if;         
       end if;
    end process; 
-                    
-   -- MMCME2_ADV clock generator:
-   --    Core clock:          32 MHz
-   --    Pixelclock:          25.175 MHz
-   --    QNICE co-processor:  50 MHz   
-   clk_gen : entity work.clk
-      port map
-      (
-         sys_clk_i         => CLK,
-         pixelclk_o        => vga_pixelclk,  -- 25.175 MHz pixelclock for VGA 640x480 @ 60 Hz
-         gbmain_o          => main_clk       -- Game Boy's 32 MHz main clock
-      );
-      
+                          
    -- MEGA65 keyboard
    kbd : entity work.keyboard
       generic map
       (
-         CLOCK_SPEED       => 32_000_000
+         CLOCK_SPEED       => GB_CLK_SPEED
       )
       port map
       (
@@ -427,12 +445,12 @@ begin
    -- 5ms for any joystick direction
    -- 1ms for the fire button
    do_dbnce_reset_n : entity work.debounce
-      generic map(clk_freq => 32_000_000, stable_time => 40)
+      generic map(clk_freq => GB_CLK_SPEED, stable_time => 40)
       port map (clk => main_clk, reset_n => '1', button => RESET_N, result => dbnce_reset_n);
    do_dbnce_joysticks : entity work.debouncer
       generic map
       (
-         CLK_FREQ             => 32_000_000
+         CLK_FREQ             => GB_CLK_SPEED
       )
       port map
       (
@@ -452,24 +470,24 @@ begin
          dbnce_joy1_fire_n    => dbnce_joy1_fire_n
       );
 
-   -- VGA 640x480 @ 60 Hz      
+   -- SVGA mode 800 x 600 @ 60 Hz  
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)      
-   -- Timings taken from http://tinyvga.com/vga-timing/640x480@60Hz
+   -- Timings taken from http://tinyvga.com/vga-timing/800x600@60Hz
    vga_pixels_and_timing : entity work.vga_controller
       generic map
       (
-         h_pixels    => 640,              -- horiztonal display width in pixels
-         v_pixels    => 480,              -- vertical display width in rows
+         h_pixels    => VGA_DX,           -- horiztonal display width in pixels
+         v_pixels    => VGA_DY,           -- vertical display width in rows
          
-         h_pulse     => 96,               -- horiztonal sync pulse width in pixels
-         h_bp        => 48,               -- horiztonal back porch width in pixels
-         h_fp        => 16,               -- horiztonal front porch width in pixels
-         h_pol       => '0',              -- horizontal sync pulse polarity (1 = positive, 0 = negative)
+         h_pulse     => 128,              -- horiztonal sync pulse width in pixels
+         h_bp        => 88,               -- horiztonal back porch width in pixels
+         h_fp        => 40,               -- horiztonal front porch width in pixels
+         h_pol       => '1',              -- horizontal sync pulse polarity (1 = positive, 0 = negative)
          
-         v_pulse     => 2,                -- vertical sync pulse width in rows
-         v_bp        => 33,               -- vertical back porch width in rows
-         v_fp        => 10,               -- vertical front porch width in rows
-         v_pol       => '0'               -- vertical sync pulse polarity (1 = positive, 0 = negative)         
+         v_pulse     => 4,                -- vertical sync pulse width in rows
+         v_bp        => 23,               -- vertical back porch width in rows
+         v_fp        => 1,                -- vertical front porch width in rows
+         v_pol       => '1'               -- vertical sync pulse polarity (1 = positive, 0 = negative)         
       )
       port map
       (

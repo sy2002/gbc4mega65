@@ -12,8 +12,8 @@ create_clock -period 10.000 -name CLK [get_ports CLK]
 ## Make the general clocks and the pixelclock unrelated to other to avoid erroneous timing
 ## violations, and hopefully make everything synthesise faster
 set_clock_groups -asynchronous \
-     -group { CLK main_clk gbmain_mmcm} \
-     -group [get_clocks -of_objects [get_pins clk_gen/pixelclk_o]]
+     -group { CLK main_clk gbmain_mmcm qnice_mmcm} \
+     -group [get_clocks -of_objects [get_pins clk_pixel/pixelclk_o]]
      
 ## Reset button
 set_property -dict {PACKAGE_PIN M13 IOSTANDARD LVCMOS33} [get_ports RESET_N]
