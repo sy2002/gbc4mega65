@@ -104,6 +104,15 @@ end MEGA65_R2;
 
 architecture beh of MEGA65_R2 is
 
+-- ROM options
+constant GBC_ORG_ROM       : string := "../../rom/cgb_bios.rom";        -- Copyrighted original GBC ROM, not checked-in into official repo
+constant GBC_OSS_ROM       : string := "../../BootROMs/cgb_boot.rom";   -- Alternative Open Source GBC ROM
+constant DMG_ORG_ROM       : string := "../../rom/dmg_boot.rom";        -- Copyrighted original DMG ROM, not checked-in into official repo
+constant DMG_OSS_ROM       : string := "../../BootROMs/dmg_boot.rom";   -- Alternative Open Source DMG ROM
+
+constant GBC_ROM           : string := GBC_OSS_ROM;
+constant DMG_ROM           : string := GBC_OSS_ROM;
+
 -- clock speeds
 constant GB_CLK_SPEED      : integer := 33_554_432;
 constant QNICE_CLK_SPEED   : integer := 50_000_000;
@@ -321,19 +330,22 @@ begin
       );
                 
    -- BIOS ROM / BOOT ROM
-   boot_rom : entity work.BROM
+   boot_rom : entity work.dualport_2clk_ram
       generic map
       (
-         FILE_NAME   => "../../rom/cgb_bios.rom",
-         ADDR_WIDTH  => 12,
-         DATA_WIDTH  => 8
+         ADDR_WIDTH     => 12,
+         DATA_WIDTH     => 8,
+         ROM_PRELOAD    => true,
+         ROM_FILE       => GBC_ROM
       )
       port map
       (
-         CLK         => main_clk,
-         ce          => '1',
-         address     => gbc_bios_addr,
-         data        => gbc_bios_data
+         -- GBC ROM interface
+         clock_a        => main_clk,
+         address_a      => gbc_bios_addr,
+         q_a            => gbc_bios_data  
+         
+         -- QNICE RAM interface       
       );
      
    -- only for testing purposes

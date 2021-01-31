@@ -9,32 +9,64 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
+use STD.TEXTIO.ALL;
 
 entity dualport_2clk_ram is
 	generic (
-		 ADDR_WIDTH : integer := 8;
-		 DATA_WIDTH : integer := 8
+		 ADDR_WIDTH     : integer := 8;            -- The size of the RAM will be 2**ADDR_WIDTH
+		 DATA_WIDTH     : integer := 8;
+		 ROM_PRELOAD    : boolean := false;        -- Preload a ROM
+		 ROM_FILE       : string  := "";           
+		 LATCH_ADDR_A   : boolean := false;        -- latch address a when "do_latch_addr_a" = '1'
+		 LATCH_ADDR_B   : boolean := false         -- ditto address b
 	); 
 	port
 	(
-		clock_a      : IN STD_LOGIC;
-		address_a    : IN STD_LOGIC_VECTOR (addr_width-1 DOWNTO 0);
-		data_a       : IN STD_LOGIC_VECTOR (data_width-1 DOWNTO 0);
-		wren_a       : IN STD_LOGIC := '0';
-		q_a          : OUT STD_LOGIC_VECTOR (data_width-1 DOWNTO 0);
+		clock_a         : IN STD_LOGIC := '0';
+		address_a       : IN STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0) := (others => '0');
+		do_latch_addr_a : IN STD_LOGIC := '0';
+		data_a          : IN STD_LOGIC_VECTOR(DATA_WIDTH - 1 DOWNTO 0) := (others => '0');
+		wren_a          : IN STD_LOGIC := '0';
+		q_a             : OUT STD_LOGIC_VECTOR(DATA_WIDTH - 1 DOWNTO 0);
 
-		clock_b      : IN STD_LOGIC;
-		address_b    : IN STD_LOGIC_VECTOR (addr_width-1 DOWNTO 0);
-		data_b       : IN STD_LOGIC_VECTOR (data_width-1 DOWNTO 0) := (others => '0');
-		wren_b       : IN STD_LOGIC := '0';
-		q_b          : OUT STD_LOGIC_VECTOR (data_width-1 DOWNTO 0)
+		clock_b         : IN STD_LOGIC := '0';
+		address_b       : IN STD_LOGIC_VECTOR(ADDR_WIDTH - 1 DOWNTO 0) := (others => '0');
+		do_latch_addr_b : IN STD_LOGIC := '0';
+		data_b          : IN STD_LOGIC_VECTOR(DATA_WIDTH - 1 DOWNTO 0) := (others => '0');
+		wren_b          : IN STD_LOGIC := '0';
+		q_b             : OUT STD_LOGIC_VECTOR(DATA_WIDTH - 1 DOWNTO 0)
 	);
 end dualport_2clk_ram;
 
 architecture beh of dualport_2clk_ram is
 
-type        memory_t is array(0 to 2**ADDR_WIDTH-1) of std_logic_vector((DATA_WIDTH-1) downto 0);
-signal      ram               : memory_t;
+type        memory_t is array(0 to 2**ADDR_WIDTH - 1) of std_logic_vector((DATA_WIDTH - 1) downto 0);
+
+impure function InitRAMFromFile(ramfilename: string) return memory_t is
+   file     ramfile	   : text is in ramfilename;
+   variable ramfileline : line;
+   variable ram_data	   : memory_t;
+   variable bitvec      : bit_vector(DATA_WIDTH - 1 downto 0);
+begin
+   for i in memory_t'range loop
+      readline(ramfile, ramfileline);
+      read(ramfileline, bitvec);
+      ram_data(i) := to_stdlogicvector(bitvec);
+   end loop;
+   return ram_data;
+end function;
+
+-- Vivado 2019.2 crashes, if we are not using this indirection
+impure function InitRAM(ramfile: string) return memory_t is
+begin
+   if ROM_PRELOAD then
+      return InitRamFromFile(ramfile);
+   else
+      return (others => (others => '0'));
+   end if;
+end;
+
+signal      ram               : memory_t := InitRAM(ROM_FILE);
 attribute   ram_style         : string;
 attribute   ram_style of ram  : signal is "block";
 
@@ -42,9 +74,33 @@ signal      address_a_int     : integer;
 signal      address_b_int     : integer;
 
 begin
-   address_a_int <= to_integer(unsigned(address_a));
-   address_b_int <= to_integer(unsigned(address_b));
-
+   -- Optional latch management for A and B 
+   latch_address_a : process(clock_a, address_a)
+   begin
+      if LATCH_ADDR_A then
+         if rising_edge(clock_a) then
+            if do_latch_addr_a = '1' then
+               address_a_int <= to_integer(unsigned(address_a));
+            end if;               
+         end if;
+      else
+         address_a_int <= to_integer(unsigned(address_a));      
+      end if;
+   end process;   
+   
+   latch_address_b : process(clock_b, address_b)
+   begin
+      if LATCH_ADDR_B then
+         if rising_edge(clock_b) then
+            if do_latch_addr_b = '1' then
+               address_b_int <= to_integer(unsigned(address_b));
+            end if;               
+         end if;
+      else
+         address_b_int <= to_integer(unsigned(address_b));      
+      end if;
+   end process;   
+   
    -- Port A
    write_a : process(clock_a)
    begin
@@ -66,4 +122,5 @@ begin
          q_b <= ram(address_b_int);         
       end if;
    end process;
-end beh;							
+end beh;
+						
