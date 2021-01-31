@@ -17,7 +17,8 @@ entity BROM is
 generic (
    FILE_NAME    : string;
    ADDR_WIDTH   : integer := 16;
-   DATA_WIDTH   : integer := 16
+   DATA_WIDTH   : integer := 16;
+   LATCH_ACTIVE : boolean := true
 );
 port (
    clk          : in std_logic;                        -- read and write on rising clock edge
@@ -68,12 +69,16 @@ signal brom : brom_t := read_romfile(FILE_NAME);
 
 begin
 
-   latch_address : process(clk)
+   latch_address : process(clk, address)
    begin
-      if rising_edge(clk) then
-         if latch_addr = '1' then
-            addr_i <= address;
+      if LATCH_ACTIVE then
+         if rising_edge(clk) then
+            if latch_addr = '1' then
+               addr_i <= address;
+            end if;
          end if;
+      else
+         addr_i <= address;
       end if;
    end process;
    

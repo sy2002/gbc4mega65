@@ -132,7 +132,8 @@ begin
       (
          FILE_NAME            => "../../QNICE/monitor/monitor.rom",
          ADDR_WIDTH           => 15,
-         DATA_WIDTH           => 16
+         DATA_WIDTH           => 16,
+         LATCH_ACTIVE         => false
       )
       port map
       (
@@ -290,7 +291,7 @@ begin
    -- Additional gbc4mega65 specific MMIO
    csr_en             <= '1' when cpu_addr(15 downto 3) = x"FFE0" else '0';
    csr_we             <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out       <= "00000000000000" & gbc_pause & gbc_reset when csr_en = '1' else (others => '0');      
+   csr_data_out       <= "00000000000000" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');      
       
    -- Control and status register: Reset & Pause
    gbc_csr : process(clk50)

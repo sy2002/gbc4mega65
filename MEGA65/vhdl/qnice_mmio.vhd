@@ -240,16 +240,18 @@ begin
       end if;
    end process;
 
-   -- debounce the reset button
-   reset_btn_debouncer : debounce
-      generic map (
-         counter_size => 18            -- @TODO change to 19 when running with 100 MHz
-      )
-      port map (
-         clk => CLK,
-         button => HW_RESET,
-         result => debounced_hw_reset
-      );
+--   -- debounce the reset button
+--   reset_btn_debouncer : debounce
+--      generic map (
+--         counter_size => 18            -- @TODO change to 19 when running with 100 MHz
+--      )
+--      port map (
+--         clk => CLK,
+--         button => HW_RESET,
+--         result => debounced_hw_reset
+--      );
+   debounced_hw_reset <= HW_RESET;
+
 
    -- PORE state machine: advance state
    fsm_advance_state : process (clk, debounced_hw_reset)
