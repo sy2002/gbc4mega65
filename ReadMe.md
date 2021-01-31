@@ -6,6 +6,15 @@ done by sy2002 in 2021
 
 Special thanks to Robert Peip for his invaluable support.
 
+## Prepare SD Card
+
+Open Source ROMs included. For more authenticity, go to
+
+https://gbdev.gg8.se/files/roms/bootroms/
+
+and download dmg_boot.bin and cgb_bios.bin and place both in a folder called
+`/gbc`.
+
 # [Gameboy](https://en.wikipedia.org/wiki/Game_Boy)  / [Gameboy Color](https://en.wikipedia.org/wiki/Game_Boy_Color) for MiSTer Platform
 
 This is port of [Gameboy for MiST](https://github.com/mist-devel/mist-board/tree/master/cores/gameboy)

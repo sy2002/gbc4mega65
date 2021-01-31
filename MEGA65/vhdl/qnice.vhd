@@ -12,8 +12,13 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
 use work.env1_globals.all;
+use work.qnice_tools.all;
 
 entity QNICE is
+generic (
+   VGA_DX            : integer;
+   VGA_DY            : integer
+);
 port (
    -- QNICE MEGA65 hardware interface
    CLK50             : in std_logic;                  -- 50 MHz clock                                    
@@ -27,21 +32,34 @@ port (
    SD_MOSI           : out std_logic;
    SD_MISO           : in std_logic;
    
+   -- Host VGA interface
+   pixelclock        : in std_logic;
+   vga_x             : in integer range 0 to VGA_DX - 1;
+   vga_y             : in integer range 0 to VGA_DY - 1;
+   vga_rgb           : out std_logic_vector(7 downto 0); 
+   
    -- Information about the current game cartridge
-   cart_cgb_flag     : out std_logic_vector(7 downto 0);
-   cart_sgb_flag     : out std_logic_vector(7 downto 0);
-   cart_mbc_type     : out std_logic_vector(7 downto 0);
-   cart_rom_size     : out std_logic_vector(7 downto 0);
-   cart_ram_size     : out std_logic_vector(7 downto 0);
-   cart_old_licensee : out std_logic_vector(7 downto 0);
+   cart_cgb_flag     : buffer std_logic_vector(7 downto 0);
+   cart_sgb_flag     : buffer std_logic_vector(7 downto 0);
+   cart_mbc_type     : buffer std_logic_vector(7 downto 0);
+   cart_rom_size     : buffer std_logic_vector(7 downto 0);
+   cart_ram_size     : buffer std_logic_vector(7 downto 0);
+   cart_old_licensee : buffer std_logic_vector(7 downto 0);
 
    -- Control and status register
-   gbc_reset         : out std_logic;
-   gbc_pause         : out std_logic
+   gbc_reset         : buffer std_logic;
+   gbc_pause         : buffer std_logic
 ); 
 end QNICE;
 
 architecture beh of QNICE is
+
+-- Constants for VGA output
+constant FONT_DX              : integer := 16;
+constant FONT_DY              : integer := 16;
+constant CHARS_DX             : integer := VGA_DX / FONT_DX;
+constant CHARS_DY             : integer := VGA_DY / FONT_DY;
+constant CHAR_MEM_SIZE        : integer := CHARS_DX * CHARS_DY;
 
 -- CPU control signals
 signal cpu_addr               : std_logic_vector(15 downto 0);
@@ -82,6 +100,10 @@ signal sd_data_out            : std_logic_vector(15 downto 0);
 signal csr_en                 : std_logic;
 signal csr_we                 : std_logic;
 signal csr_data_out           : std_logic_vector(15 downto 0);
+signal vram_en                : std_logic;
+signal vram_we                : std_logic;
+signal vram_data_out_i        : std_logic_vector(7 downto 0);
+signal vram_data_out          : std_logic_vector(15 downto 0);
 
 attribute mark_debug                      : boolean;
 attribute mark_debug of reset_ctl         : signal is true;
@@ -103,7 +125,8 @@ begin
                   uart_data_out     or
                   eae_data_out      or
                   sd_data_out       or
-                  csr_data_out;
+                  csr_data_out      or
+                  vram_data_out;
                                     
    -- generate the general reset signal
    reset_ctl <= '1' when (reset_pre_pore = '1' or reset_post_pore = '1') else '0';                     
@@ -148,7 +171,7 @@ begin
       port map
       (
          clk                  => CLK50,
-         ce                   => ram_en,
+         ce                   => ram_en and not vram_en, -- VRAM is mapped from 0xD000
          address              => cpu_addr(14 downto 0),
          we                   => cpu_data_dir,         
          data_i               => cpu_data_out,
@@ -210,7 +233,8 @@ begin
     
     -- Standard QNICE-FPGA MMIO controller  
    mmio_std : entity work.mmio_mux
-      generic map (
+      generic map
+      (
          GD_TIL               => false,
          GD_SWITCHES          => true,
          GD_HRAM              => false,
@@ -287,19 +311,24 @@ begin
          hram_reg             => open, 
          hram_cpu_ws          => '0'          
       );
-      
-   -- Additional gbc4mega65 specific MMIO
-   csr_en             <= '1' when cpu_addr(15 downto 3) = x"FFE0" else '0';
-   csr_we             <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out       <= "00000000000000" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');      
-      
+               
+   -- Additional gbc4mega65 specific MMIO:
+   -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
+   -- 0xFFE0        : Game Boy control and status register
+   csr_en         <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
+   csr_we         <= csr_en and cpu_data_dir and cpu_data_valid;
+   csr_data_out   <= x"000" & "00" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');      
+   vram_en        <= '1' when cpu_addr(15 downto 12) = x"E" else '0';
+   vram_we        <= vram_en and cpu_data_dir and cpu_data_valid;
+   vram_data_out  <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
+            
    -- Control and status register: Reset & Pause
    gbc_csr : process(clk50)
    begin
-      if rising_edge(clk50) then
+      if falling_edge(clk50) then
          if reset_ctl = '1' then
             gbc_reset <= '1';
-            gbc_pause <= '1';
+            gbc_pause <= '0';
          elsif csr_we = '1' then
             gbc_reset <= cpu_data_out(0);
             gbc_pause <= cpu_data_out(1);
@@ -310,5 +339,26 @@ begin
    -- emulate the toggle switches as described in QNICE-FPGA's doc/README.md
    -- all zero: STDIN = STDOUT = UART
    switch_data_out <= (others => '0');
-         
+      
+   -- Dual port & dual clock screen RAM / video RAM: contains the "ASCII" codes of the characters
+   vram : entity work.dualport_2clk_ram
+      generic map
+      (
+          ADDR_WIDTH          => f_log2(CHAR_MEM_SIZE),
+          DATA_WIDTH          => 8
+      )
+      port map
+      (
+         clock_a              => not CLK50,        -- QNICE uses a tight timing and needs the RAM to be on the negative edge
+         address_a            => (others => '0'),
+         data_a               => cpu_data_out(7 downto 0),
+         wren_a               => vram_we,
+         q_a                  => vram_data_out_i,
+   
+         clock_b              => pixelclock,
+         address_b            => (others => '0'),
+         data_b               => (others => '0'),
+         wren_b               => '0',
+         q_b                  => open
+      );         
 end beh;

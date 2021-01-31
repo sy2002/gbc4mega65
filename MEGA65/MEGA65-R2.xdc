@@ -15,6 +15,10 @@ set_clock_groups -asynchronous \
      -group { CLK main_clk gbmain_mmcm qnice_mmcm} \
      -group [get_clocks -of_objects [get_pins clk_pixel/pixelclk_o]]
      
+set_clock_groups -asynchronous \
+     -group { CLK main_clk gbmain_mmcm } \
+     -group { qnice_mmcm }
+          
 ## QNICE's EAE combinatorial division networks take longer than
 ## the regular clock period, so we specify a multicycle path
 ## see also the comments in EAE.vhd and explanations in UG903/chapter 5/Multicycle Paths as well as ug911/page 25

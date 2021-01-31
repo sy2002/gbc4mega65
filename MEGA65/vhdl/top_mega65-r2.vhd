@@ -172,6 +172,10 @@ signal cart_di             : std_logic_vector(7 downto 0);
 -- the direction keys or the other buttons
 signal joypad_p54          : std_logic_vector(1 downto 0);
 signal joypad_data         : std_logic_vector(3 downto 0);
+
+-- QNICE control signals
+signal qngbc_reset         : std_logic;
+signal qngbc_pause         : std_logic;
  
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -223,7 +227,7 @@ begin
    gameboy : entity work.gb
       port map
       (
-         reset                   => i_reset,
+         reset                   => qngbc_reset,
                      
          clk_sys                 => main_clk,
          ce                      => sc_ce,
@@ -306,7 +310,7 @@ begin
       port map
       (
          clk_sys                 => main_clk,
-         pause                   => '0',
+         pause                   => qngbc_pause,
          speedup                 => '0',
          cart_act                => cart_rd or cart_wr,
          HDMA_on                 => HDMA_on,
@@ -565,6 +569,11 @@ begin
    
    -- QNICE Co-Processor (System-on-a-Chip) for ROM loading and On-Screen-Menu
    QNICE_SOC : entity work.QNICE
+      generic map
+      (
+         VGA_DX      => VGA_DX,
+         VGA_DY      => VGA_DY
+      )
       port map
       (
          CLK50       => qnice_clk,        -- 50 MHz clock                                    
@@ -579,6 +588,15 @@ begin
          SD_RESET    => SD_RESET,
          SD_CLK      => SD_CLK,
          SD_MOSI     => SD_MOSI,
-         SD_MISO     => SD_MISO         
+         SD_MISO     => SD_MISO,
+         
+         -- VGA interface
+         pixelclock  => vga_pixelclk,
+         vga_x       => vga_col,
+         vga_y       => vga_row,
+         
+         -- Game Boy control
+         gbc_reset   => qngbc_reset,
+         gbc_pause   => qngbc_pause
       );   
 end beh;
