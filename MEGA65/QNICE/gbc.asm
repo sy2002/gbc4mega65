@@ -17,6 +17,6 @@ GBC$CSR_UN_RESET    .EQU 0xFFFE
 GBC$CSR_PAUSE       .EQU 0x0002
 GBC$CSR_UN_PAUSE    .EQU 0xFFFD
 
-CARTRIDGE_WIN       .EQU 0xB000 ; 4kb window defined by GBC$CART_SEL
-BIOS                .EQU 0xC000 ; GBC or GB BIOS
-VRAM                .EQU 0xD000 ; Video RAM: "ASCII" characters
+MEM_CARTRIDGE_WIN   .EQU 0xB000 ; 4kb window defined by GBC$CART_SEL
+MEM_BIOS            .EQU 0xC000 ; GBC or GB BIOS
+MEM_VRAM            .EQU 0xD000 ; Video RAM: "ASCII" characters
