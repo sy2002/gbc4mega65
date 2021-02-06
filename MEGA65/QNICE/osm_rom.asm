@@ -28,7 +28,6 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 MOVE    MEM_BIOS, R9            ; MMIO location of "ROM RAM"
                 RSUB    LOAD_ROM, 1
 
-
                 MOVE    GBC$CSR, R0             ; R0 = control & status reg.
 
                 MOVE    @R0, R8
@@ -75,6 +74,19 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
 
                 SYSCALL(exit, 1)
 
+
+DEBUG_WAIT      INCRB
+                MOVE    1000, R0
+_WAITLOOP2      MOVE    0xFFFF, R1
+_WAITLOOP1      SUB     1, R1
+                RBRA    _WAITLOOP1, !Z
+                SUB     1, R0
+                RBRA    _WAITLOOP2, !Z
+                DECRB
+                RET
+
+DEBUG_HALT      HALT                
+
 TEST_STR1       .ASCII_W "GBC is reset and paused\n"
 TEST_STR2       .ASCII_W "GBC is running\n"
 TEST_STR3       .ASCII_W "GBC is paused\n"
@@ -82,7 +94,7 @@ TEST_STR4       .ASCII_W "GBC is running\n"
 
 STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 - MiSTer port done by sy2002 in 2021\n\n"
 
-STR_ROM_FF      .ASCII_W " found. Using original ROM.\n"
+STR_ROM_FF      .ASCII_W " found. Using given ROM.\n"
 STR_ROM_FNF     .ASCII_W " not found. Will use built-in open source ROM instead.\n"
 
 FN_DMG_ROM      .ASCII_W "/gbc/dmg_boot.bin"
@@ -90,6 +102,7 @@ FN_GBC_ROM      .ASCII_W "/gbc/cgb_bios.bin"
 FN_START_DIR    .ASCII_W "/gbc"
 
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
+ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long."
 
 ; ----------------------------------------------------------------------------
 ; SD Card / file system functions
@@ -120,9 +133,13 @@ CHKORMNT        XOR     R9, R9
 _CHKORMNT_RET   RET
 
 ; Check, if original ROM is available and load it.
-; R8: full path to file to be loaded
-; R9: MMIO address of "ROM RAM"
+;  R8: full path to file to be loaded
+;  R9: MMIO address of "ROM RAM"
+; R10: 0 = file found, using ROM from file
+;      1 = file not found, using Open Source ROM
+;      2 = load error, corrupt state, system should halt
 LOAD_ROM        INCRB
+                MOVE    R9, R7                  ; R7: MMIO addr. of "ROM RAM"
                 RSUB    PRINTSTR, 1             ; print full file path
                 MOVE    R8, R10                 ; R10: full path to file
                 MOVE    SD_DEVHANDLE, R8        ; R8: device handle
@@ -133,11 +150,28 @@ LOAD_ROM        INCRB
                 RBRA    _LR_FOPEN_OK, Z         ; yes: process
                 MOVE    STR_ROM_FNF, R8         ; no: print msg and use ..
                 RSUB    PRINTSTR, 1             ; .. Open Source ROM instead
+                MOVE    1, R10                  ; return with code 1
                 RBRA    _LOAD_ROM_RET, 1
 
 _LR_FOPEN_OK    MOVE    STR_ROM_FF, R8
                 RSUB    PRINTSTR, 1
+                MOVE    R9, R8                  ; R8: valid file handle
+                MOVE    R7, R0                  ; R0: MMIO BIOS "ROM RAM"
+                MOVE    R0, R1                  ; R1: maximum length
+                ADD     MEM_BIOS_MAXLEN, R1                
 
+_LR_LOAD_LOOP   SYSCALL(f32_fread, 1)           ; read one byte
+                CMP     FAT32$EOF, R10          ; EOF?
+                RBRA    _LR_LOAD_OK, Z          ; yes: close file and end
+                MOVE    R9, @R0++               ; no: store byte in "ROM RAM"
+                CMP     R0, R1                  ; maximum length reached?
+                RBRA    _LR_LOAD_LOOP, !Z       ; no: continue
+                MOVE    2, R10                  ; yes: illegal/corrupt file
+                RBRA    _LR_FCLOSE, 1           ; end with code 2
+
+_LR_LOAD_OK     XOR     R10, R10                ; R10 = 0: file load OK                
+_LR_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
+                MOVE    0, @R8
 _LOAD_ROM_RET   DECRB
                 RET
 

@@ -339,8 +339,9 @@ begin
       (
          ADDR_WIDTH     => 12,
          DATA_WIDTH     => 8,
-         ROM_PRELOAD    => false,
-         ROM_FILE       => GBC_ROM
+         ROM_PRELOAD    => false,      -- TODO/DEBUG -- load default ROM in case no other ROM is on the SD card 
+         ROM_FILE       => GBC_ROM,
+         FALLING_B      => true        -- QNICE reads/writes on the falling clock edge
       )
       port map
       (
@@ -350,7 +351,7 @@ begin
          q_a            => gbc_bios_data, 
          
          -- QNICE RAM interface 
-         clock_b        => not qnice_clk,       -- QNICE reads/writes on the negative clock edge
+         clock_b        => qnice_clk,
          address_b      => qngbc_bios_addr,
          data_b         => qngbc_bios_data_in,
          wren_b         => qngbc_bios_we,

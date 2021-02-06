@@ -18,7 +18,9 @@ entity dualport_2clk_ram is
 		 ROM_PRELOAD    : boolean := false;        -- Preload a ROM
 		 ROM_FILE       : string  := "";           
 		 LATCH_ADDR_A   : boolean := false;        -- latch address a when "do_latch_addr_a" = '1'
-		 LATCH_ADDR_B   : boolean := false         -- ditto address b
+		 LATCH_ADDR_B   : boolean := false;        -- ditto address b
+		 FALLING_A      : boolean := false;        -- read/write on falling edge for clock a
+		 FALLING_B      : boolean := false         -- ditto clock b		 		 
 	); 
 	port
 	(
@@ -78,10 +80,18 @@ begin
    latch_address_a : process(clock_a, address_a)
    begin
       if LATCH_ADDR_A then
-         if rising_edge(clock_a) then
-            if do_latch_addr_a = '1' then
-               address_a_int <= to_integer(unsigned(address_a));
-            end if;               
+         if not FALLING_A then
+            if rising_edge(clock_a) then
+               if do_latch_addr_a = '1' then
+                  address_a_int <= to_integer(unsigned(address_a));
+               end if;               
+            end if;
+         else
+            if falling_edge(clock_a) then
+               if do_latch_addr_a = '1' then
+                  address_a_int <= to_integer(unsigned(address_a));
+               end if;               
+            end if;         
          end if;
       else
          address_a_int <= to_integer(unsigned(address_a));      
@@ -91,10 +101,18 @@ begin
    latch_address_b : process(clock_b, address_b)
    begin
       if LATCH_ADDR_B then
-         if rising_edge(clock_b) then
-            if do_latch_addr_b = '1' then
-               address_b_int <= to_integer(unsigned(address_b));
-            end if;               
+         if not FALLING_B then
+            if rising_edge(clock_b) then
+               if do_latch_addr_b = '1' then
+                  address_b_int <= to_integer(unsigned(address_b));
+               end if;               
+            end if;
+         else
+            if falling_edge(clock_b) then
+               if do_latch_addr_b = '1' then
+                  address_b_int <= to_integer(unsigned(address_b));
+               end if;               
+            end if;         
          end if;
       else
          address_b_int <= to_integer(unsigned(address_b));      
@@ -104,23 +122,40 @@ begin
    -- Port A
    write_a : process(clock_a)
    begin
-      if rising_edge(clock_a) then
-         if wren_a = '1' then
-            ram(address_a_int) <= data_a;
+      if not FALLING_A then
+         if rising_edge(clock_a) then
+            if wren_a = '1' then
+               ram(address_a_int) <= data_a;
+            end if;
+            q_a <= ram(address_a_int);         
          end if;
-         q_a <= ram(address_a_int);         
+      else
+         if falling_edge(clock_a) then
+            if wren_a = '1' then
+               ram(address_a_int) <= data_a;
+            end if;
+            q_a <= ram(address_a_int);         
+         end if;      
       end if;
    end process;
 
    -- Port B
    write_b : process(clock_b)
    begin
-      if rising_edge(clock_b) then
-         if wren_b = '1' then
-            ram(address_b_int) <= data_b;
+      if not FALLING_B then
+         if rising_edge(clock_b) then
+            if wren_b = '1' then
+               ram(address_b_int) <= data_b;
+            end if;
+            q_b <= ram(address_b_int);         
          end if;
-         q_b <= ram(address_b_int);         
+      else
+         if falling_edge(clock_b) then
+            if wren_b = '1' then
+               ram(address_b_int) <= data_b;
+            end if;
+            q_b <= ram(address_b_int);         
+         end if;      
       end if;
    end process;
 end beh;
-						
