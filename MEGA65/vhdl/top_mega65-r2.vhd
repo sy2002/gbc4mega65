@@ -334,7 +334,7 @@ begin
       );
                 
    -- BIOS ROM / BOOT ROM
-   boot_rom : entity work.dualport_2clk_ram
+   bios_rom : entity work.dualport_2clk_ram
       generic map
       (
          ADDR_WIDTH     => 12,

@@ -86,6 +86,7 @@ signal reset_post_pore           : std_logic;
 signal rom_en                    : std_logic;
 signal rom_data_out              : std_logic_vector(15 downto 0);
 signal ram_en                    : std_logic;
+signal ram_en_maybe              : std_logic;                        -- output of standard MMIO module without taking care of gbc specific MMIO 
 signal ram_busy                  : std_logic;
 signal ram_data_out              : std_logic_vector(15 downto 0);
 signal switch_data_out           : std_logic_vector(15 downto 0);
@@ -113,6 +114,7 @@ signal vram_data_out_i           : std_logic_vector(7 downto 0);
 signal vram_data_out             : std_logic_vector(15 downto 0);
 signal gbc_bios_en               : std_logic;
 signal gbc_bios_data_out_16bit   : std_logic_vector(15 downto 0);
+signal gbc_cart_en               : std_logic;
 
 begin
 
@@ -171,7 +173,7 @@ begin
       port map
       (
          clk                  => CLK50,
-         ce                   => ram_en and not vram_en, -- VRAM is mapped from 0xD000
+         ce                   => ram_en,
          address              => cpu_addr(14 downto 0),
          we                   => cpu_data_dir,         
          data_i               => cpu_data_out,
@@ -260,7 +262,8 @@ begin
          rom_busy             => '0',
          
          -- RAM is enabled when the address is in ($8000..$FEFF)
-         ram_enable           => ram_en,
+         -- QNICE's standard MMIO module is not aware of gbc specific MMIO, this is why this signal is just a "maybe"
+         ram_enable           => ram_en_maybe,
          ram_busy             => '0',
                           
          -- SWITCHES is $FF00
@@ -317,16 +320,19 @@ begin
    -- 0xC000..0xCFFF: BIOS/BOOT "ROM RAM": 4kb
    -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
    -- 0xFFE0        : Game Boy control and status register
+   ram_en                  <= '1' when ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                  <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                  <= csr_en and cpu_data_dir and cpu_data_valid;
    csr_data_out            <= x"000" & "00" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
    vram_en                 <= '1' when cpu_addr(15 downto 12) = x"D" else '0';
    vram_we                 <= vram_en and cpu_data_dir and cpu_data_valid;
    vram_data_out           <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
+   gbc_bios_addr           <= cpu_addr(11 downto 0);
    gbc_bios_en             <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
    gbc_bios_we             <= '1' when gbc_bios_en and cpu_data_dir and cpu_data_valid;
    gbc_bios_data_out_16bit <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0'); 
    gbc_bios_data_in        <= cpu_data_out(7 downto 0);
+   gbc_cart_en             <= '0';
             
    -- Control and status register: Reset & Pause
    gbc_csr : process(clk50)
