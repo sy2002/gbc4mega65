@@ -166,7 +166,6 @@ PRINTCRLF       INCRB
 
 ; ----------------------------------------------------------------------------
 ; Variables (need to be located in RAM)
-; Returns: Always the value 3 in R8
 ; ----------------------------------------------------------------------------
 
 SD_DEVHANDLE   .BLOCK  FAT32$DEV_STRUCT_SIZE   ; SD card device handle

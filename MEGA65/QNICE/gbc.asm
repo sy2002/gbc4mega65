@@ -10,7 +10,7 @@
 GBC$CSR             .EQU 0xFFE0 ; Control and status register
     ; Bit      0: Reset
     ; Bit      1: Pause
-GBC$CART_SEL        .EQU 0xFFE1 ; 
+GBC$CART_SEL        .EQU 0xFFE1 ; window selector for MEM_CARTRIDGE_WIN
 
 GBC$CSR_RESET       .EQU 0x0001
 GBC$CSR_UN_RESET    .EQU 0xFFFE

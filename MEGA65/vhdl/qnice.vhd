@@ -37,18 +37,25 @@ port (
    vga_x             : in integer range 0 to VGA_DX - 1;
    vga_y             : in integer range 0 to VGA_DY - 1;
    vga_rgb           : out std_logic_vector(7 downto 0); 
-   
+
+   -- Control and status register
+   gbc_reset         : buffer std_logic;
+   gbc_pause         : buffer std_logic;
+
+   -- Interfaces to Game Boy's RAMs (MMIO):
+   gbc_bios_addr     : out std_logic_vector(11 downto 0);
+   gbc_bios_we       : out std_logic;
+   gbc_bios_data_in  : out std_logic_vector(7 downto 0);
+   gbc_bios_data_out : in std_logic_vector(7 downto 0);
+      
    -- Information about the current game cartridge
    cart_cgb_flag     : buffer std_logic_vector(7 downto 0);
    cart_sgb_flag     : buffer std_logic_vector(7 downto 0);
    cart_mbc_type     : buffer std_logic_vector(7 downto 0);
    cart_rom_size     : buffer std_logic_vector(7 downto 0);
    cart_ram_size     : buffer std_logic_vector(7 downto 0);
-   cart_old_licensee : buffer std_logic_vector(7 downto 0);
+   cart_old_licensee : buffer std_logic_vector(7 downto 0)
 
-   -- Control and status register
-   gbc_reset         : buffer std_logic;
-   gbc_pause         : buffer std_logic
 ); 
 end QNICE;
 
@@ -104,29 +111,22 @@ signal vram_en                : std_logic;
 signal vram_we                : std_logic;
 signal vram_data_out_i        : std_logic_vector(7 downto 0);
 signal vram_data_out          : std_logic_vector(15 downto 0);
-
-attribute mark_debug                      : boolean;
-attribute mark_debug of reset_ctl         : signal is true;
-attribute mark_debug of cpu_addr          : signal is true;
-attribute mark_debug of cpu_data_in       : signal is true;
-attribute mark_debug of cpu_data_out      : signal is true;
-attribute mark_debug of cpu_data_dir      : signal is true;
-attribute mark_debug of cpu_data_valid    : signal is true;
-attribute mark_debug of cpu_wait_for_data : signal is true;
-attribute mark_debug of cpu_halt          : signal is true;
+signal gbc_bios_en            : std_logic;
+signal gbc_bios_data_out_i    : std_logic_vector(7 downto 0);
 
 begin
 
    -- Merge data outputs from all devices into a single data input to the CPU.
    -- This requires that all devices output 0's when not selected.
-   cpu_data_in <= rom_data_out      or
-                  ram_data_out      or
-                  switch_data_out   or
-                  uart_data_out     or
-                  eae_data_out      or
-                  sd_data_out       or
-                  csr_data_out      or
-                  vram_data_out;
+   cpu_data_in <= rom_data_out         or
+                  ram_data_out         or
+                  switch_data_out      or
+                  uart_data_out        or
+                  eae_data_out         or
+                  sd_data_out          or
+                  csr_data_out         or
+                  vram_data_out        or
+                  gbc_bios_data_out_i;
                                     
    -- generate the general reset signal
    reset_ctl <= '1' when (reset_pre_pore = '1' or reset_post_pore = '1') else '0';                     
@@ -313,14 +313,20 @@ begin
       );
                
    -- Additional gbc4mega65 specific MMIO:
+   -- 0xB000..0xBFFF: Game Cartridge RAM: 4kb gliding window defined by 0xFFE1
+   -- 0xC000..0xCFFF: BIOS/BOOT "ROM RAM": 4kb
    -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
    -- 0xFFE0        : Game Boy control and status register
-   csr_en         <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
-   csr_we         <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out   <= x"000" & "00" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');      
-   vram_en        <= '1' when cpu_addr(15 downto 12) = x"E" else '0';
-   vram_we        <= vram_en and cpu_data_dir and cpu_data_valid;
-   vram_data_out  <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
+   csr_en               <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
+   csr_we               <= csr_en and cpu_data_dir and cpu_data_valid;
+   csr_data_out         <= x"000" & "00" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
+   vram_en              <= '1' when cpu_addr(15 downto 12) = x"D" else '0';
+   vram_we              <= vram_en and cpu_data_dir and cpu_data_valid;
+   vram_data_out        <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
+   gbc_bios_en          <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
+   gbc_bios_we          <= '1' when gbc_bios_en and cpu_data_dir and cpu_data_valid;
+   gbc_bios_data_out_i  <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0'); 
+   gbc_bios_data_in     <= cpu_data_out(7 downto 0);
             
    -- Control and status register: Reset & Pause
    gbc_csr : process(clk50)

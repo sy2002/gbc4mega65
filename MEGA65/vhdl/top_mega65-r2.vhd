@@ -185,6 +185,10 @@ signal joypad_data         : std_logic_vector(3 downto 0);
 -- QNICE control signals
 signal qngbc_reset         : std_logic;
 signal qngbc_pause         : std_logic;
+signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
+signal qngbc_bios_we       : std_logic;
+signal qngbc_bios_data_in  : std_logic_vector(7 downto 0);
+signal qngbc_bios_data_out : std_logic_vector(7 downto 0);
  
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -335,7 +339,7 @@ begin
       (
          ADDR_WIDTH     => 12,
          DATA_WIDTH     => 8,
-         ROM_PRELOAD    => true,
+         ROM_PRELOAD    => false,
          ROM_FILE       => GBC_ROM
       )
       port map
@@ -343,9 +347,14 @@ begin
          -- GBC ROM interface
          clock_a        => main_clk,
          address_a      => gbc_bios_addr,
-         q_a            => gbc_bios_data  
+         q_a            => gbc_bios_data, 
          
-         -- QNICE RAM interface       
+         -- QNICE RAM interface 
+         clock_b        => not qnice_clk,       -- QNICE reads/writes on the negative clock edge
+         address_b      => qngbc_bios_addr,
+         data_b         => qngbc_bios_data_in,
+         wren_b         => qngbc_bios_we,
+         q_b            => qngbc_bios_data_out         
       );
      
    -- only for testing purposes
@@ -583,32 +592,38 @@ begin
    QNICE_SOC : entity work.QNICE
       generic map
       (
-         VGA_DX      => VGA_DX,
-         VGA_DY      => VGA_DY
+         VGA_DX            => VGA_DX,
+         VGA_DY            => VGA_DY
       )
       port map
       (
-         CLK50       => qnice_clk,        -- 50 MHz clock                                    
-         RESET_N     => RESET_N,
+         CLK50             => qnice_clk,        -- 50 MHz clock                                    
+         RESET_N           => RESET_N,
          
          -- serial communication (rxd, txd only; rts/cts are not available)
          -- 115.200 baud, 8-N-1
-         UART_RXD    => UART_RXD,         -- receive data
-         UART_TXD    => UART_TXD,         -- send data   
+         UART_RXD          => UART_RXD,         -- receive data
+         UART_TXD          => UART_TXD,         -- send data   
                  
          -- SD Card
-         SD_RESET    => SD_RESET,
-         SD_CLK      => SD_CLK,
-         SD_MOSI     => SD_MOSI,
-         SD_MISO     => SD_MISO,
+         SD_RESET          => SD_RESET,
+         SD_CLK            => SD_CLK,
+         SD_MOSI           => SD_MOSI,
+         SD_MISO           => SD_MISO,
          
          -- VGA interface
-         pixelclock  => vga_pixelclk,
-         vga_x       => vga_col,
-         vga_y       => vga_row,
+         pixelclock        => vga_pixelclk,
+         vga_x             => vga_col,
+         vga_y             => vga_row,
          
          -- Game Boy control
-         gbc_reset   => qngbc_reset,
-         gbc_pause   => qngbc_pause
+         gbc_reset         => qngbc_reset,
+         gbc_pause         => qngbc_pause,
+         
+         -- Interfaces to Game Boy's RAMs (MMIO):
+         gbc_bios_addr     => qngbc_bios_addr,
+         gbc_bios_we       => qngbc_bios_we,
+         gbc_bios_data_in  => qngbc_bios_data_in,
+         gbc_bios_data_out => qngbc_bios_data_out         
       );   
 end beh;
