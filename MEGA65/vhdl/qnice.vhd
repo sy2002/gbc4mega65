@@ -320,7 +320,7 @@ begin
    -- 0xC000..0xCFFF: BIOS/BOOT "ROM RAM": 4kb
    -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
    -- 0xFFE0        : Game Boy control and status register
-   ram_en                  <= '1' when ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
+   ram_en                  <= '1' when ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en else '0';  -- exclude gbc specific MMIO areas
    csr_en                  <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                  <= csr_en and cpu_data_dir and cpu_data_valid;
    csr_data_out            <= x"000" & "00" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');

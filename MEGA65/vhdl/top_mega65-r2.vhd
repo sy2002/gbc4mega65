@@ -110,7 +110,7 @@ constant GBC_OSS_ROM       : string := "../../BootROMs/cgb_boot.rom";   -- Alter
 constant DMG_ORG_ROM       : string := "../../rom/dmg_boot.rom";        -- Copyrighted original DMG ROM, not checked-in into official repo
 constant DMG_OSS_ROM       : string := "../../BootROMs/dmg_boot.rom";   -- Alternative Open Source DMG ROM
 
-constant GBC_ROM           : string := GBC_OSS_ROM;
+constant GBC_ROM           : string := GBC_OSS_ROM;   -- use Open Source ROMs by default
 constant DMG_ROM           : string := GBC_OSS_ROM;
 
 -- clock speeds
@@ -118,16 +118,16 @@ constant GB_CLK_SPEED      : integer := 33_554_432;
 constant QNICE_CLK_SPEED   : integer := 50_000_000;
 
 -- rendering constants
-constant GB_DX             : integer := 160;       -- Game Boy's X pixel resolution
-constant GB_DY             : integer := 144;       -- ditto Y
-constant VGA_DX            : integer := 800;       -- SVGA mode 800 x 600 @ 60 Hz
-constant VGA_DY            : integer := 600;       -- ditto
-constant GB_TO_VGA_SCALE   : integer := 4;         -- 160 x 144 => 4x => 640 x 576
+constant GB_DX             : integer := 160;          -- Game Boy's X pixel resolution
+constant GB_DY             : integer := 144;          -- ditto Y
+constant VGA_DX            : integer := 800;          -- SVGA mode 800 x 600 @ 60 Hz
+constant VGA_DY            : integer := 600;          -- ditto
+constant GB_TO_VGA_SCALE   : integer := 4;            -- 160 x 144 => 4x => 640 x 576
 
 -- clocks
-signal main_clk            : std_logic;            -- Game Boy core main clock @ 33.554432 MHz
-signal vga_pixelclk        : std_logic;            -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
-signal qnice_clk           : std_logic;            -- QNICE main clock @ 50 MHz
+signal main_clk            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
+signal vga_pixelclk        : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
+signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 MHz
 
 -- VGA signals
 signal vga_disp_en         : std_logic;
