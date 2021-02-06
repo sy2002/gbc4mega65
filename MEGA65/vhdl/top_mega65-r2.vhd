@@ -14,6 +14,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
+use work.qnice_tools.all;
 
 entity MEGA65_R2 is
 port (
@@ -104,6 +105,14 @@ end MEGA65_R2;
 
 architecture beh of MEGA65_R2 is
 
+-- Maximum size of cartridge ROM and RAM
+-- as long as we are not yet leveraging HyperRAM, these two parameters
+-- are the main distinction between the MEGA65 R2 and R3, as R3 has a much larger FPGA
+constant CART_ROM_MAX_R2   : integer := 64 * 1024;
+constant CART_RAM_MAX_R2   : integer := 32 * 1024;
+constant CART_ROM_MAX      : integer := CART_ROM_MAX_R2; 
+constant CART_RAM_MAX      : integer := CART_RAM_MAX_R2;
+
 -- ROM options
 constant GBC_ORG_ROM       : string := "../../rom/cgb_bios.rom";        -- Copyrighted original GBC ROM, not checked-in into official repo
 constant GBC_OSS_ROM       : string := "../../BootROMs/cgb_boot.rom";   -- Alternative Open Source GBC ROM
@@ -189,7 +198,17 @@ signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
 signal qngbc_bios_we       : std_logic;
 signal qngbc_bios_data_in  : std_logic_vector(7 downto 0);
 signal qngbc_bios_data_out : std_logic_vector(7 downto 0);
- 
+signal qngbc_cart_addr     : std_logic_vector(22 downto 0);
+signal qngbc_cart_we       : std_logic;
+signal qngbc_cart_data_in  : std_logic_vector(7 downto 0);
+signal qngbc_cart_data_out : std_logic_vector(7 downto 0);
+
+attribute MARK_DEBUG                         : string;
+attribute MARK_DEBUG of qngbc_cart_addr      : signal is "TRUE";
+attribute MARK_DEBUG of qngbc_cart_we        : signal is "TRUE";
+attribute MARK_DEBUG of qngbc_cart_data_in   : signal is "TRUE";
+attribute MARK_DEBUG of qngbc_cart_data_out  : signal is "TRUE";
+
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
 signal i_fast_boot         : std_logic;
@@ -358,22 +377,32 @@ begin
          q_b            => qngbc_bios_data_out         
       );
      
-   -- only for testing purposes
-   -- TODO: needs to be removed and replaced by cartridge RAM and a cartridge loader
-   tetris_test : entity work.BROM
+   game_cart : entity work.dualport_2clk_ram
       generic map
       (
-         FILE_NAME   => "../../rom/tetris.rom",
-         ADDR_WIDTH  => 16,
-         DATA_WIDTH  => 8
+         ADDR_WIDTH        => f_log2(CART_ROM_MAX),   -- TODO: depends on R2 vs. R3 and TODO adjust address_b
+         DATA_WIDTH        => 8,
+         ROM_PRELOAD       => true,
+         ROM_FILE          => "../../rom/tetris.rom",
+         LATCH_ADDR_A      => true,       -- the gbc core expects that the RAM latches the address on cart_rd
+         FALLING_B         => true        -- QNICE reads/writes on the falling clock edge
       )
       port map
       (
-         CLK         => main_clk,
-         ce          => '1',
-         latch_addr  => cart_rd,
-         address     => cart_addr,
-         data        => cart_do   
+         -- GBC Game Cartridge Interface
+         clock_a           => main_clk,
+         address_a         => cart_addr,
+         do_latch_addr_a   => cart_rd,
+         data_a            => cart_di,
+         wren_a            => cart_wr,
+         q_a               => cart_do,
+         
+         -- QNICE RAM interface
+         clock_b           => qnice_clk,
+         address_b         => qngbc_cart_addr(15 downto 0),
+         data_b            => qngbc_cart_data_in,
+         wren_b            => qngbc_cart_we,
+         q_b               => qngbc_cart_data_out  
       );
 
    -- Dual clock & dual port RAM that acts as framebuffer: the LCD display of the gameboy is
@@ -625,6 +654,10 @@ begin
          gbc_bios_addr     => qngbc_bios_addr,
          gbc_bios_we       => qngbc_bios_we,
          gbc_bios_data_in  => qngbc_bios_data_in,
-         gbc_bios_data_out => qngbc_bios_data_out         
+         gbc_bios_data_out => qngbc_bios_data_out,
+         gbc_cart_addr     => qngbc_cart_addr,
+         gbc_cart_we       => qngbc_cart_we,
+         gbc_cart_data_in  => qngbc_cart_data_in,
+         gbc_cart_data_out => qngbc_cart_data_out             
       );   
 end beh;

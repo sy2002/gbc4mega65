@@ -28,6 +28,23 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 MOVE    MEM_BIOS, R9            ; MMIO location of "ROM RAM"
                 RSUB    LOAD_ROM, 1
 
+                ; Load Tetris
+                MOVE    STR_CART_LOAD, R8
+                RSUB    PRINTSTR, 1
+                MOVE    TMP_TETRIS, R8
+                RSUB    PRINTSTR, 1
+                MOVE    MEM_CARTRIDGE_WIN, R9
+                MOVE    GBC$CART_SEL, R10  
+                RSUB    LOAD_CART, 1
+                CMP     0, R11
+                RBRA    CART_OK, Z
+                MOVE    ERR_LOAD_CART, R8
+                RSUB    PRINTSTR, 1
+                HALT                            ; TODO
+
+CART_OK         MOVE    STR_CART_DONE, R8
+                RSUB    PRINTSTR, 1
+
                 MOVE    GBC$CSR, R0             ; R0 = control & status reg.
 
                 MOVE    @R0, R8
@@ -72,6 +89,25 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 RSUB    PRINTSTR, 1
                 SYSCALL(getc, 1)
 
+                ; Load and start KWIRK
+                MOVE    GBC$CSR, R0
+                MOVE    1, @R0
+
+                MOVE    STR_CART_LOAD, R8
+                RSUB    PRINTSTR, 1
+                MOVE    TMP_KWIRK, R8
+                RSUB    PRINTSTR, 1
+                MOVE    MEM_CARTRIDGE_WIN, R9
+                MOVE    GBC$CART_SEL, R10  
+                RSUB    LOAD_CART, 1
+                CMP     0, R11
+                RBRA    CART2_OK, Z
+                MOVE    ERR_LOAD_CART, R8
+                RSUB    PRINTSTR, 1
+                HALT                            ; TODO
+
+CART2_OK        MOVE    0, @R0
+
                 SYSCALL(exit, 1)
 
 
@@ -85,24 +121,30 @@ _WAITLOOP1      SUB     1, R1
                 DECRB
                 RET
 
-DEBUG_HALT      HALT                
+DEBUG_HALT      HALT              
 
 TEST_STR1       .ASCII_W "GBC is reset and paused\n"
 TEST_STR2       .ASCII_W "GBC is running\n"
 TEST_STR3       .ASCII_W "GBC is paused\n"
 TEST_STR4       .ASCII_W "GBC is running\n"
 
+TMP_TETRIS      .ASCII_W "/gbc/tetris.gb"
+TMP_KWIRK       .ASCII_W "/gbc/kwirk.gb"
+
 STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 - MiSTer port done by sy2002 in 2021\n\n"
 
 STR_ROM_FF      .ASCII_W " found. Using given ROM.\n"
 STR_ROM_FNF     .ASCII_W " not found. Will use built-in open source ROM instead.\n"
+STR_CART_LOAD   .ASCII_W "Loading cartridge: "
+STR_CART_DONE   .ASCII_W "  Done.\n"
 
 FN_DMG_ROM      .ASCII_W "/gbc/dmg_boot.bin"
 FN_GBC_ROM      .ASCII_W "/gbc/cgb_bios.bin"
 FN_START_DIR    .ASCII_W "/gbc"
 
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
-ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long."
+ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
+ERR_LOAD_CART   .ASCII_W "  ERROR!\n"
 
 ; ----------------------------------------------------------------------------
 ; SD Card / file system functions
@@ -165,14 +207,55 @@ _LR_LOAD_LOOP   SYSCALL(f32_fread, 1)           ; read one byte
                 RBRA    _LR_LOAD_OK, Z          ; yes: close file and end
                 MOVE    R9, @R0++               ; no: store byte in "ROM RAM"
                 CMP     R0, R1                  ; maximum length reached?
-                RBRA    _LR_LOAD_LOOP, !Z       ; no: continue
+                RBRA    _LR_LOAD_LOOP, !Z       ; no: continue with next byte
                 MOVE    2, R10                  ; yes: illegal/corrupt file
+                MOVE    ERR_LOAD_ROM, R8
+                RBRA    PRINTSTR, 1
                 RBRA    _LR_FCLOSE, 1           ; end with code 2
 
 _LR_LOAD_OK     XOR     R10, R10                ; R10 = 0: file load OK                
 _LR_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
                 MOVE    0, @R8
 _LOAD_ROM_RET   DECRB
+                RET
+
+; Check, if original ROM is available and load it.
+;  R8: full path to file to be loaded
+;  R9: MMIO address of "ROM RAM"
+; R10: MMIO address of window selector
+; R11: 0 = OK
+;      1 = file not found
+LOAD_CART       INCRB
+                MOVE    R9, R0                  ; R0: MMIO addr. of 4k win.
+                MOVE    R10, R1                 ; R1: MMIO of win. selector
+                MOVE    R8, R10                 ; R9: full path to cart. file
+                XOR     R11, R11                ; 0 = "/" is path separator
+                MOVE    SD_DEVHANDLE, R8        ; R8: device handle
+                MOVE    FILEHANDLE, R9          ; R9: file handle
+                SYSCALL(f32_fopen, 1)
+                CMP     0, R10                  ; file open worked?
+                RBRA    _LC_FOPEN_OK, Z         ; yes: process
+                MOVE    1, R11                  ; end with code 1
+                RBRA    _LC_FCLOSE, 1
+
+_LC_FOPEN_OK    MOVE    R9, R8                  ; R8: valid file handle
+                MOVE    0, @R1                  ; start with 0 as win. sel.
+                MOVE    R0, R3                  ; window boundary + 1
+                ADD     MEM_CARTWIN_MAXLEN, R3
+_LC_LOAD_LOOP1  MOVE    R0, R2                  ; R2: write pointer to 4k win.
+_LC_LOAD_LOOP2  SYSCALL(f32_fread, 1)
+                CMP     FAT32$EOF, R10          ; EOF?
+                RBRA    _LC_LOAD_OK, Z          ; yes: close file and end  
+                MOVE    R9, @R2++               ; store byte in cart. mem.
+                CMP     R3, R2                  ; window boundary reached?
+                RBRA    _LC_LOAD_LOOP2, !Z      ; no: continue with next byte
+                ADD     1, @R1                  ; next cart. mem. window
+                RBRA    _LC_LOAD_LOOP1, 1
+
+_LC_LOAD_OK     XOR     R11, R11                ; end with code 0
+_LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
+                MOVE    0, @R8            
+                DECRB
                 RET
 
 ; ----------------------------------------------------------------------------

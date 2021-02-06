@@ -23,3 +23,4 @@ MEM_BIOS            .EQU 0xC000 ; GBC or GB BIOS
 MEM_VRAM            .EQU 0xD000 ; Video RAM: "ASCII" characters
 
 MEM_BIOS_MAXLEN     .EQU 0x1000 ; maximum length of BIOS
+MEM_CARTWIN_MAXLEN  .EQU 0x1000 ; length of cartridge window

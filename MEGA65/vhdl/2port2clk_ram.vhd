@@ -49,11 +49,14 @@ impure function InitRAMFromFile(ramfilename: string) return memory_t is
    variable ramfileline : line;
    variable ram_data	   : memory_t;
    variable bitvec      : bit_vector(DATA_WIDTH - 1 downto 0);
+   variable i           : integer;
 begin
-   for i in memory_t'range loop
+   i := 0;
+   while not endfile(ramfile) loop
       readline(ramfile, ramfileline);
       read(ramfileline, bitvec);
       ram_data(i) := to_stdlogicvector(bitvec);
+      i := i + 1;
    end loop;
    return ram_data;
 end function;

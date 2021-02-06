@@ -47,7 +47,11 @@ port (
    gbc_bios_we       : out std_logic;
    gbc_bios_data_in  : out std_logic_vector(7 downto 0);
    gbc_bios_data_out : in std_logic_vector(7 downto 0);
-      
+   gbc_cart_addr     : out std_logic_vector(22 downto 0);
+   gbc_cart_we       : out std_logic;
+   gbc_cart_data_in  : out std_logic_vector(7 downto 0);
+   gbc_cart_data_out : in std_logic_vector(7 downto 0);
+         
    -- Information about the current game cartridge
    cart_cgb_flag     : buffer std_logic_vector(7 downto 0);
    cart_sgb_flag     : buffer std_logic_vector(7 downto 0);
@@ -66,7 +70,7 @@ constant FONT_DX                 : integer := 16;
 constant FONT_DY                 : integer := 16;
 constant CHARS_DX                : integer := VGA_DX / FONT_DX;
 constant CHARS_DY                : integer := VGA_DY / FONT_DY;
-constant CHAR_MEM_SIZE           : integer := CHARS_DX * CHARS_DY;
+constant CHAR_MEM_SIZE           : integer := (CHARS_DX + 1) * (CHARS_DY + 1);
 
 -- CPU control signals
 signal cpu_addr                  : std_logic_vector(15 downto 0);
@@ -105,16 +109,23 @@ signal sd_reg                    : std_logic_vector(2 downto 0);
 signal sd_data_out               : std_logic_vector(15 downto 0);
 
 -- GBC specific MMIO signals
-signal csr_en                    :  std_logic;
+signal csr_en                    : std_logic;                        -- $FFE0
 signal csr_we                    : std_logic;
 signal csr_data_out              : std_logic_vector(15 downto 0);
-signal vram_en                   : std_logic;
+signal gbc_cart_sel_en           : std_logic;                        -- $FFE1
+signal gbc_cart_sel_we           : std_logic;
+signal gbc_cart_sel_data_out     : std_logic_vector(15 downto 0);
+signal vram_en                   : std_logic;                        -- $D000
 signal vram_we                   : std_logic;
 signal vram_data_out_i           : std_logic_vector(7 downto 0);
 signal vram_data_out             : std_logic_vector(15 downto 0);
-signal gbc_bios_en               : std_logic;
+signal gbc_bios_en               : std_logic;                        -- $C000
 signal gbc_bios_data_out_16bit   : std_logic_vector(15 downto 0);
-signal gbc_cart_en               : std_logic;
+signal gbc_cart_en               : std_logic;                        -- $B000
+signal gbc_cart_data_out_16bit   : std_logic_vector(15 downto 0);
+
+-- The cartridge address is up to 8 MB large and is calculated like this: (gbc_cart_sel x 4096) + gbc_cart_win
+signal gbc_cart_sel              : integer range 0 to 2047; 
 
 begin
 
@@ -128,7 +139,9 @@ begin
                   sd_data_out             or
                   csr_data_out            or
                   vram_data_out           or
-                  gbc_bios_data_out_16bit;
+                  gbc_bios_data_out_16bit or
+                  gbc_cart_data_out_16bit or
+                  gbc_cart_sel_data_out;
                                     
    -- generate the general reset signal
    reset_ctl <= '1' when (reset_pre_pore = '1' or reset_post_pore = '1') else '0';                     
@@ -316,10 +329,11 @@ begin
       );
                
    -- Additional gbc4mega65 specific MMIO:
-   -- 0xB000..0xBFFF: Game Cartridge RAM: 4kb gliding window defined by 0xFFE1
+   -- 0xB000..0xBFFF: Game Cartridge RAM: 4kb gliding window defined by 0xFFE1 multiplied by 4096
    -- 0xC000..0xCFFF: BIOS/BOOT "ROM RAM": 4kb
    -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
    -- 0xFFE0        : Game Boy control and status register
+   -- 0xFFE1        : Selector for the gliding Cartridge RAM window (multiplied by 4096)
    ram_en                  <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                  <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                  <= csr_en and cpu_data_dir and cpu_data_valid;
@@ -330,20 +344,37 @@ begin
    gbc_bios_addr           <= cpu_addr(11 downto 0);
    gbc_bios_en             <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
    gbc_bios_we             <= gbc_bios_en and cpu_data_dir and cpu_data_valid;
-   gbc_bios_data_out_16bit <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0'); 
    gbc_bios_data_in        <= cpu_data_out(7 downto 0);
-   gbc_cart_en             <= '0';
-            
-   -- Control and status register: Reset & Pause
+   gbc_bios_data_out_16bit <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0');
+   gbc_cart_addr           <= std_logic_vector(to_unsigned(gbc_cart_sel, 11)) & cpu_addr(11 downto 0); -- up to 8 MB ROM size: 4096 x gbc_cart_sel + address in window
+   gbc_cart_en             <= '1' when cpu_addr(15 downto 12) = x"B" else '0';
+   gbc_cart_we             <= gbc_cart_en and cpu_data_dir and cpu_data_valid;
+   gbc_cart_data_in        <= cpu_data_out(7 downto 0);
+   gbc_cart_data_out_16bit <= x"00" & gbc_cart_data_out when gbc_cart_en = '1' and gbc_cart_we = '0' else (others => '0');
+   gbc_cart_sel_en         <= '1' when cpu_addr = x"FFE1" else '0';
+   gbc_cart_sel_we         <= gbc_cart_sel_en and cpu_data_dir and cpu_data_valid;
+   gbc_cart_sel_data_out   <= "00000" & std_logic_vector(to_unsigned(gbc_cart_sel, 11)) when gbc_cart_sel_en = '1' and gbc_cart_sel_we = '0' else (others => '0');
+               
+   -- GBC registers
+   --   CSR: Control and status register: Reset & Pause
+   --   cart_sel: Cartridge "ROM RAM" 4096-byte window selector
    gbc_csr : process(clk50)
    begin
       if falling_edge(clk50) then
          if reset_ctl = '1' then
             gbc_reset <= '1';
             gbc_pause <= '0';
-         elsif csr_we = '1' then
-            gbc_reset <= cpu_data_out(0);
-            gbc_pause <= cpu_data_out(1);
+         else
+            -- CSR register
+            if csr_we = '1' then
+               gbc_reset <= cpu_data_out(0);
+               gbc_pause <= cpu_data_out(1);
+            end if;
+            
+            -- cartridge window selector
+            if gbc_cart_sel_we = '1' then
+               gbc_cart_sel <= to_integer(unsigned(cpu_data_out(10 downto 0))); -- 0 .. 2047 
+            end if;
          end if;
       end if;
    end process;
