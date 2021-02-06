@@ -49,9 +49,8 @@ impure function InitRAMFromFile(ramfilename: string) return memory_t is
    variable ramfileline : line;
    variable ram_data	   : memory_t;
    variable bitvec      : bit_vector(DATA_WIDTH - 1 downto 0);
-   variable i           : integer;
+   variable i           : natural := 0;
 begin
-   i := 0;
    while not endfile(ramfile) loop
       readline(ramfile, ramfileline);
       read(ramfileline, bitvec);

@@ -358,7 +358,7 @@ begin
       (
          ADDR_WIDTH     => 12,
          DATA_WIDTH     => 8,
-         ROM_PRELOAD    => false,      -- TODO/DEBUG -- load default ROM in case no other ROM is on the SD card 
+         ROM_PRELOAD    => true,       -- load default ROM in case no other ROM is on the SD card 
          ROM_FILE       => GBC_ROM,
          FALLING_B      => true        -- QNICE reads/writes on the falling clock edge
       )
@@ -382,8 +382,7 @@ begin
       (
          ADDR_WIDTH        => f_log2(CART_ROM_MAX),   -- TODO: depends on R2 vs. R3 and TODO adjust address_b
          DATA_WIDTH        => 8,
-         ROM_PRELOAD       => true,
-         ROM_FILE          => "../../rom/tetris.rom",
+         ROM_PRELOAD       => false,
          LATCH_ADDR_A      => true,       -- the gbc core expects that the RAM latches the address on cart_rd
          FALLING_B         => true        -- QNICE reads/writes on the falling clock edge
       )
