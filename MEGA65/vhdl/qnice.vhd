@@ -478,7 +478,7 @@ begin
    end process;
       
    -- render OSM: calculate the pixel that needs to be shown at the given position   
-   render_osm : process(vga_x, vga_x_old, vga_y, osm_vram_data, osm_font_data)
+   render_osm : process(vga_x, vga_x_old, vga_y_old, osm_vram_data, osm_font_data, osm_x1, osm_y1, osm_x2, osm_y2, gbc_osm)
       variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
       variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
       variable vga_x_mod_16 : integer range 0 to 15;
