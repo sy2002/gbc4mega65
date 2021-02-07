@@ -202,12 +202,9 @@ signal qngbc_cart_addr     : std_logic_vector(22 downto 0);
 signal qngbc_cart_we       : std_logic;
 signal qngbc_cart_data_in  : std_logic_vector(7 downto 0);
 signal qngbc_cart_data_out : std_logic_vector(7 downto 0);
+signal qngbc_osm_on        : std_logic;
+signal qngbc_osm_rgb       : std_logic_vector(7 downto 0);
 
-attribute MARK_DEBUG                         : string;
-attribute MARK_DEBUG of qngbc_cart_addr      : signal is "TRUE";
-attribute MARK_DEBUG of qngbc_cart_we        : signal is "TRUE";
-attribute MARK_DEBUG of qngbc_cart_data_in   : signal is "TRUE";
-attribute MARK_DEBUG of qngbc_cart_data_out  : signal is "TRUE";
 
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -392,8 +389,8 @@ begin
          clock_a           => main_clk,
          address_a         => cart_addr,
          do_latch_addr_a   => cart_rd,
-         data_a            => cart_di,
-         wren_a            => cart_wr,
+--         data_a            => cart_di,
+--         wren_a            => cart_wr,
          q_a               => cart_do,
          
          -- QNICE RAM interface
@@ -583,9 +580,15 @@ begin
       if rising_edge(vga_pixelclk) then 
          if vga_disp_en then
             if vga_col < GB_DX * GB_TO_VGA_SCALE and vga_row < GB_DY * GB_TO_VGA_SCALE then
-               VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
-               VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
-               VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
+               if qngbc_osm_on then
+                  VGA_RED   <= (others => qngbc_osm_rgb(0));
+                  VGA_GREEN <= (others => qngbc_osm_rgb(0));
+                  VGA_BLUE  <= (others => qngbc_osm_rgb(0));                  
+               else
+                  VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
+                  VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
+                  VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
+               end if;
             else
                VGA_RED   <= (others => '0');
                VGA_GREEN <= (others => '0');
@@ -644,7 +647,9 @@ begin
          pixelclock        => vga_pixelclk,
          vga_x             => vga_col,
          vga_y             => vga_row,
-         
+         vga_on            => qngbc_osm_on,
+         vga_rgb           => qngbc_osm_rgb,
+                  
          -- Game Boy control
          gbc_reset         => qngbc_reset,
          gbc_pause         => qngbc_pause,

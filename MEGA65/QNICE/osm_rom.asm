@@ -13,7 +13,14 @@
 
                 .ORG    0x8000                  ; start at 0x8000
 
+                ; initialize variables
                 MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
+                MOVE    0, @R8
+                MOVE    FILEHANDLE, R8          ; ditto file handle
+                MOVE    0, @R8
+                MOVE    CUR_X, R8               ; cursor X = 0
+                MOVE    0, @R8
+                MOVE    CUR_Y, R8               ; ditto cursor Y
                 MOVE    0, @R8
 
                 MOVE    STR_TITLE, R8           ; welcome message
@@ -31,7 +38,7 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 ; Load Tetris
                 MOVE    STR_CART_LOAD, R8
                 RSUB    PRINTSTR, 1
-                MOVE    TMP_TETRIS, R8
+                MOVE    TMP_KWIRK, R8
                 RSUB    PRINTSTR, 1
                 MOVE    MEM_CARTRIDGE_WIN, R9
                 MOVE    GBC$CART_SEL, R10  
@@ -55,8 +62,6 @@ CART_OK         MOVE    STR_CART_DONE, R8
                 RSUB    PRINTSTR, 1
                 SYSCALL(getc, 1)
 
-                ; on reset, is on continous reset
-
                 AND     GBC$CSR_UN_RESET, @R0   ; un-reset => system runs now
 
                 MOVE    @R0, R8
@@ -66,6 +71,49 @@ CART_OK         MOVE    STR_CART_DONE, R8
                 MOVE    TEST_STR2, R8
                 RSUB    PRINTSTR, 1
                 SYSCALL(getc, 1)
+
+                ; ------------------------------------------------------------
+                ; DEBUG COMPARE
+                ; ------------------------------------------------------------
+
+                MOVE    SD_DEVHANDLE, R8
+                MOVE    FILEHANDLE, R9
+                MOVE    0, @R9
+                MOVE    TMP_KWIRK, R10
+                XOR     R11, R11
+                SYSCALL(f32_fopen, 1)
+                MOVE    R9, R8
+
+                MOVE    MEM_CARTRIDGE_WIN, R0
+                MOVE    GBC$CART_SEL, R1
+                MOVE    0, @R1
+                MOVE    R0, R3
+                ADD     MEM_CARTWIN_MAXLEN, R3
+
+CMP_LOOP1       MOVE    R0, R2
+CMP_LOOP2       SYSCALL(f32_fread, 1)
+                CMP     FAT32$EOF, R10          
+                RBRA    CMP_OK, Z 
+                CMP     R9, @R2++
+                RBRA    CMP_LOOP3, Z
+
+                MOVE    R8, R7
+                MOVE    R2, R8
+                SUB     1, R8
+                RSUB    PRINTHEX, 1
+                MOVE    R9, R8
+                RSUB    PRINTHEX, 1
+                RSUB    PRINTCRLF, 1
+                MOVE    R7, R8
+
+CMP_LOOP3       CMP     R3, R2    
+                RBRA    CMP_LOOP2, !Z
+                ADD     1, @R1     
+                RBRA    CMP_LOOP1, 1
+
+CMP_OK          SYSCALL(exit, 1)
+
+                ; ------------------------------------------------------------
 
                 ; pause
                 OR      GBC$CSR_PAUSE, @R0      ; pause
@@ -264,9 +312,19 @@ _LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
 
 ; Print the string in R8 on the current cursor position on the screen
 ; and in parallel to the UART
-PRINTSTR        INCRB
+PRINTSTR        RSUB    ENTER, 1
+
                 SYSCALL(puts, 1)
-                DECRB
+
+                RSUB    CALC_VRAM, 1            ; R8: VRAM addr of curs. pos.
+                MOVE    'H', @R8++
+                MOVE    'a', @R8++
+                MOVE    'l', @R8++
+                MOVE    'l', @R8++
+                MOVE    'o', @R8++
+                MOVE    '!', @R8++
+
+                RSUB    LEAVE, 1
                 RET
 
 ; Print the number in R8 in hexadecimal
@@ -281,10 +339,52 @@ PRINTCRLF       INCRB
                 DECRB
                 RET
 
+; Calculates the VRAM address for the current cursor pos in CUR_X & CUR_Y
+; R8: VRAM address
+CALC_VRAM       RSUB    ENTER, 1
+
+                MOVE    MEM_VRAM, R0            ; video ram address equals ..    
+                MOVE    CUR_Y, R8               ; .. CUR_Y x GBC$OSM_COLS ..
+                MOVE    @R8, R8
+                MOVE    GBC$OSM_COLS, R9
+                SYSCALL(mulu, 1)                ; R10 = R8 x R9
+                MOVE    CUR_X, R8
+                MOVE    @R8, R8
+                ADD     R8, R10                 ; .. + CUR_X
+                ADD     R10, R0                 ; R0 = video RAM addr
+
+                MOVE    R0, @--SP
+                RSUB    LEAVE, 1
+                MOVE    @SP++, R8
+                RET
+
+; ----------------------------------------------------------------------------
+; Misc helper functions
+; ----------------------------------------------------------------------------
+
+ENTER           INCRB
+                MOVE    R8, R0
+                MOVE    R9, R1
+                MOVE    R10, R2
+                MOVE    R11, R3
+                MOVE    R12, R4
+                INCRB
+                RET
+
+LEAVE           DECRB
+                MOVE    R0, R8
+                MOVE    R1, R9
+                MOVE    R2, R10
+                MOVE    R3, R11
+                MOVE    R4, R12
+                DECRB
+                RET
+
 ; ----------------------------------------------------------------------------
 ; Variables (need to be located in RAM)
 ; ----------------------------------------------------------------------------
 
 SD_DEVHANDLE   .BLOCK  FAT32$DEV_STRUCT_SIZE   ; SD card device handle
 FILEHANDLE     .BLOCK  FAT32$FDH_STRUCT_SIZE   ; File handle
-
+CUR_X          .BLOCK  1                       ; OSD cursor x coordinate
+CUR_Y          .BLOCK  1                       ; ditto y

@@ -32,15 +32,19 @@ port (
    SD_MOSI           : out std_logic;
    SD_MISO           : in std_logic;
    
-   -- Host VGA interface
+   -- Host VGA interface:
+   -- The host requests one pixel in advance and QNICE responds with vga_on if this pixel is
+   -- an OSD pixel and if yes, vga_rgb contains the color
    pixelclock        : in std_logic;
    vga_x             : in integer range 0 to VGA_DX - 1;
    vga_y             : in integer range 0 to VGA_DY - 1;
-   vga_rgb           : out std_logic_vector(7 downto 0); 
+   vga_on            : out std_logic;
+   vga_rgb           : out std_logic_vector(7 downto 0);
 
    -- Control and status register
-   gbc_reset         : buffer std_logic;
-   gbc_pause         : buffer std_logic;
+   gbc_reset         : buffer std_logic;     -- reset Game Boy
+   gbc_pause         : buffer std_logic;     -- pause Game Boy
+   gbc_osm           : buffer std_logic;     -- show QNICE's On-Screen-Menu (OSM) over the Game Boy's Screen
 
    -- Interfaces to Game Boy's RAMs (MMIO):
    gbc_bios_addr     : out std_logic_vector(11 downto 0);
@@ -70,7 +74,8 @@ constant FONT_DX                 : integer := 16;
 constant FONT_DY                 : integer := 16;
 constant CHARS_DX                : integer := VGA_DX / FONT_DX;
 constant CHARS_DY                : integer := VGA_DY / FONT_DY;
-constant CHAR_MEM_SIZE           : integer := (CHARS_DX + 1) * (CHARS_DY + 1);
+constant CHAR_MEM_SIZE           : integer := CHARS_DX * CHARS_DY;
+constant VRAM_ADDR_WIDTH         : integer := f_log2(CHAR_MEM_SIZE);
 
 -- CPU control signals
 signal cpu_addr                  : std_logic_vector(15 downto 0);
@@ -125,7 +130,15 @@ signal gbc_cart_en               : std_logic;                        -- $B000
 signal gbc_cart_data_out_16bit   : std_logic_vector(15 downto 0);
 
 -- The cartridge address is up to 8 MB large and is calculated like this: (gbc_cart_sel x 4096) + gbc_cart_win
-signal gbc_cart_sel              : integer range 0 to 2047; 
+signal gbc_cart_sel              : integer range 0 to 2047;
+
+-- On-Screen-Menu (OSM)
+signal vga_x_old                 : integer range 0 to VGA_DX - 1;
+signal vga_y_old                 : integer range 0 to VGA_DY - 1;
+signal osm_vram_addr             : std_logic_vector(VRAM_ADDR_WIDTH - 1 downto 0);
+signal osm_vram_data             : std_logic_vector(7 downto 0);
+signal osm_font_addr             : std_logic_vector(11 downto 0);
+signal osm_font_data             : std_logic_vector(15 downto 0);
 
 begin
 
@@ -337,7 +350,7 @@ begin
    ram_en                  <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                  <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                  <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out            <= x"000" & "00" & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
+   csr_data_out            <= x"000" & "0" & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
    vram_en                 <= '1' when cpu_addr(15 downto 12) = x"D" else '0';
    vram_we                 <= vram_en and cpu_data_dir and cpu_data_valid;
    vram_data_out           <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
@@ -364,11 +377,13 @@ begin
          if reset_ctl = '1' then
             gbc_reset <= '1';
             gbc_pause <= '0';
+            gbc_osm   <= '1';
          else
             -- CSR register
             if csr_we = '1' then
                gbc_reset <= cpu_data_out(0);
                gbc_pause <= cpu_data_out(1);
+               gbc_osm   <= cpu_data_out(2);
             end if;
             
             -- cartridge window selector
@@ -387,21 +402,70 @@ begin
    vram : entity work.dualport_2clk_ram
       generic map
       (
-          ADDR_WIDTH          => f_log2(CHAR_MEM_SIZE),
-          DATA_WIDTH          => 8
+          ADDR_WIDTH          => VRAM_ADDR_WIDTH,
+          DATA_WIDTH          => 8,
+          FALLING_A           => true              -- QNICE expects read/write to happen at the falling clock edge
       )
       port map
       (
-         clock_a              => not CLK50,        -- QNICE uses a tight timing and needs the RAM to be on the negative edge
-         address_a            => (others => '0'),
+         clock_a              => CLK50,
+         address_a            => cpu_addr(VRAM_ADDR_WIDTH - 1 downto 0),
          data_a               => cpu_data_out(7 downto 0),
          wren_a               => vram_we,
          q_a                  => vram_data_out_i,
    
          clock_b              => pixelclock,
-         address_b            => (others => '0'),
-         data_b               => (others => '0'),
-         wren_b               => '0',
-         q_b                  => open
-      );         
+         address_b            => osm_vram_addr,
+         q_b                  => osm_vram_data
+      );
+            
+   font : entity work.BROM
+      generic map
+      (
+         FILE_NAME      => "../font/Anikki-16x16.rom",
+         ADDR_WIDTH     => 12,
+         DATA_WIDTH     => 16,
+         LATCH_ACTIVE   => false
+      )
+      port map
+      (
+         clk            => pixelclock,
+         ce             => '1',
+         address        => osm_font_addr,
+         data           => osm_font_data
+      );
+      
+   latch_vga_x : process(pixelclock)
+   begin
+      if rising_edge(pixelclock) then
+         vga_x_old <= vga_x;
+         vga_y_old <= vga_y;
+      end if;
+   end process;
+      
+   -- render OSM: calculate the pixel that needs to be shown at the given position   
+   render_osm : process(vga_x, vga_x_old, vga_y, osm_vram_data, osm_font_data)
+   variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
+   variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
+   variable vga_x_mod_16 : integer range 0 to 15;
+   variable vga_y_mod_16 : integer range 0 to 15;
+   begin
+      vga_x_div_16 := to_integer(to_unsigned(vga_x, 16)(9 downto 4));
+      vga_y_div_16 := to_integer(to_unsigned(vga_y, 16)(9 downto 4));
+      vga_x_mod_16 := to_integer(to_unsigned(vga_x_old, 16)(3 downto 0));
+      vga_y_mod_16 := to_integer(to_unsigned(vga_y_old, 16)(3 downto 0));
+      osm_vram_addr <= std_logic_vector(to_unsigned(vga_y_div_16 * CHARS_DX + vga_x_div_16, VRAM_ADDR_WIDTH));
+      osm_font_addr <= std_logic_vector(to_unsigned(to_integer(unsigned(osm_vram_data)) * FONT_DY + vga_y_mod_16, 12));
+      if osm_font_data(15 - vga_x_mod_16) = '1' then
+         vga_rgb <= (others => '1');
+      else
+         vga_rgb <= (others => '0');
+      end if;
+      
+      if vga_x_div_16 < 50 and vga_y_div_16 < 4 then
+         vga_on <= gbc_osm;
+      else
+         vga_on <= '0';
+      end if;
+   end process;   
 end beh;

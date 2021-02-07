@@ -16,7 +16,7 @@ set_clock_groups -asynchronous \
      -group [get_clocks -of_objects [get_pins clk_pixel/pixelclk_o]]
      
 set_clock_groups -asynchronous \
-     -group { CLK main_clk gbmain_mmcm } \
+     -group { CLK gbmain_mmcm } \
      -group { qnice_mmcm }
           
 ## QNICE's EAE combinatorial division networks take longer than
