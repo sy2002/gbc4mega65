@@ -579,26 +579,19 @@ begin
    begin
       if rising_edge(vga_pixelclk) then 
          if vga_disp_en then
+            -- Game Boy output
             if vga_col < GB_DX * GB_TO_VGA_SCALE and vga_row < GB_DY * GB_TO_VGA_SCALE then
-               if qngbc_osm_on then
-                  VGA_RED   <= (others => qngbc_osm_rgb(0));
-                  VGA_GREEN <= (others => qngbc_osm_rgb(0));
-                  VGA_BLUE  <= (others => qngbc_osm_rgb(0));                  
-               else
-                  VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
-                  VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
-                  VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
-               end if;
-            else
-               VGA_RED   <= (others => '0');
-               VGA_GREEN <= (others => '0');
-               VGA_BLUE  <= (others => '1');
+               VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
+               VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
+               VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
             end if;       
          
---            -- debug output to test, if VGA and vga_col/vga_row works       
---            VGA_RED   <= std_logic_vector(to_unsigned(vga_col + vga_row, 32)(7 downto 0));
---            VGA_BLUE  <= std_logic_vector(to_unsigned(vga_row, 9)(8 downto 3)) & "11";
---            VGA_GREEN <= std_logic_vector(to_unsigned(vga_col, 10)(9 downto 4)) & "11";
+            -- On-Screen-Menu (OSM) output
+            if qngbc_osm_on then
+               VGA_RED   <= (others => qngbc_osm_rgb(0));
+               VGA_GREEN <= (others => qngbc_osm_rgb(0));
+               VGA_BLUE  <= (others => qngbc_osm_rgb(0));                  
+            end if;
 
          -- for some reason, the VDAC does not like non-zero values outside the visible window
          -- maybe "vdac_sync_n <= '0';" activates sync-on-green?

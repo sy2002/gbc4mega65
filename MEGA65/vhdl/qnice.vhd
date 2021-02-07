@@ -119,11 +119,17 @@ signal csr_we                    : std_logic;
 signal csr_data_out              : std_logic_vector(15 downto 0);
 signal gbc_cart_sel_en           : std_logic;                        -- $FFE1
 signal gbc_cart_sel_we           : std_logic;
+signal osm_xy_en                 : std_logic;                        -- $FFE2
+signal osm_xy_we                 : std_logic;
+signal osm_xy_data_out           : std_logic_vector(15 downto 0);
+signal osm_dxdy_en               : std_logic;                        -- $FFE3
+signal osm_dxdy_we               : std_logic;
+signal osm_dxdy_data_out         : std_logic_vector(15 downto 0);
 signal gbc_cart_sel_data_out     : std_logic_vector(15 downto 0);
 signal vram_en                   : std_logic;                        -- $D000
 signal vram_we                   : std_logic;
 signal vram_data_out_i           : std_logic_vector(7 downto 0);
-signal vram_data_out             : std_logic_vector(15 downto 0);
+signal vram_data_out_16bit       : std_logic_vector(15 downto 0);
 signal gbc_bios_en               : std_logic;                        -- $C000
 signal gbc_bios_data_out_16bit   : std_logic_vector(15 downto 0);
 signal gbc_cart_en               : std_logic;                        -- $B000
@@ -139,6 +145,10 @@ signal osm_vram_addr             : std_logic_vector(VRAM_ADDR_WIDTH - 1 downto 0
 signal osm_vram_data             : std_logic_vector(7 downto 0);
 signal osm_font_addr             : std_logic_vector(11 downto 0);
 signal osm_font_data             : std_logic_vector(15 downto 0);
+signal osm_xy                    : std_logic_vector(15 downto 0);
+signal osm_dxdy                  : std_logic_vector(15 downto 0);
+signal osm_x1, osm_x2            : integer range 0 to CHARS_DX - 1;
+signal osm_y1, osm_y2            : integer range 0 to CHARS_DY - 1;
 
 begin
 
@@ -151,10 +161,12 @@ begin
                   eae_data_out            or
                   sd_data_out             or
                   csr_data_out            or
-                  vram_data_out           or
+                  vram_data_out_16bit     or
                   gbc_bios_data_out_16bit or
                   gbc_cart_data_out_16bit or
-                  gbc_cart_sel_data_out;
+                  gbc_cart_sel_data_out   or
+                  osm_xy_data_out         or
+                  osm_dxdy_data_out;
                                     
    -- generate the general reset signal
    reset_ctl <= '1' when (reset_pre_pore = '1' or reset_post_pore = '1') else '0';                     
@@ -347,13 +359,15 @@ begin
    -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
    -- 0xFFE0        : Game Boy control and status register
    -- 0xFFE1        : Selector for the gliding Cartridge RAM window (multiplied by 4096)
+   -- 0xFFE2        : X and Y coordinate (in chars, hi/lo) where the OSM window will start
+   -- 0xFFE3        : DX and DY size (in chars, hi/lo) of the OSM window
    ram_en                  <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                  <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                  <= csr_en and cpu_data_dir and cpu_data_valid;
    csr_data_out            <= x"000" & "0" & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
    vram_en                 <= '1' when cpu_addr(15 downto 12) = x"D" else '0';
    vram_we                 <= vram_en and cpu_data_dir and cpu_data_valid;
-   vram_data_out           <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
+   vram_data_out_16bit     <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
    gbc_bios_addr           <= cpu_addr(11 downto 0);
    gbc_bios_en             <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
    gbc_bios_we             <= gbc_bios_en and cpu_data_dir and cpu_data_valid;
@@ -367,17 +381,27 @@ begin
    gbc_cart_sel_en         <= '1' when cpu_addr = x"FFE1" else '0';
    gbc_cart_sel_we         <= gbc_cart_sel_en and cpu_data_dir and cpu_data_valid;
    gbc_cart_sel_data_out   <= "00000" & std_logic_vector(to_unsigned(gbc_cart_sel, 11)) when gbc_cart_sel_en = '1' and gbc_cart_sel_we = '0' else (others => '0');
+   osm_xy_en               <= '1' when cpu_addr = x"FFE2" else '0';
+   osm_xy_we               <= osm_xy_en and cpu_data_dir and cpu_data_valid;
+   osm_xy_data_out         <= osm_xy when osm_xy_en = '1' and osm_xy_we = '0' else (others => '0');
+   osm_dxdy_en             <= '1' when cpu_addr = x"FFE3" else '0';
+   osm_dxdy_we             <= osm_dxdy_en and cpu_data_dir and cpu_data_valid;
+   osm_dxdy_data_out       <= osm_dxdy when osm_dxdy_en = '1' and osm_dxdy_we = '0' else (others => '0');
                
-   -- GBC registers
+   -- Registers
    --   CSR: Control and status register: Reset & Pause
    --   cart_sel: Cartridge "ROM RAM" 4096-byte window selector
-   gbc_csr : process(clk50)
+   --   osm_xy: X and Y coordinate (in chars, hi/lo) where the OSM window will start
+   --   osm_dxdy: DX and DY size (in chars, hi/lo) of the OSM window
+   handle_regs : process(clk50)
    begin
       if falling_edge(clk50) then
          if reset_ctl = '1' then
             gbc_reset <= '1';
             gbc_pause <= '0';
             gbc_osm   <= '1';
+            osm_xy    <= x"0000";
+            osm_dxdy  <= std_logic_vector(to_unsigned(CHARS_DX * 256 + CHARS_DY, 16));
          else
             -- CSR register
             if csr_we = '1' then
@@ -389,6 +413,14 @@ begin
             -- cartridge window selector
             if gbc_cart_sel_we = '1' then
                gbc_cart_sel <= to_integer(unsigned(cpu_data_out(10 downto 0))); -- 0 .. 2047 
+            end if;
+            
+            -- osm registers
+            if osm_xy_we = '1' then
+               osm_xy <= cpu_data_out;
+            end if;
+            if osm_dxdy_we = '1' then
+               osm_dxdy <= cpu_data_out;
             end if;
          end if;
       end if;
@@ -418,7 +450,8 @@ begin
          address_b            => osm_vram_addr,
          q_b                  => osm_vram_data
       );
-            
+         
+   -- 16x16 pixel font ROM   
    font : entity work.BROM
       generic map
       (
@@ -434,8 +467,9 @@ begin
          address        => osm_font_addr,
          data           => osm_font_data
       );
-      
-   latch_vga_x : process(pixelclock)
+     
+   -- it takes one pixelclock cycle until the vram returns the data 
+   latch_vga_xy : process(pixelclock)
    begin
       if rising_edge(pixelclock) then
          vga_x_old <= vga_x;
@@ -445,10 +479,10 @@ begin
       
    -- render OSM: calculate the pixel that needs to be shown at the given position   
    render_osm : process(vga_x, vga_x_old, vga_y, osm_vram_data, osm_font_data)
-   variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
-   variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
-   variable vga_x_mod_16 : integer range 0 to 15;
-   variable vga_y_mod_16 : integer range 0 to 15;
+      variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
+      variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
+      variable vga_x_mod_16 : integer range 0 to 15;
+      variable vga_y_mod_16 : integer range 0 to 15;
    begin
       vga_x_div_16 := to_integer(to_unsigned(vga_x, 16)(9 downto 4));
       vga_y_div_16 := to_integer(to_unsigned(vga_y, 16)(9 downto 4));
@@ -462,10 +496,22 @@ begin
          vga_rgb <= (others => '0');
       end if;
       
-      if vga_x_div_16 < 50 and vga_y_div_16 < 4 then
+      if vga_x_div_16 >= osm_x1 and vga_x_div_16 < osm_x2 and vga_y_div_16 >= osm_y1 and vga_y_div_16 < osm_y2 then
          vga_on <= gbc_osm;
       else
          vga_on <= '0';
       end if;
    end process;   
+   
+   calc_boundaries : process(osm_xy, osm_dxdy)
+      variable osm_x : integer range 0 to CHARS_DX - 1;
+      variable osm_y : integer range 0 to CHARS_DY - 1;
+   begin
+      osm_x  := to_integer(unsigned(osm_xy(15 downto 8)));
+      osm_y  := to_integer(unsigned(osm_xy(7 downto 0)));
+      osm_x1 <= osm_x;
+      osm_y1 <= osm_y;
+      osm_x2 <= osm_x + to_integer(unsigned(osm_dxdy(15 downto 8)));
+      osm_y2 <= osm_y + to_integer(unsigned(osm_dxdy(7 downto 0)));
+   end process;
 end beh;

@@ -42,3 +42,12 @@ MEM_VRAM            .EQU 0xD000 ; Video RAM: "ASCII" characters
 
 MEM_BIOS_MAXLEN     .EQU 0x1000 ; maximum length of BIOS
 MEM_CARTWIN_MAXLEN  .EQU 0x1000 ; length of cartridge window
+
+; Special characters in font Anikki-16x16
+CHR_FC_TL           .EQU 201    ; fat top/left corner
+CHR_FC_SH           .EQU 205    ; fat straight horizontal
+CHR_FC_TR           .EQU 187    ; fat top/right corner
+CHR_FC_SV           .EQU 186    ; fat straight vertical
+CHR_FC_BL           .EQU 200    ; fat bottom/left corner
+CHR_FC_BR           .EQU 188    ; fat bottom/right corner
+
