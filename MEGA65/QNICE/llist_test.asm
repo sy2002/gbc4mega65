@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; Game Boy Color for MEGA65 (gbc4mega65)
 ;
-; Linked List: Test program and development testbed for Simple Linked List.
+; Linked List: Test program and development testbed for Simple Linked List
 ;
 ; gbc4mega65 machine is based on Gameboy_MiSTer
 ; MEGA65 port done by sy2002 in February 2021 and licensed under GPL v3
@@ -23,11 +23,21 @@
                 MOVE    TEST_STR_COUNT, R1      ; R1: amount of test strings
                 XOR     R2, R2                  ; R2: head of linked list
 
+                MOVE    UNSORTED_STR, R8        ; output UNSORTED
+                RSUB    PRINT_SEPARATOR, 1
+
                 ; create the elements of the sorted linked list on the heap
                 ; and use the sorted-insert function to actually create the
                 ; sorted linked list
-INSERT_LOOP     MOVE    R0, R8
-                RSUB    NEW_ELM, 1              ; create element on heap
+INSERT_LOOP     MOVE    R0, R8                  ; R8: string
+                RSUB    NEW_ELM, 1              ; R8: new created elm. on heap
+
+                MOVE    R8, R6                  ; print unsorted output
+                ADD     SLL$DATA, R8
+                MOVE    @R8, R8
+                SYSCALL(puts, 1)                
+                SYSCALL(crlf, 1)
+                MOVE    R6, R8
 
                 MOVE    R8, R9                  ; R9: newly created heap elm
                 MOVE    R2, R8                  ; R8: head of linked list
@@ -39,20 +49,44 @@ INSERT_LOOP     MOVE    R0, R8
                 SUB     1, R1                   ; one less string to go
                 RBRA    INSERT_LOOP, !Z         ; done? no: loop
 
+                MOVE    ASCENDING_STR, R8       ; output SORTED (ASCENDING)
+                RSUB    PRINT_SEPARATOR, 1
+                MOVE    R2, R7                  ; R7: remember head
+
                 ; print the sorted strings by traversing the linked list
-PRINT_LOOP      MOVE    R2, R0                  ; R2: current element
+PRINT_LOOP_ASC  MOVE    R2, R0                  ; R2: current element
                 MOVE    R2, R1
-                ADD     SLL$NEXT, R0            ; end of list?
+                ADD     SLL$NEXT, R0
                 ADD     SLL$DATA, R1
                 MOVE    @R1, R8                 ; print string
                 SYSCALL(puts, 1)
                 SYSCALL(crlf, 1)
                 MOVE    @R0, R0                 ; R0: ptr to next element
-                RBRA    END, Z                  ; end of list!: end program                
+                RBRA    DESCENDING, Z           ; end of list! end program                
                 MOVE    R0, R2                  ; next element
-                RBRA    PRINT_LOOP, 1
+                RBRA    PRINT_LOOP_ASC, 1
 
-END             SYSCALL(exit, 1)
+DESCENDING      MOVE    DESCENDING_STR, R8      ; output SORTED (DESCENDING)
+                RSUB    PRINT_SEPARATOR, 1
+
+                MOVE    R7, R8                  ; R9: last element of SLL
+                RSUB    SLL$LASTNCOUNT, 1
+                MOVE    R9, R2
+
+PRINT_LOOP_DESC MOVE    R2, R0                  ; R2: current element
+                MOVE    R2, R1
+                ADD     SLL$PREV, R0
+                ADD     SLL$DATA, R1
+                MOVE    @R1, R8                 ; print string
+                SYSCALL(puts, 1)
+                SYSCALL(crlf, 1)
+                MOVE    @R0, R0                 ; R0: ptr to prev. element
+                RBRA    END, Z                  ; end of list! end program
+                MOVE    R0, R2
+                RBRA    PRINT_LOOP_DESC, 1
+
+END             SYSCALL(crlf, 1)
+                SYSCALL(exit, 1)
 
 ; ----------------------------------------------------------------------------
 ; Sorted Linked List
@@ -169,10 +203,36 @@ _STRCPY_LOOP    MOVE    @R0++, @R1++
                 RET                
 
 ; ----------------------------------------------------------------------------
-; Sample strings to be sorted
+; User interface
 ; ----------------------------------------------------------------------------
 
-TITLE_STR       .ASCII_W "Sorted Linked List Development Testbed done by sy2002 in February 2021\n\n"
+; print embedded separator
+PRINT_SEPARATOR INCRB
+                MOVE    R8, R0
+
+                SYSCALL(crlf, 1)
+                MOVE    SEPARATOR_STR, R8       
+                SYSCALL(puts, 1)
+                MOVE    R0, R8
+                SYSCALL(puts, 1)
+                MOVE    SEPARATOR_STR, R8
+                SYSCALL(puts, 1)
+                SYSCALL(crlf, 1)
+
+                MOVE    R0, R8
+                DECRB
+                RET
+
+; user interface strings
+TITLE_STR       .ASCII_W "Sorted Linked List Development Testbed done by sy2002 in February 2021\n"
+SEPARATOR_STR   .ASCII_W "================================================================================\n"
+UNSORTED_STR    .ASCII_W "     UNSORTED\n"
+ASCENDING_STR   .ASCII_W "     SORTED IN ASCENDING ORDER: 0..9 then A..Z\n"
+DESCENDING_STR  .ASCII_W "     SORTED IN DESCENDING ORDER: Z..A then 9..0\n"
+
+; ----------------------------------------------------------------------------
+; Sample strings to be sorted
+; ----------------------------------------------------------------------------
 
 TEST_STR_LEN    .EQU    21
 TEST_STR_COUNT  .EQU    500

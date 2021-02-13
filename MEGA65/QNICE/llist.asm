@@ -1,8 +1,12 @@
 ; ****************************************************************************
 ; Game Boy Color for MEGA65 (gbc4mega65)
 ;
-; Linked List: Simple linked list implementation for the file browser that
-; is able to do a sorted insert
+; Simple Linked List
+;
+; Simple linked list implementation for the file browser that is able to do
+; a sorted insert. Meant to be resusable, so that it could for example be
+; merged upstream to QNICE-FPGA as part of a newly to-be-defined library of
+; optional functionality (i.e. not part of Monitor).
 ;
 ; gbc4mega65 machine is based on Gameboy_MiSTer
 ; MEGA65 port done by sy2002 in February 2021 and licensed under GPL v3
@@ -16,10 +20,41 @@ SLL$PREV        .EQU    0x0001                  ; pointer: previous element
 SLL$DATA_SIZE   .EQU    0x0002                  ; amount of data (words)
 SLL$DATA        .EQU    0x0003                  ; pointer: data
 
+
+; ----------------------------------------------------------------------------
+; Find last element and count the amount of elements
+; Input:
+;   R8: Pointer to head of linked list
+; Output:
+;   R9: Pointer to last element
+;  R10: Amount of elements
+; ----------------------------------------------------------------------------
+
+SLL$LASTNCOUNT  INCRB
+
+                MOVE    R8, R9                  ; R9: pointer to last element
+                XOR     R10, R10                ; R10: amount of elements
+
+                CMP     0, R8                   ; head is null
+                RBRA    _SLLLNC_RET, Z
+
+_SLLLNC_LOOP    ADD     1, R10                  ; one more element
+                MOVE    R9, R0                  ; remember element
+                ADD     SLL$NEXT, R9            ; next element available?
+                MOVE    @R9, R9
+                RBRA    _SLLLNC_RETELM, Z       ; no: return
+                RBRA    _SLLLNC_LOOP, 1         ; yes: next element
+
+_SLLLNC_RETELM  MOVE    R0, R9                  ; return last element
+_SLLLNC_RET     DECRB
+                RET
+
+; ----------------------------------------------------------------------------
 ; Sorted Insert: Insert the new element at the right position
+;
 ; Input
-;   R8: Head of linked list, zero if this is the first element
-;   R9: New element
+;   R8: Pointer to head of linked list, zero if this is the first element
+;   R9: Pointer to new element
 ;  R10: Pointer to a compare function that returns negative if (S0 < S1),
 ;       zero if (S0 == S1), positive if (S0 > S1). These semantic are
 ;       basically compatible with STR$CMP, but instead of expecting pointers
@@ -27,8 +62,10 @@ SLL$DATA        .EQU    0x0003                  ; pointer: data
 ;       SLL records, while the pointer to the first one is given in R8 and
 ;       treated as "S0" and the second one in R9 and treated as "S1".
 ;       R10 is overwritten by the return value
+;
 ; Output:
 ;   R8: (New) head of linked list
+; ----------------------------------------------------------------------------
 
 SLL$S_INSERT    INCRB
                 MOVE    R9, R0
