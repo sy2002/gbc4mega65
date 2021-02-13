@@ -43,12 +43,12 @@ INSERT_LOOP     MOVE    R0, R8
 PRINT_LOOP      MOVE    R2, R0                  ; R2: current element
                 MOVE    R2, R1
                 ADD     SLL$NEXT, R0            ; end of list?
-                MOVE    @R0, R0                 ; R0: ptr to next element
-                RBRA    END, Z                  ; end of list!: end program
                 ADD     SLL$DATA, R1
                 MOVE    @R1, R8                 ; print string
                 SYSCALL(puts, 1)
                 SYSCALL(crlf, 1)
+                MOVE    @R0, R0                 ; R0: ptr to next element
+                RBRA    END, Z                  ; end of list!: end program                
                 MOVE    R0, R2                  ; next element
                 RBRA    PRINT_LOOP, 1
 
