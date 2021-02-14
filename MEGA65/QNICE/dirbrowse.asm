@@ -101,6 +101,8 @@ _DIRBR_LOOPEND  MOVE    R4, R9                  ; return amount of entries
 _DIRBR_RD_ECD   MOVE    1, R11                  ; directory not found
                 RBRA    _DIRBR_RD_RET, 1
 _DIRBR_RD_WOOM  MOVE    2, R11                  ; out-of-memory
+                MOVE    R4, R9                  ; amount of entries
+                MOVE    R5, R10                 ; head of linked list
                 RBRA    _DIRBR_RD_RET, 1
 _DIRBR_RD_EDH   MOVE    3, R11                  ; unknown error
 _DIRBR_RD_RET   DECRB

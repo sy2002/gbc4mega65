@@ -51,7 +51,7 @@ MOUNT_OK        MOVE    STARTPATH_STR, R8       ; user enters start path
                 RBRA    WRN_MAX, Z
                 RBRA    ERR_UNKNOWN, 1
 
-                ; DEBUG TEST
+                ; Output sorted directory listing
 LOAD_OK         MOVE    R10, R0
                 ADD     SLL$NEXT, R0                
                 MOVE    R10, R1
@@ -109,5 +109,5 @@ SD_DEVHANDLE   .BLOCK  FAT32$DEV_STRUCT_SIZE   ; SD card device handle
 
 #include "dirbrowse.asm"
 
-HEAP_SIZE      .EQU 4096
+HEAP_SIZE      .EQU 4096        
 HEAP           .BLOCK 1
