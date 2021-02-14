@@ -1,7 +1,7 @@
 ; ****************************************************************************
 ; Game Boy Color for MEGA65 (gbc4mega65)
 ;
-; Linked List: Test program and development testbed for Simple Linked List
+; Test program and development testbed for Simple Linked List
 ;
 ; gbc4mega65 machine is based on Gameboy_MiSTer
 ; MEGA65 port done by sy2002 in February 2021 and licensed under GPL v3

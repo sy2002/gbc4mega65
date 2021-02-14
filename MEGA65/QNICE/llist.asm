@@ -20,6 +20,8 @@ SLL$PREV        .EQU    0x0001                  ; pointer: previous element
 SLL$DATA_SIZE   .EQU    0x0002                  ; amount of data (words)
 SLL$DATA        .EQU    0x0003                  ; pointer: data
 
+SLL$OVRHD_SIZE  .EQU    0x0003                  ; size of the structural
+                                                ; overhead other than data
 
 ; ----------------------------------------------------------------------------
 ; Find last element and count the amount of elements
