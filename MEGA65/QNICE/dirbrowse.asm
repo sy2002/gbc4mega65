@@ -286,7 +286,7 @@ _DIRBR_CMP_RET  DECRB
 
 ; STRCPY copies a zero-terminated string to a destination
 ; Hint: QNICE Monitor V1.7 comes with a STRCPY, but currently, the gbc4mega65
-; project is based on QNICE V1.7, so we need to have our own STRCPY function
+; project is based on QNICE V1.6, so we need to have our own STRCPY function
 ; R8: Pointer to the string to be copied
 ; R9: Pointer to the destination
 _DIRBR_STRCPY   INCRB

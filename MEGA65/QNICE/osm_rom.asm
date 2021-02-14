@@ -37,7 +37,7 @@
 
                 MOVE    STR_TITLE, R8           ; welcome message
                 RSUB    PRINTSTR, 1
-                RSUB    WAIT_2S, 1
+                ;RSUB    WAIT_2S, 1
 
                 ; Mount SD card and load original ROMs, if available.
                 RSUB    CHKORMNT, 1             ; mount SD card partition #1 
@@ -47,7 +47,50 @@
 MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 MOVE    MEM_BIOS, R9            ; MMIO location of "ROM RAM"
                 RSUB    LOAD_ROM, 1
-                RSUB    WAIT_2S, 1
+                ;RSUB    WAIT_2S, 1
+
+                ; load sorted directory list into memory
+                MOVE    SD_DEVHANDLE, R8
+                MOVE    FN_START_DIR, R9        ; start path
+                MOVE    HEAP, R10               ; start address of heap   
+                MOVE    HEAP_SIZE, R11          ; maximum memory available
+                                                ; for storing the linked list
+                RSUB    DIRBROWSE_READ, 1       ; read directory content
+                CMP     0, R11                  ; errors?
+                RBRA    BROWSE_OK, Z            ; no
+                CMP     1, R11                  ; error: path not found
+                RBRA    ERR_PNF, Z
+                CMP     2, R11                  ; max files? (only warn)
+                RBRA    WRN_MAX, Z
+                RBRA    ERR_UNKNOWN, 1
+
+                ; /gbc path not found, try root instead
+ERR_PNF         MOVE    FN_ROOT_DIR, R9         ; try root
+                MOVE    HEAP, R10
+                MOVE    HEAP_SIZE, R11
+                RSUB    DIRBROWSE_READ, 1
+                CMP     0, R11                  
+                RBRA    BROWSE_OK, Z
+                CMP     2, R11
+                RBRA    WRN_MAX, Z
+                RBRA    ERR_UNKNOWN, 1
+
+                ; unknown error: halt (TODO: we might want to retry in future)
+ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8
+                RSUB    PRINTSTR, 1
+                HALT
+
+                ; TODO: we need to warn, that we are not showing all files
+WRN_MAX         RBRA    BROWSE_OK, 1
+
+BROWSE_OK       MOVE    R10, R0                 ; R0: dir. linekd list head
+                RSUB    CLRINNER, 1
+                MOVE    R0, R8                  ; R8: pos in LL to show list
+                MOVE    GBC$OSM_ROWS, R9        ; R9: amount if lines to show
+                SUB     2, R9
+                RSUB    SHOW_DIR, 1
+
+                SYSCALL(getc, 1)
 
                 ; Load Tetris
                 MOVE    STR_CART_LOAD, R8
@@ -127,13 +170,16 @@ STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM inste
 STR_CART_LOAD   .ASCII_W "Loading cartridge: "
 STR_CART_DONE   .ASCII_W "\nDone.\n"
 
+FN_ROM_OFS      .EQU 5 ; offset to add to rom filen. to get the name w/o path
 FN_DMG_ROM      .ASCII_W "/gbc/dmg_boot.bin"
 FN_GBC_ROM      .ASCII_W "/gbc/cgb_bios.bin"
 FN_START_DIR    .ASCII_W "/gbc"
+FN_ROOT_DIR     .ASCII_W "/"
 
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
 ERR_LOAD_CART   .ASCII_W "  ERROR!\n"
+ERR_BROWSE_UNKN .ASCII_W "SD Card: Unknown error while trying to browse.\n"
 
 ; ----------------------------------------------------------------------------
 ; SD Card / file system functions
@@ -251,6 +297,43 @@ _LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
 ; Screen and Serial IO functions
 ; ----------------------------------------------------------------------------
 
+; Show directory listing
+; R8: position inside the directory linked-list from which to show it
+; R9: maximum amount of entries to show
+SHOW_DIR        RSUB    ENTER, 1
+
+                XOR     R0, R0                  ; R0: amount of entries shown
+
+_SHOWDIR_L      MOVE    R8, R1                  ; R1: ptr to next LL element
+                ADD     SLL$NEXT, R1
+                ADD     SLL$DATA, R8            ; R8: entry name
+
+                ; filter the ROMs
+                MOVE    R9, R2
+                MOVE    FN_DMG_ROM, R9
+                ADD     FN_ROM_OFS, R9                
+                SYSCALL(strcmp, 1)
+                MOVE    R2, R9
+                CMP     0, R10
+                RBRA    _SHOWDIR_NEXT, Z
+                MOVE    FN_GBC_ROM, R9
+                ADD     FN_ROM_OFS, R9
+                SYSCALL(strcmp, 1)
+                MOVE    R2, R9
+                CMP     0, R10
+                RBRA    _SHOWDIR_NEXT, Z
+
+                RSUB    PRINTSTR, 1             ; print dirname/filename
+                RSUB    PRINTCRLF, 1
+                ADD     1, R0
+                CMP     R0, R9                  ; shown <= maximum?
+                RBRA    _SHOWDIR_RET, N         ; no: leave
+_SHOWDIR_NEXT   MOVE    @R1, R8                 ; more entries available?
+                RBRA    _SHOWDIR_L, !Z          ; yes: loop
+
+_SHOWDIR_RET    RSUB    LEAVE, 1
+                RET
+
 ; Print the string in R8 on the current cursor position on the screen
 ; and in parallel to the UART
 PRINTSTR        RSUB    ENTER, 1
@@ -268,9 +351,17 @@ PRINTSTR        RSUB    ENTER, 1
 _PS_L1          MOVE    @R0++, R4               ; read char
                 CMP     0x000D, R4              ; is it a CR?
                 RBRA    _PS_L2, Z               ; yes: process
-                CMP     0, R4                   ; no: end-of-string?
+                CMP     '<', R4                 ; replace < by special
+                RBRA    _PS_L4, !Z
+                MOVE    CHR_DIR_L, R4
+                RBRA    _PS_L6, 1
+_PS_L4          CMP     '>', R4                 ; replace > by special                
+                RBRA    _PS_L5, !Z
+                MOVE    CHR_DIR_R, R4
+                RBRA    _PS_L6, 1
+_PS_L5          CMP     0, R4                   ; no: end-of-string?
                 RBRA    _PS_RET, Z              ; yes: leave
-                MOVE    R4, @R8++               ; no: print char
+_PS_L6          MOVE    R4, @R8++               ; no: print char
                 ADD     1, @R1                  ; x-cursor + 1
                 RBRA    _PS_L1, 1               ; next char
 
@@ -297,9 +388,12 @@ PRINTHEX        INCRB
 
 ; Move the cursor to the next line
 PRINTCRLF       INCRB
-                SYSCALL(crlf, 1)
+                MOVE    _PRINTCRLF_S, R8
+                RSUB    PRINTSTR, 1
                 DECRB
                 RET
+
+_PRINTCRLF_S    .ASCII_W "\n"                
 
 ; Calculates the VRAM address for the current cursor pos in CUR_X & CUR_Y
 ; R8: VRAM address
@@ -327,6 +421,30 @@ CLRSCR          INCRB
 _CLRSCR_L       MOVE    0, @R0++
                 SUB     1, R1
                 RBRA    _CLRSCR_L, !Z                 
+                DECRB
+                RET
+
+; clear inner part of the screen (leave the frame)
+CLRINNER        INCRB
+                MOVE    MEM_VRAM, R0            ; R0: VRAM
+                MOVE    GBC$OSM_COLS, R1        ; R1: amount of cols to fill
+                SUB     2, R1
+                MOVE    GBC$OSM_ROWS, R2        ; R2: amount of lines to fill
+                SUB     2, R2                
+                ADD     GBC$OSM_COLS, R0        ; skip first row
+                ADD     1, R0                   ; skip first col
+                MOVE    R2, R5
+_CLRINNER_L1    MOVE    R1, R4
+_CLRINNER_L2    MOVE    0, @R0++
+                SUB     1, R4
+                RBRA    _CLRINNER_L2, !Z
+                ADD     2, R0
+                SUB     1, R5
+                RBRA    _CLRINNER_L1, !Z
+                MOVE    CUR_X, R0
+                MOVE    1, @R0
+                MOVE    CUR_Y, R0
+                MOVE    1, @R0
                 DECRB
                 RET
 
@@ -445,3 +563,12 @@ FILEHANDLE     .BLOCK  FAT32$FDH_STRUCT_SIZE   ; File handle
 CUR_X          .BLOCK  1                       ; OSD cursor x coordinate
 CUR_Y          .BLOCK  1                       ; ditto y
 INNER_X        .BLOCK  1                       ; first x-coord within frame
+
+; ----------------------------------------------------------------------------
+; Directory browser including heap for storing the sorted structure
+; ----------------------------------------------------------------------------
+
+#include "dirbrowse.asm"
+
+HEAP_SIZE      .EQU 4096        
+HEAP           .BLOCK 1
