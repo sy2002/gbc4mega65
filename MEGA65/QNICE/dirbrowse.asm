@@ -227,9 +227,25 @@ _DIRBR_COMPARE  INCRB
                 MOVE    R9, R1
 
                 ADD     SLL$DATA, R0            ; R0: pointer to first string
+                ADD     SLL$DATA, R1            ; R1: pointer to second string
+
+                ; directories written like <this> shall always be sorted
+                ; above everything else
+                MOVE    @R0, R8
+                MOVE    @R1, R9
+                CMP     R8, R9
+                RBRA    _DIRBR_CMP, Z
+                CMP     _DIRBR_DS, R8           ; < is less than everything
+                RBRA    _DIRBR_CHK, !Z
+                MOVE    -1, R10
+                RBRA    _DIRBR_CMP_RET, 1
+_DIRBR_CHK      CMP     _DIRBR_DS, R9           ; everything is greater than <
+                RBRA    _DIRBR_CMP, !Z
+                MOVE    1, R10
+                RBRA    _DIRBR_CMP_RET, 1                
 
                 ; copy R0 to the stack and make it upper case
-                MOVE    R0, R8                  ; copy string to stack
+_DIRBR_CMP      MOVE    R0, R8                  ; copy string to stack
                 SYSCALL(strlen, 1)
                 ADD     1, R9               
                 SUB     R9, SP
@@ -240,7 +256,6 @@ _DIRBR_COMPARE  INCRB
                 SYSCALL(str2upper, 1)
                 MOVE    R8, R0
 
-                ADD     SLL$DATA, R1            ; R1: pointer to second string
 
                 ; copy R1 to the stack and make it upper case
                 MOVE    R1, R8
@@ -261,7 +276,7 @@ _DIRBR_COMPARE  INCRB
 
                 ADD     R4, SP                  ; restore stack pointer
 
-                DECRB                
+_DIRBR_CMP_RET  DECRB                
                 MOVE    R0, R8
                 MOVE    R1, R9   
                 DECRB
