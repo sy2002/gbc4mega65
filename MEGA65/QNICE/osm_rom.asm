@@ -417,9 +417,11 @@ CALC_VRAM       RSUB    ENTER, 1
 ; clear screen (VRAM) by filling it with 0 which is an empty char in our font
 CLRSCR          INCRB
                 MOVE    MEM_VRAM, R0
-                MOVE    4096, R1
-_CLRSCR_L       MOVE    0, @R0++
-                SUB     1, R1
+                MOVE    MEM_VRAM_ATTR, R1
+                MOVE    2048, R2
+_CLRSCR_L       MOVE    0, @R0++                ; 0 = CLR = space character
+                MOVE    SA_COL_STD, @R1++       ; foreground/backgr. color
+                SUB     1, R2
                 RBRA    _CLRSCR_L, !Z                 
                 DECRB
                 RET

@@ -203,7 +203,7 @@ signal qngbc_cart_we       : std_logic;
 signal qngbc_cart_data_in  : std_logic_vector(7 downto 0);
 signal qngbc_cart_data_out : std_logic_vector(7 downto 0);
 signal qngbc_osm_on        : std_logic;
-signal qngbc_osm_rgb       : std_logic_vector(7 downto 0);
+signal qngbc_osm_rgb       : std_logic_vector(23 downto 0);
 
 
 -- signals neccessary due to Verilog in VHDL embedding
@@ -588,9 +588,9 @@ begin
          
             -- On-Screen-Menu (OSM) output
             if qngbc_osm_on then
-               VGA_RED   <= (others => qngbc_osm_rgb(0));
-               VGA_GREEN <= (others => qngbc_osm_rgb(0));
-               VGA_BLUE  <= (others => qngbc_osm_rgb(0));                  
+               VGA_RED   <= qngbc_osm_rgb(23 downto 16);
+               VGA_GREEN <= qngbc_osm_rgb(15 downto 8);
+               VGA_BLUE  <= qngbc_osm_rgb(7 downto 0);                  
             end if;
 
          -- for some reason, the VDAC does not like non-zero values outside the visible window

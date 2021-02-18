@@ -44,8 +44,19 @@ MEM_VRAM_ATTR       .EQU 0xD800 ; Video RAM: Attributes
 MEM_BIOS_MAXLEN     .EQU 0x1000 ; maximum length of BIOS
 MEM_CARTWIN_MAXLEN  .EQU 0x1000 ; length of cartridge window
 
-; Screen attributes
+; Screen attributes: Single bits
 SA_INVERSE          .EQU 0x80
+SA_DARK             .EQU 0x40
+SA_BG_RED           .EQU 0x20
+SA_BG_GREEN         .EQU 0x10
+SA_BG_BLUE          .EQU 0x08
+SA_FG_RED           .EQU 0x04
+SA_FG_GREEN         .EQU 0x02
+SA_FG_BLUE          .EQU 0x01
+
+; Screen attributes: Common bit-combinations
+SA_COL_STD          .EQU 0x0B   ; cyan font on blue background
+SA_COL_STD_INV      .EQU 0x8B   ; inverse standard
 
 ; Special characters in font Anikki-16x16
 CHR_FC_TL           .EQU 201    ; fat top/left corner

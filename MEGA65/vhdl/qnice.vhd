@@ -39,7 +39,7 @@ port (
    vga_x             : in integer range 0 to VGA_DX - 1;
    vga_y             : in integer range 0 to VGA_DY - 1;
    vga_on            : out std_logic;
-   vga_rgb           : out std_logic_vector(7 downto 0);
+   vga_rgb           : out std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each 
 
    -- Control and status register
    gbc_reset         : buffer std_logic;     -- reset Game Boy
@@ -130,6 +130,10 @@ signal vram_en                   : std_logic;                        -- $D000
 signal vram_we                   : std_logic;
 signal vram_data_out_i           : std_logic_vector(7 downto 0);
 signal vram_data_out_16bit       : std_logic_vector(15 downto 0);
+signal vram_attr_en              : std_logic;
+signal vram_attr_we              : std_logic;
+signal vram_attr_data_out_i      : std_logic_vector(7 downto 0);
+signal vram_attr_data_out_16bit  : std_logic_vector(15 downto 0);
 signal gbc_bios_en               : std_logic;                        -- $C000
 signal gbc_bios_data_out_16bit   : std_logic_vector(15 downto 0);
 signal gbc_cart_en               : std_logic;                        -- $B000
@@ -143,6 +147,7 @@ signal vga_x_old                 : integer range 0 to VGA_DX - 1;
 signal vga_y_old                 : integer range 0 to VGA_DY - 1;
 signal osm_vram_addr             : std_logic_vector(VRAM_ADDR_WIDTH - 1 downto 0);
 signal osm_vram_data             : std_logic_vector(7 downto 0);
+signal osm_vram_attr_data        : std_logic_vector(7 downto 0);
 signal osm_font_addr             : std_logic_vector(11 downto 0);
 signal osm_font_data             : std_logic_vector(15 downto 0);
 signal osm_xy                    : std_logic_vector(15 downto 0);
@@ -154,18 +159,19 @@ begin
 
    -- Merge data outputs from all devices into a single data input to the CPU.
    -- This requires that all devices output 0's when not selected.
-   cpu_data_in <= rom_data_out            or
-                  ram_data_out            or
-                  switch_data_out         or
-                  uart_data_out           or
-                  eae_data_out            or
-                  sd_data_out             or
-                  csr_data_out            or
-                  vram_data_out_16bit     or
-                  gbc_bios_data_out_16bit or
-                  gbc_cart_data_out_16bit or
-                  gbc_cart_sel_data_out   or
-                  osm_xy_data_out         or
+   cpu_data_in <= rom_data_out               or
+                  ram_data_out               or
+                  switch_data_out            or
+                  uart_data_out              or
+                  eae_data_out               or
+                  sd_data_out                or
+                  csr_data_out               or
+                  vram_data_out_16bit        or
+                  vram_attr_data_out_16bit   or
+                  gbc_bios_data_out_16bit    or
+                  gbc_cart_data_out_16bit    or
+                  gbc_cart_sel_data_out      or
+                  osm_xy_data_out            or
                   osm_dxdy_data_out;
                                     
    -- generate the general reset signal
@@ -356,37 +362,41 @@ begin
    -- Additional gbc4mega65 specific MMIO:
    -- 0xB000..0xBFFF: Game Cartridge RAM: 4kb gliding window defined by 0xFFE1 multiplied by 4096
    -- 0xC000..0xCFFF: BIOS/BOOT "ROM RAM": 4kb
-   -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
+   -- 0xD000..0xD7FF: Screen RAM, "ASCII" codes
+   -- 0xD800..0xDFFF: Attribute RAM for Screen RAM
    -- 0xFFE0        : Game Boy control and status register
    -- 0xFFE1        : Selector for the gliding Cartridge RAM window (multiplied by 4096)
    -- 0xFFE2        : X and Y coordinate (in chars, hi/lo) where the OSM window will start
    -- 0xFFE3        : DX and DY size (in chars, hi/lo) of the OSM window
-   ram_en                  <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
-   csr_en                  <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
-   csr_we                  <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out            <= x"000" & "0" & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
-   vram_en                 <= '1' when cpu_addr(15 downto 12) = x"D" else '0';
-   vram_we                 <= vram_en and cpu_data_dir and cpu_data_valid;
-   vram_data_out_16bit     <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
-   gbc_bios_addr           <= cpu_addr(11 downto 0);
-   gbc_bios_en             <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
-   gbc_bios_we             <= gbc_bios_en and cpu_data_dir and cpu_data_valid;
-   gbc_bios_data_in        <= cpu_data_out(7 downto 0);
-   gbc_bios_data_out_16bit <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0');
-   gbc_cart_addr           <= std_logic_vector(to_unsigned(gbc_cart_sel, 11)) & cpu_addr(11 downto 0); -- up to 8 MB ROM size: 4096 x gbc_cart_sel + address in window
-   gbc_cart_en             <= '1' when cpu_addr(15 downto 12) = x"B" else '0';
-   gbc_cart_we             <= gbc_cart_en and cpu_data_dir and cpu_data_valid;
-   gbc_cart_data_in        <= cpu_data_out(7 downto 0);
-   gbc_cart_data_out_16bit <= x"00" & gbc_cart_data_out when gbc_cart_en = '1' and gbc_cart_we = '0' else (others => '0');
-   gbc_cart_sel_en         <= '1' when cpu_addr = x"FFE1" else '0';
-   gbc_cart_sel_we         <= gbc_cart_sel_en and cpu_data_dir and cpu_data_valid;
-   gbc_cart_sel_data_out   <= "00000" & std_logic_vector(to_unsigned(gbc_cart_sel, 11)) when gbc_cart_sel_en = '1' and gbc_cart_sel_we = '0' else (others => '0');
-   osm_xy_en               <= '1' when cpu_addr = x"FFE2" else '0';
-   osm_xy_we               <= osm_xy_en and cpu_data_dir and cpu_data_valid;
-   osm_xy_data_out         <= osm_xy when osm_xy_en = '1' and osm_xy_we = '0' else (others => '0');
-   osm_dxdy_en             <= '1' when cpu_addr = x"FFE3" else '0';
-   osm_dxdy_we             <= osm_dxdy_en and cpu_data_dir and cpu_data_valid;
-   osm_dxdy_data_out       <= osm_dxdy when osm_dxdy_en = '1' and osm_dxdy_we = '0' else (others => '0');
+   ram_en                   <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
+   csr_en                   <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
+   csr_we                   <= csr_en and cpu_data_dir and cpu_data_valid;
+   csr_data_out             <= x"000" & "0" & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
+   vram_en                  <= '1' when cpu_addr(15 downto 11) = x"D" & "0" else '0'; -- $D000 .. $D7FF
+   vram_we                  <= vram_en and cpu_data_dir and cpu_data_valid;
+   vram_data_out_16bit      <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
+   vram_attr_en             <= '1' when cpu_addr(15 downto 11) = x"D" & "1" else '0'; -- $D800 .. $DFFF
+   vram_attr_we             <= vram_attr_en and cpu_data_dir and cpu_data_valid;
+   vram_attr_data_out_16bit <= x"00" & vram_attr_data_out_i when vram_attr_en = '1' and vram_attr_we = '0' else (others => '0');
+   gbc_bios_addr            <= cpu_addr(11 downto 0);
+   gbc_bios_en              <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
+   gbc_bios_we              <= gbc_bios_en and cpu_data_dir and cpu_data_valid;
+   gbc_bios_data_in         <= cpu_data_out(7 downto 0);
+   gbc_bios_data_out_16bit  <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0');
+   gbc_cart_addr            <= std_logic_vector(to_unsigned(gbc_cart_sel, 11)) & cpu_addr(11 downto 0); -- up to 8 MB ROM size: 4096 x gbc_cart_sel + address in window
+   gbc_cart_en              <= '1' when cpu_addr(15 downto 12) = x"B" else '0';
+   gbc_cart_we              <= gbc_cart_en and cpu_data_dir and cpu_data_valid;
+   gbc_cart_data_in         <= cpu_data_out(7 downto 0);
+   gbc_cart_data_out_16bit  <= x"00" & gbc_cart_data_out when gbc_cart_en = '1' and gbc_cart_we = '0' else (others => '0');
+   gbc_cart_sel_en          <= '1' when cpu_addr = x"FFE1" else '0';
+   gbc_cart_sel_we          <= gbc_cart_sel_en and cpu_data_dir and cpu_data_valid;
+   gbc_cart_sel_data_out    <= "00000" & std_logic_vector(to_unsigned(gbc_cart_sel, 11)) when gbc_cart_sel_en = '1' and gbc_cart_sel_we = '0' else (others => '0');
+   osm_xy_en                <= '1' when cpu_addr = x"FFE2" else '0';
+   osm_xy_we                <= osm_xy_en and cpu_data_dir and cpu_data_valid;
+   osm_xy_data_out          <= osm_xy when osm_xy_en = '1' and osm_xy_we = '0' else (others => '0');
+   osm_dxdy_en              <= '1' when cpu_addr = x"FFE3" else '0';
+   osm_dxdy_we              <= osm_dxdy_en and cpu_data_dir and cpu_data_valid;
+   osm_dxdy_data_out        <= osm_dxdy when osm_dxdy_en = '1' and osm_dxdy_we = '0' else (others => '0');
                
    -- Registers
    --   CSR: Control and status register: Reset & Pause
@@ -450,8 +460,37 @@ begin
          address_b            => osm_vram_addr,
          q_b                  => osm_vram_data
       );
+      
+   -- Dual port & dual clock attribute RAM: contains inverse attribute, light/dark attrib. and colors of the chars
+   -- bit 7: 1=inverse
+   -- bit 6: 1=dark, 0=bright
+   -- bit 5: background red
+   -- bit 4: background green
+   -- bit 3: background blue
+   -- bit 2: foreground red
+   -- bit 1: foreground green
+   -- bit 0: foreground blue
+   vram_attr : entity work.dualport_2clk_ram
+      generic map
+      (
+         ADDR_WIDTH           => VRAM_ADDR_WIDTH,
+         DATA_WIDTH           => 8,
+         FALLING_A            => true
+      )
+      port map
+      (
+         clock_a              => CLK50,
+         address_a            => cpu_addr(VRAM_ADDR_WIDTH - 1 downto 0),
+         data_a               => cpu_data_out(7 downto 0),
+         wren_a               => vram_attr_we,
+         q_a                  => vram_attr_data_out_i,
          
-   -- 16x16 pixel font ROM   
+         clock_b              => pixelclock,
+         address_b            => osm_vram_addr,       -- same address as VRAM
+         q_b                  => osm_vram_attr_data
+      );
+         
+   -- 16x16 pixel font ROM
    font : entity work.BROM
       generic map
       (
@@ -477,12 +516,26 @@ begin
       end if;
    end process;
       
-   -- render OSM: calculate the pixel that needs to be shown at the given position   
+   -- render OSM: calculate the pixel that needs to be shown at the given position  
+   -- TODO: either here or in the top file: we are +1 pixel too much to the right (what about the vertical axis?) 
    render_osm : process(vga_x, vga_x_old, vga_y_old, osm_vram_data, osm_font_data, osm_x1, osm_y1, osm_x2, osm_y2, gbc_osm)
       variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
       variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
       variable vga_x_mod_16 : integer range 0 to 15;
       variable vga_y_mod_16 : integer range 0 to 15;
+      
+      function attr2rgb(attr: in std_logic_vector(3 downto 0)) return std_logic_vector is
+      variable r, g, b: std_logic_vector(7 downto 0);
+      variable brightness : std_logic_vector(7 downto 0);
+      begin
+         -- see comment above at vram_attr to understand the Attribute VRAM bit patterns
+         brightness := x"FF" when attr(3) = '0' else x"7F";
+         r := brightness when attr(2) = '1' else x"00";
+         g := brightness when attr(1) = '1' else x"00";
+         b := brightness when attr(0) = '1' else x"00";
+         return r & g & b;
+      end attr2rgb;
+      
    begin
       vga_x_div_16 := to_integer(to_unsigned(vga_x, 16)(9 downto 4));
       vga_y_div_16 := to_integer(to_unsigned(vga_y, 16)(9 downto 4));
@@ -490,10 +543,13 @@ begin
       vga_y_mod_16 := to_integer(to_unsigned(vga_y_old, 16)(3 downto 0));
       osm_vram_addr <= std_logic_vector(to_unsigned(vga_y_div_16 * CHARS_DX + vga_x_div_16, VRAM_ADDR_WIDTH));
       osm_font_addr <= std_logic_vector(to_unsigned(to_integer(unsigned(osm_vram_data)) * FONT_DY + vga_y_mod_16, 12));
-      if osm_font_data(15 - vga_x_mod_16) = '1' then
-         vga_rgb <= (others => '1');
+      -- if pixel is set in font (and take care of inverse on/off)
+      if osm_font_data(15 - vga_x_mod_16) = not osm_vram_attr_data(7) then
+         -- foreground color
+         vga_rgb <= attr2rgb(osm_vram_attr_data(6) & osm_vram_attr_data(2 downto 0));
       else
-         vga_rgb <= (others => '0');
+         -- background color
+         vga_rgb <= attr2rgb(osm_vram_attr_data(6 downto 3));
       end if;
       
       if vga_x_div_16 >= osm_x1 and vga_x_div_16 < osm_x2 and vga_y_div_16 >= osm_y1 and vga_y_div_16 < osm_y2 then
