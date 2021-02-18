@@ -91,19 +91,50 @@ BROWSE_OK       MOVE    R10, R0                 ; R0: dir. linekd list head
                 SUB     2, R9
                 RSUB    SHOW_DIR, 1
 
-INPUT_LOOP      RSUB    KEYB_SCAN, 1
+                XOR     R0, R0                  ; R0: currently selected line
+                MOVE    9, R1                   ; R1: amount of items in dir.
+                MOVE    GBC$OSM_ROWS, R2        ; R2: max amnt items on screen
+                SUB     2, R2
+
+SELECT_LOOP     MOVE    R0, R8
+                MOVE    SA_COL_STD_INV, R9
+                RSUB    SELECT_LINE, 1
+
+INPUT_LOOP      RSUB    KEYB_SCAN, 1          
                 RSUB    KEYB_GETKEY, 1
                 CMP     0, R8
                 RBRA    INPUT_LOOP, Z
-                RSUB    PRINTHEX, 1
-                RBRA    INPUT_LOOP, 1
+                CMP     KEY_CUR_UP, R8          ; cursor up
+                RBRA    IL_CUR_UP, Z
+                CMP     KEY_CUR_DOWN, R8        ; cursor down
+                RBRA    IL_CUR_DOWN, Z
+                CMP     KEY_RETURN, R8          ; return key
+                RBRA    IL_KEY_RETURN, Z
+                RBRA    INPUT_LOOP, 1           ; unknown key
 
-                SYSCALL(getc, 1)
+IL_CUR_UP       CMP     R0, 0                   ; > 0?
+                RBRA    INPUT_LOOP, !N          ; no: next key
+                MOVE    R0, R8                  ; yes: deselect current line
+                MOVE    SA_COL_STD, R9
+                RSUB    SELECT_LINE, 1
+                SUB     1, R0
+                RBRA    SELECT_LOOP, 1
+
+IL_CUR_DOWN     MOVE    R1, R8                  ; TEMP / TODO
+                SUB     2, R8
+                CMP     R0, R8                  ; R0 <= R8?
+                RBRA    INPUT_LOOP, N           ; no: next key
+                MOVE    R0, R8                  ; yes: deselect current line
+                MOVE    SA_COL_STD, R9
+                RSUB    SELECT_LINE, 1
+                ADD     1, R0                   ; next line
+                RBRA    SELECT_LOOP, 1
 
                 ; Load Tetris
+IL_KEY_RETURN   RSUB    PRINTCRLF, 1
                 MOVE    STR_CART_LOAD, R8
                 RSUB    PRINTSTR, 1
-                MOVE    TMP_KWIRK, R8
+                MOVE    TMP_TETRIS, R8
                 RSUB    PRINTSTR, 1
                 MOVE    MEM_CARTRIDGE_WIN, R9
                 MOVE    GBC$CART_SEL, R10  
@@ -113,8 +144,13 @@ INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 MOVE    ERR_LOAD_CART, R8
                 RSUB    PRINTSTR, 1
                 HALT                            ; TODO
+                
+CART_OK         MOVE    GBC$CSR, R0
+                AND     GBC$CSR_UN_RESET, @R0   ; un-reset => system runs now
+                AND     GBC$CSR_UN_OSM, @R0     ; hide OSM
+                SYSCALL(exit, 1)
 
-CART_OK         MOVE    STR_CART_DONE, R8
+                MOVE    STR_CART_DONE, R8
                 RSUB    PRINTSTR, 1
 
                 MOVE    GBC$CSR, R0             ; R0 = control & status reg.
@@ -527,6 +563,32 @@ _PF_DL3         MOVE    CHR_FC_SH, @R8++        ; horizontal line
                 MOVE    CHR_FC_BR, @R8          ; draw bottom/right corner                   
 
                 RSUB    LEAVE, 1
+                RET
+
+; Change the attribute of the line in R8 to R9
+; R8 is considered as "inside the window", i.e. screenrow = R8 + 1
+SELECT_LINE     INCRB   
+                MOVE    R8, R0
+                MOVE    R9, R1
+                INCRB
+
+                MOVE    R9, R0
+                ADD     1, R8                   ; calculate attrib RAM offset
+                MOVE    GBC$OSM_COLS, R9
+                SYSCALL(mulu, 1)
+                ADD     1, R10
+                MOVE    MEM_VRAM_ATTR, R8
+                ADD     R10, R8
+                MOVE    GBC$OSM_COLS, R9
+                SUB     2, R9
+_SL_FILL_LOOP   MOVE    R0, @R8++
+                SUB     1, R9
+                RBRA    _SL_FILL_LOOP, !Z
+
+                DECRB
+                MOVE    R0, R8
+                MOVE    R1, R9
+                DECRB
                 RET
 
 ; ----------------------------------------------------------------------------
