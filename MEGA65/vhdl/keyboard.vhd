@@ -38,7 +38,10 @@ port (
    -- Bit 1 - P11 Input Left  or Button B (0=Pressed)
    -- Bit 0 - P10 Input Right or Button A (0=Pressed)   
    p54         : in std_logic_vector(1 downto 0);  -- "01" selects buttons and "10" selects direction keys
-   joypad      : out std_logic_vector(3 downto 0)   
+   joypad      : out std_logic_vector(3 downto 0);
+   
+   -- interface to QNICE
+   full_matrix : out std_logic_vector(15 downto 0)
 );
 end keyboard;
 
@@ -59,6 +62,9 @@ type matrix_reg_t is array(0 to 1) of std_logic_vector(3 downto 0);
 signal matrix : matrix_reg_t := (others => "1111");  -- low active, i.e. "1111" means "no key pressed"
 
 begin
+
+   -- keyboard matrix: convert to high-active and output full matrix
+   full_matrix <= x"00" & not matrix(1) & not matrix(0);
    
    m65driver : entity work.mega65kbd_to_matrix
    port map

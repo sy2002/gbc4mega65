@@ -204,6 +204,7 @@ signal qngbc_cart_data_in  : std_logic_vector(7 downto 0);
 signal qngbc_cart_data_out : std_logic_vector(7 downto 0);
 signal qngbc_osm_on        : std_logic;
 signal qngbc_osm_rgb       : std_logic_vector(23 downto 0);
+signal qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
 
 
 -- signals neccessary due to Verilog in VHDL embedding
@@ -510,7 +511,8 @@ begin
          kio9              => kb_io1,
          kio10             => kb_io2,
          p54               => joypad_p54,
-         joypad            => joypad_data
+         joypad            => joypad_data,
+         full_matrix       => qngbc_keyb_matrix
       );
    
    -- debouncer for the RESET button as well as for the joysticks:
@@ -635,6 +637,9 @@ begin
          SD_CLK            => SD_CLK,
          SD_MOSI           => SD_MOSI,
          SD_MISO           => SD_MISO,
+         
+         -- keyboard interface
+         full_matrix       => qngbc_keyb_matrix,
          
          -- VGA interface
          pixelclock        => vga_pixelclk,

@@ -34,6 +34,18 @@ GBC$OSM_DXDY        .EQU 0xFFE3 ; hi-byte = dx, lo-byte = dy
 GBC$OSM_COLS        .EQU 50     ; columns (max chars per line)
 GBC$OSM_ROWS        .EQU 37     ; rows (max lines per screen)
 
+; Keyboard matrix (read-only)
+GBC$KEYMATRIX       .EQU 0xFFE4
+
+; AND-masks for keys
+KEY_CUR_UP          .EQU 0x0004
+KEY_CUR_DOWN        .EQU 0x0008
+KEY_CUR_LEFT        .EQU 0x0002
+KEY_CUR_RIGHT       .EQU 0x0001
+KEY_RETURN          .EQU 0x0040
+KEY_SPACE           .EQU 0x0080
+KEY_LSHIFT          .EQU 0x0010
+KEY_MEGA            .EQU 0x0020
 
 ; MMIO locations and sizes
 MEM_CARTRIDGE_WIN   .EQU 0xB000 ; 4kb window defined by GBC$CART_SEL

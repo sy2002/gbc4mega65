@@ -13,7 +13,7 @@
 
                 .ORG    0x8000                  ; start at 0x8000
 
-                ; initialize variables
+                ; initialize system
                 MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 MOVE    0, @R8
                 MOVE    FILEHANDLE, R8          ; ditto file handle
@@ -22,6 +22,7 @@
                 MOVE    0, @R8
                 MOVE    CUR_Y, R8               ; ditto cursor Y
                 MOVE    0, @R8
+                RSUB    KEYB_INIT, 1
 
                 ; set visibility parameters and print frame
                 MOVE    GBC$CSR, R0             ; R0: GBC control & status reg
@@ -89,6 +90,13 @@ BROWSE_OK       MOVE    R10, R0                 ; R0: dir. linekd list head
                 MOVE    GBC$OSM_ROWS, R9        ; R9: amount if lines to show
                 SUB     2, R9
                 RSUB    SHOW_DIR, 1
+
+INPUT_LOOP      RSUB    KEYB_SCAN, 1
+                RSUB    KEYB_GETKEY, 1
+                CMP     0, R8
+                RBRA    INPUT_LOOP, Z
+                RSUB    PRINTHEX, 1
+                RBRA    INPUT_LOOP, 1
 
                 SYSCALL(getc, 1)
 
@@ -565,6 +573,12 @@ FILEHANDLE     .BLOCK  FAT32$FDH_STRUCT_SIZE   ; File handle
 CUR_X          .BLOCK  1                       ; OSD cursor x coordinate
 CUR_Y          .BLOCK  1                       ; ditto y
 INNER_X        .BLOCK  1                       ; first x-coord within frame
+
+; ----------------------------------------------------------------------------
+; Keyboard controller
+; ----------------------------------------------------------------------------
+
+#include "keyboard.asm"
 
 ; ----------------------------------------------------------------------------
 ; Directory browser including heap for storing the sorted structure

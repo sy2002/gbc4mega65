@@ -32,6 +32,9 @@ port (
    SD_MOSI           : out std_logic;
    SD_MISO           : in std_logic;
    
+   -- keyboard matrix
+   full_matrix       : in std_logic_vector(15 downto 0);
+
    -- Host VGA interface:
    -- The host requests one pixel in advance and QNICE responds with vga_on if this pixel is
    -- an OSD pixel and if yes, vga_rgb contains the color
@@ -63,7 +66,6 @@ port (
    cart_rom_size     : buffer std_logic_vector(7 downto 0);
    cart_ram_size     : buffer std_logic_vector(7 downto 0);
    cart_old_licensee : buffer std_logic_vector(7 downto 0)
-
 ); 
 end QNICE;
 
@@ -125,6 +127,8 @@ signal osm_xy_data_out           : std_logic_vector(15 downto 0);
 signal osm_dxdy_en               : std_logic;                        -- $FFE3
 signal osm_dxdy_we               : std_logic;
 signal osm_dxdy_data_out         : std_logic_vector(15 downto 0);
+signal keyb_en                   : std_logic;                        -- $FFE4
+signal keyb_data_out             : std_logic_vector(15 downto 0);
 signal gbc_cart_sel_data_out     : std_logic_vector(15 downto 0);
 signal vram_en                   : std_logic;                        -- $D000
 signal vram_we                   : std_logic;
@@ -166,6 +170,7 @@ begin
                   eae_data_out               or
                   sd_data_out                or
                   csr_data_out               or
+                  keyb_data_out              or
                   vram_data_out_16bit        or
                   vram_attr_data_out_16bit   or
                   gbc_bios_data_out_16bit    or
@@ -397,6 +402,8 @@ begin
    osm_dxdy_en              <= '1' when cpu_addr = x"FFE3" else '0';
    osm_dxdy_we              <= osm_dxdy_en and cpu_data_dir and cpu_data_valid;
    osm_dxdy_data_out        <= osm_dxdy when osm_dxdy_en = '1' and osm_dxdy_we = '0' else (others => '0');
+   keyb_en                  <= '1' when cpu_addr = x"FFE4" else '0';
+   keyb_data_out            <= full_matrix when keyb_en = '1' and cpu_data_dir = '0' else (others => '0');
                
    -- Registers
    --   CSR: Control and status register: Reset & Pause
