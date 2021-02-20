@@ -42,6 +42,8 @@ INSERT_LOOP     MOVE    R0, R8                  ; R8: string
                 MOVE    R8, R9                  ; R9: newly created heap elm
                 MOVE    R2, R8                  ; R8: head of linked list
                 MOVE    CMP_FUNC, R10           ; R10: compare function
+                XOR     R11, R11                ; R11 = 0: no filter
+                ;MOVE    FILTER_FUNC, R11        ; R11: filter function
                 RSUB    SLL$S_INSERT, 1         ; linked list sorted insert
                 MOVE    R8, R2                  ; new head of linked list
 
@@ -188,6 +190,31 @@ CMP_FUNC        INCRB
                 DECRB
                 RET
 
+; SLL$S_INSERT filter function that filters out some values, i.e. does not
+; insert them into the linked list. Returns 1 for all values that shall be
+; filtered and 0 for all values that are OK.
+; R8 contains the element-pointer and R8 is also used as return value, i.e.
+; R8 is overwritten.
+FILTER_FUNC     INCRB
+
+                ADD     SLL$DATA, R8
+                MOVE    @R8, R8
+
+                MOVE    FILTER_1, R9            ; filter string 1
+                SYSCALL(strcmp, 1)
+                CMP     0, R10
+                RBRA    _FF_RET1, Z
+
+                MOVE    FILTER_2, R9            ; filter string 2
+                SYSCALL(strcmp, 1)
+                CMP     0, R10
+                RBRA    _FF_RET0, !Z
+                
+_FF_RET1        MOVE    1, R8
+                RBRA    _FF_RET, 1
+_FF_RET0        XOR     R8, R8
+_FF_RET         DECRB
+                RET
 
 ; STRCPY copies a zero-terminated string to a destination
 ; Hint: QNICE Monitor V1.7 comes with a STRCPY, but currently, the gbc4mega65
@@ -233,6 +260,9 @@ DESCENDING_STR  .ASCII_W "     SORTED IN DESCENDING ORDER: Z..A then 9..0\n"
 ; ----------------------------------------------------------------------------
 ; Sample strings to be sorted
 ; ----------------------------------------------------------------------------
+
+FILTER_1        .ASCII_W "ssi4HRhP0dvMK0VTA78D"
+FILTER_2        .ASCII_W "co4G5GEQDp06cyTWfsmb"
 
 TEST_STR_LEN    .EQU    21
 TEST_STR_COUNT  .EQU    500

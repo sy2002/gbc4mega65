@@ -57,13 +57,17 @@ _SLLLNC_RET     DECRB
 ; Input
 ;   R8: Pointer to head of linked list, zero if this is the first element
 ;   R9: Pointer to new element
-;  R10: Pointer to a compare function that returns negative if (S0 < S1),
+;  R10: Pointer to a COMPARE function that returns negative if (S0 < S1),
 ;       zero if (S0 == S1), positive if (S0 > S1). These semantic are
 ;       basically compatible with STR$CMP, but instead of expecting pointers
 ;       to two strings, this compare function is expecting two pointers to
 ;       SLL records, while the pointer to the first one is given in R8 and
 ;       treated as "S0" and the second one in R9 and treated as "S1".
 ;       R10 is overwritten by the return value
+;  R11: Pointer to an optional FILTER function that returns 0, if the current
+;       element is OK and shall be inserted and 1, if the current element
+;       shall be filtered, i.e. not inserted. R8 contains the element-pointer
+;       and R8 is also used as return value, i.e. R8 is overwritten.
 ;
 ; Output:
 ;   R8: (New) head of linked list
@@ -72,6 +76,7 @@ _SLLLNC_RET     DECRB
 SLL$S_INSERT    INCRB
                 MOVE    R9, R0
                 MOVE    R10, R1
+                MOVE    R11, R2
                 INCRB
 
                 MOVE    R8, R0                  ; R0: head of linked list
@@ -79,9 +84,17 @@ SLL$S_INSERT    INCRB
                 MOVE    R0, R2                  ; R2: curr. elm to be checked                
                 MOVE    R10, R7                 ; R7: ptr to compare func.
 
+                ; apply filter
+                CMP     0, R11                  ; filter function provided?
+                RBRA    _SLLSI_NOFILTER, Z      ; no: continue
+                MOVE    R1, R8                  ; yes: call filter function
+                ASUB    R11, 1
+                CMP     1, R8                   ; filter current element?
+                RBRA    _SLLSI_OLDHEAD, Z       ; yes: return old head
+
                 ; if the new element is the first element, then we can
                 ; directly return
-                CMP     0, R0                   ; head = zero?
+_SLLSI_NOFILTER CMP     0, R0                   ; head = zero?
                 RBRA    _SLLSI_LOOP, !Z         ; no: go on
                 MOVE    R1, R8                  ; yes: return new elm has head
                 RBRA    _SLLSI_RET, 1
@@ -135,12 +148,13 @@ _SLLSI_INSERT   MOVE    R2, R3                  ; add new elm as PREV of old
 
                 CMP     R2, R0                  ; was the old elm the head?
                 RBRA    _SLLSI_NEWHEAD, Z
-                MOVE    R0, R8                  ; no: return the old head
+_SLLSI_OLDHEAD  MOVE    R0, R8                  ; no: return the old head
                 RBRA    _SLLSI_RET, 1
 _SLLSI_NEWHEAD  MOVE    R1, R8                  ; yes: return the new head
 
 _SLLSI_RET      DECRB
                 MOVE    R0, R9
                 MOVE    R1, R10
+                MOVE    R2, R11
                 DECRB
                 RET
