@@ -23,6 +23,52 @@ SLL$DATA        .EQU    0x0003                  ; pointer: data
 SLL$OVRHD_SIZE  .EQU    0x0003                  ; size of the structural
                                                 ; overhead other than data
 
+
+; ----------------------------------------------------------------------------
+; Find n elements after or before the given point in the list
+; Input:
+;   R8: Pointer to any element of the linked list
+;   R9: -1: iterate backward  1: iterate forward
+;  R10: Amount of elements to iterate
+; Output:
+;  R11: Target element (result of iteration) or 0, if we iterated too far
+; ----------------------------------------------------------------------------
+
+SLL$ITERATE     INCRB
+                ; if either the pointer is zero or the iteration mode is
+                ; invalid or the iteration amount is zero, return
+                CMP     0, R8                   ; input ptr zero?
+                RBRA    _SLLIT_RETORG, Z        ; yes: return original (zero)
+                CMP     0, R9                   ; iteration amount zero?
+                RBRA    _SLLIT_RETORG, Z        ; yes: return original
+                CMP     0, R10                  ; nothing to iterate?
+                RBRA    _SLLIT_RETORG, Z        ; yes: return original
+                CMP     -1, R9                  ; valid R9 (-1)?
+                RBRA    _SLLIT_START, Z         ; yes: start
+                CMP     1, R9                   ; another valid R9 (1)?
+                RBRA    _SLLIT_START, Z         ; yes: start
+                RBRA    _SLLIT_RET0, 1          ; no: return 0
+
+                ; iterate through the list by the given amount
+                ; return 0 in case we cross boundaries                
+_SLLIT_START    MOVE    R8, R0                  ; R0: iteration pointer
+                MOVE    R10, R1                 ; R1: amount of iterations
+
+_SLLIT_ITERATE  ADD     SLL$NEXT, R0            ; ptr. to next element
+                MOVE    @R0, R0                 ; try to go to next element                
+                RBRA    _SLLIT_RET0, Z          ; no next element? return 0!
+                SUB     1, R1                   ; one less iteration
+                RBRA    _SLLIT_ITERATE, !Z
+
+                MOVE    R0, R11                 ; return target element
+                RBRA    _SLLIT_RET, 1
+
+_SLLIT_RETORG   MOVE    R8, R11                 ; return the original R8
+                RBRA    _SLLIT_RET, 1
+_SLLIT_RET0     XOR     R11, R11                ; return zero
+_SLLIT_RET      DECRB
+                RET
+
 ; ----------------------------------------------------------------------------
 ; Find last element and count the amount of elements
 ; Input:

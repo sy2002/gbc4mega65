@@ -24,20 +24,9 @@
                 MOVE    0, @R8
                 RSUB    KEYB_INIT, 1
 
-                ; set visibility parameters and print frame
-                MOVE    GBC$CSR, R0             ; R0: GBC control & status reg
-                MOVE    0, @R0
-                OR      GBC$CSR_RESET, @R0      ; put machine in reset state 
-                OR      GBC$CSR_OSM, @R0        ; show on-screen-menu
-                RSUB    CLRSCR, 1               ; clear VRAM
-                XOR     R8, R8                  ; x|y for frame = (0, 0)
-                XOR     R9, R9                  
-                MOVE    GBC$OSM_COLS, R10       ; full screen size
-                MOVE    GBC$OSM_ROWS, R11
-                RSUB    PRINTFRAME, 1           ; show frame
-
-                MOVE    STR_TITLE, R8           ; welcome message
-                RSUB    PRINTSTR, 1
+                ; reset gameboy, set visibility parameters and
+                ; print the frame and the welcome message
+                RSUB    RESETGB_WELCOME, 1
                 ;RSUB    WAIT_2S, 1
 
                 ; Mount SD card and load original ROMs, if available.
@@ -53,13 +42,13 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 ; load sorted directory list into memory
                 MOVE    SD_DEVHANDLE, R8
                 MOVE    FN_START_DIR, R9        ; start path
-                MOVE    HEAP, R10               ; start address of heap   
+CD_AND_READ     MOVE    HEAP, R10               ; start address of heap   
                 MOVE    HEAP_SIZE, R11          ; maximum memory available
                                                 ; for storing the linked list
                 MOVE    FILTERROMNAMES, R12     ; do not show ROM file names
                 RSUB    DIRBROWSE_READ, 1       ; read directory content
                 CMP     0, R11                  ; errors?
-                RBRA    BROWSE_OK, Z            ; no
+                RBRA    BROWSE_START, Z         ; no
                 CMP     1, R11                  ; error: path not found
                 RBRA    ERR_PNF, Z
                 CMP     2, R11                  ; max files? (only warn)
@@ -72,39 +61,49 @@ ERR_PNF         MOVE    FN_ROOT_DIR, R9         ; try root
                 MOVE    HEAP_SIZE, R11
                 RSUB    DIRBROWSE_READ, 1
                 CMP     0, R11                  
-                RBRA    BROWSE_OK, Z
+                RBRA    BROWSE_START, Z
                 CMP     2, R11
                 RBRA    WRN_MAX, Z
                 RBRA    ERR_UNKNOWN, 1
 
-                ; unknown error: halt (TODO: we might want to retry in future)
-ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8
-                RSUB    PRINTSTR, 1
-                HALT
+                ; unknown error: end (TODO: we might want to retry in future)
+ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8 
+                XOR     R9, R9               
+                RBRA    FATALERROR, 1
 
                 ; TODO: we need to warn, that we are not showing all files
-WRN_MAX         RBRA    BROWSE_OK, 1
+WRN_MAX         RBRA    BROWSE_START, 1
 
-BROWSE_OK       MOVE    R10, R0                 ; R0: dir. linekd list head
+BROWSE_START    MOVE    R10, R0                 ; R0: dir. linked list head
+
+                ; how much items are there in the current directory?
+                MOVE    R0, R8
+                RSUB    SLL$LASTNCOUNT, 1
+                MOVE    R10, R1                 ; R1: amount of items in dir.
+
+                MOVE    GBC$OSM_ROWS, R2        ; R2: max rows on screen
+                SUB     2, R2                   ; (frame is 2 rows high)
+                MOVE    R0, R3                  ; R3: currently visible head
+                XOR     R4, R4                  ; R4: currently selected ..
+                                                ; .. line inside window
+
+                ; list (maximum one screen of) directory entries
                 RSUB    CLRINNER, 1
-                MOVE    R0, R8                  ; R8: pos in LL to show list
-                MOVE    GBC$OSM_ROWS, R9        ; R9: amount if lines to show
-                SUB     2, R9
-                RSUB    SHOW_DIR, 1
+                MOVE    R3, R8                  ; R8: pos in LL to show list
+                MOVE    R2, R9                  ; R9: amount if lines to show
+                RSUB    SHOW_DIR, 1             ; print directory listing
 
-                XOR     R0, R0                  ; R0: currently selected line
-                MOVE    9, R1                   ; R1: amount of items in dir.
-                MOVE    GBC$OSM_ROWS, R2        ; R2: max amnt items on screen
-                SUB     2, R2
-
-SELECT_LOOP     MOVE    R0, R8
+SELECT_LOOP     MOVE    R4, R8                  ; invert currently sel. line
                 MOVE    SA_COL_STD_INV, R9
                 RSUB    SELECT_LINE, 1
 
-INPUT_LOOP      RSUB    KEYB_SCAN, 1          
+                ; non-blocking mechanism to read keys from the Game Boy
+                ; keyboard (MEGA65 keyboard) as well as from the UART
+INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 RSUB    KEYB_GETKEY, 1
-                CMP     0, R8
-                RBRA    INPUT_LOOP, Z
+                CMP     0, R8                   ; no key?
+                RBRA    INPUT_LOOP, Z           ; then back to non-block. rd.
+
                 CMP     KEY_CUR_UP, R8          ; cursor up
                 RBRA    IL_CUR_UP, Z
                 CMP     KEY_CUR_DOWN, R8        ; cursor down
@@ -113,46 +112,93 @@ INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 RBRA    IL_KEY_RETURN, Z
                 RBRA    INPUT_LOOP, 1           ; unknown key
 
-IL_CUR_UP       CMP     R0, 0                   ; > 0?
+IL_CUR_UP       CMP     R4, 0                   ; > 0?
                 RBRA    INPUT_LOOP, !N          ; no: next key
-                MOVE    R0, R8                  ; yes: deselect current line
-                MOVE    SA_COL_STD, R9
+                MOVE    R4, R8                  ; yes: deselect current line
+                MOVE    SA_COL_STD, R9          
                 RSUB    SELECT_LINE, 1
-                SUB     1, R0
-                RBRA    SELECT_LOOP, 1
+                SUB     1, R4                   ; one line up
+                RBRA    SELECT_LOOP, 1          ; select new line and continue
 
-IL_CUR_DOWN     MOVE    R1, R8                  ; TEMP / TODO
-                SUB     2, R8
-                CMP     R0, R8                  ; R0 <= R8?
-                RBRA    INPUT_LOOP, N           ; no: next key
-                MOVE    R0, R8                  ; yes: deselect current line
-                MOVE    SA_COL_STD, R9
+IL_CUR_DOWN     MOVE    R1, R8                  ; R1: amount of items in dir..
+                SUB     1, R8                   ; ..-1 as we count from zero
+                CMP     R4, R8                  ; R4 = R1 (bottom reached?)
+                RBRA    INPUT_LOOP, Z           ; yes: ignore key press
+                MOVE    R4, R8                  ; yes: deselect current line
+                MOVE    SA_COL_STD, R9          
                 RSUB    SELECT_LINE, 1
-                ADD     1, R0                   ; next line
-                RBRA    SELECT_LOOP, 1
+                ADD     1, R4                   ; one line down
+                RBRA    SELECT_LOOP, 1          ; select new line and continue
 
-                ; Load Tetris
-IL_KEY_RETURN   RSUB    PRINTCRLF, 1
-                MOVE    STR_CART_LOAD, R8
-                RSUB    PRINTSTR, 1
-                MOVE    TMP_TETRIS, R8
-                RSUB    PRINTSTR, 1
+                ; iterate the linked list: find the currently seleted element
+IL_KEY_RETURN   MOVE    R3, R8                  ; R8: currently visible head
+                MOVE    1, R9                   ; R9: iterate forward
+                MOVE    R4, R10                 ; R10: iterate by R4 elements
+                RSUB    SLL$ITERATE, 1          ; find element
+                CMP     0, R11                  ; found element?
+                RBRA    ELEMENT_FOUND, !Z       ; yes: continue
+                MOVE    ERR_FATAL_ITER, R8      ; no: fatal error and halt
+                XOR     R9, R9
+                RBRA    FATALERROR, 1
+
+                ; depending on if a directory of a file was selected:
+                ; change directory or load cartridge; we therefore need to
+                ; find the flag that contains the info "directory" or "file"
+ELEMENT_FOUND   MOVE    R11, R8                 ; R11: selected SLL element
+                ADD     SLL$DATA_SIZE, R8
+                MOVE    @R8, R9
+                MOVE    R11, R8
+                ADD     SLL$OVRHD_SIZE, R8
+                ADD     R9, R8
+                CMP     0, @--R8                ; 0=file, 1=directory
+                RBRA    LOAD, Z
+
+                ; change directory
+                MOVE    R4, R8                  ; deselect current line
+                MOVE    SA_COL_STD, R9          
+                RSUB    SELECT_LINE, 1                
+                MOVE    STR_CD, R8              ; log directory change to UART
+                SYSCALL(puts, 1)
+                RSUB    CLRINNER, 1             ; clear inner part of frame
+                ADD     SLL$DATA, R11
+                ADD     1, R11                  ; remove < from name
+                MOVE    R11, R8                 ; remove > from name
+                SYSCALL(strlen, 1)
+                ADD     R9, R8
+                SUB     1, R8
+                MOVE    0, @R8
+                MOVE    R11, R8                 ; R8: clean directory name
+                SYSCALL(puts, 1)                ; log it to UART
+                SYSCALL(crlf, 1)
+                SYSCALL(crlf, 1)
+                MOVE    R8, R9                  ; use this directory
+                MOVE    SD_DEVHANDLE, R8                
+                RBRA    CD_AND_READ, 1          ; create new linked-list
+
+LOAD            MOVE    STR_LOAD_CART, R8       ; log cartridge name to UART
+                SYSCALL(puts, 1)
+                ADD     SLL$DATA, R11
+                MOVE    R11, R8                 ; R8: cartridge name
+                SYSCALL(puts, 1)
+
                 MOVE    MEM_CARTRIDGE_WIN, R9
                 MOVE    GBC$CART_SEL, R10  
                 RSUB    LOAD_CART, 1
                 CMP     0, R11
                 RBRA    CART_OK, Z
-                MOVE    ERR_LOAD_CART, R8
-                RSUB    PRINTSTR, 1
-                HALT                            ; TODO
-                
-CART_OK         MOVE    GBC$CSR, R0
-                AND     GBC$CSR_UN_RESET, @R0   ; un-reset => system runs now
-                AND     GBC$CSR_UN_OSM, @R0     ; hide OSM
-                SYSCALL(exit, 1)
+                HALT 
 
-                MOVE    STR_CART_DONE, R8
-                RSUB    PRINTSTR, 1
+CART_OK         MOVE    STR_LOAD_DONE, R8       ; log success to UART only
+                SYSCALL(puts, 1)
+
+                ; start Game Boy by "un-resetting" and hide the OSM
+                MOVE    GBC$CSR, R0
+                AND     GBC$CSR_UN_RESET, @R0
+                AND     GBC$CSR_UN_OSM, @R0
+                MOVE    STR_GB_STARTED, R8      ; log gameboy start to UART
+                SYSCALL(puts, 1)
+
+                SYSCALL(exit, 1)
 
                 MOVE    GBC$CSR, R0             ; R0 = control & status reg.
 
@@ -212,13 +258,19 @@ STR_TITLE       .ASCII_W "Game Boy Color for MEGA65\nMiSTer port done by sy2002 
 
 STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
-STR_CART_LOAD   .ASCII_W "Loading cartridge: "
-STR_CART_DONE   .ASCII_W "\nDone.\n"
+
+STR_CD          .ASCII_W "\nChanging directory to: "
+STR_LOAD_CART   .ASCII_W "\nLoading cartridge: "
+STR_LOAD_DONE   .ASCII_W "\nDone.\n"
+STR_GB_STARTED  .ASCII_W "Gameboy started.\n"
 
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
 ERR_LOAD_CART   .ASCII_W "  ERROR!\n"
 ERR_BROWSE_UNKN .ASCII_W "SD Card: Unknown error while trying to browse.\n"
+ERR_FATAL       .ASCII_W "FATAL ERROR:\n"
+ERR_FATAL_STOP  .ASCII_W "Core stopped. Please reset the machine."
+ERR_FATAL_ITER  .ASCII_W "Corrupt memory structure: Linked-list boundary.\n"
 
 ; ROM/BIOS file names and standard path 
 ; (the file names need to be in upper case)
@@ -374,6 +426,24 @@ _FILTRN_RET     MOVE    R0, R9
 ; Screen and Serial IO functions
 ; ----------------------------------------------------------------------------
 
+; reset Game Boy, set visibility parameters, print frame and pnt welcome msg
+RESETGB_WELCOME INCRB
+                MOVE    GBC$CSR, R0             ; R0: GBC control & status reg
+                MOVE    0, @R0
+                OR      GBC$CSR_RESET, @R0      ; put machine in reset state 
+                OR      GBC$CSR_OSM, @R0        ; show on-screen-menu
+                RSUB    CLRSCR, 1               ; clear VRAM
+                XOR     R8, R8                  ; x|y for frame = (0, 0)
+                XOR     R9, R9                  
+                MOVE    GBC$OSM_COLS, R10       ; full screen size
+                MOVE    GBC$OSM_ROWS, R11
+                RSUB    PRINTFRAME, 1           ; show frame
+
+                MOVE    STR_TITLE, R8           ; welcome message
+                RSUB    PRINTSTR, 1
+                DECRB
+                RET
+
 ; Show directory listing
 ; R8: position inside the directory linked-list from which to show it
 ; R9: maximum amount of entries to show
@@ -443,6 +513,7 @@ _PS_RET         RSUB    LEAVE, 1
                 RET
 
 ; Print the number in R8 in hexadecimal
+; TODO: also print on MEGA65 screen for better error messages & debugging
 PRINTHEX        INCRB
                 SYSCALL(puthex, 1)
                 DECRB
@@ -588,6 +659,8 @@ _PF_DL3         MOVE    CHR_FC_SH, @R8++        ; horizontal line
 SELECT_LINE     INCRB   
                 MOVE    R8, R0
                 MOVE    R9, R1
+                MOVE    R10, R2                 ; R10 & R11: changed by mulu
+                MOVE    R11, R3
                 INCRB
 
                 MOVE    R9, R0
@@ -606,8 +679,30 @@ _SL_FILL_LOOP   MOVE    R0, @R8++
                 DECRB
                 MOVE    R0, R8
                 MOVE    R1, R9
+                MOVE    R2, R10
+                MOVE    R3, R11
                 DECRB
                 RET
+
+; prints the error message given in R8 and the error code given in R9,
+; then halts the Game Boy and exits to the QNICE Monitor, which will be
+; invisble for most normal users but which might be helpful to debug
+FATALERROR      MOVE    R8, R0
+                MOVE    R9, R1
+                RSUB    RESETGB_WELCOME, 1
+                RSUB    PRINTCRLF, 1
+                MOVE    ERR_FATAL, R8
+                RSUB    PRINTSTR, 1
+                MOVE    R0, R8
+                RSUB    PRINTSTR, 1
+                CMP     0, R1
+                RBRA    _FATAL_END, Z
+                MOVE    R1, R8
+                RSUB    PRINTHEX, 1
+_FATAL_END      RSUB    PRINTCRLF, 1
+                MOVE    ERR_FATAL_STOP, R8
+                RSUB    PRINTSTR, 1
+                SYSCALL(exit, 1)
 
 ; ----------------------------------------------------------------------------
 ; Misc helper functions
