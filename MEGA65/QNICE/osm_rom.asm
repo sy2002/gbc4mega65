@@ -88,7 +88,7 @@ BROWSE_START    MOVE    R10, R0                 ; R0: dir. linked list head
                                                 ; .. line inside window
 
                 ; list (maximum one screen of) directory entries
-                RSUB    CLRINNER, 1
+DRAW_DIRLIST    RSUB    CLRINNER, 1
                 MOVE    R3, R8                  ; R8: pos in LL to show list
                 MOVE    R2, R9                  ; R9: amount if lines to show
                 RSUB    SHOW_DIR, 1             ; print directory listing
@@ -113,27 +113,45 @@ INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 RBRA    INPUT_LOOP, 1           ; unknown key
 
 IL_CUR_UP       CMP     R4, 0                   ; > 0?
-                RBRA    INPUT_LOOP, !N          ; no: next key
+                RBRA    IL_CUR_UP_CHK, !N       ; no: check if need to scroll
                 MOVE    R4, R8                  ; yes: deselect current line
                 MOVE    SA_COL_STD, R9          
                 RSUB    SELECT_LINE, 1
                 SUB     1, R4                   ; one line up
                 RBRA    SELECT_LOOP, 1          ; select new line and continue
+IL_CUR_UP_CHK   SYSCALL(exit, 1)               
 
 IL_CUR_DOWN     MOVE    R1, R8                  ; R1: amount of items in dir..
                 SUB     1, R8                   ; ..-1 as we count from zero
                 CMP     R4, R8                  ; R4 = R1 (bottom reached?)
                 RBRA    INPUT_LOOP, Z           ; yes: ignore key press
-                MOVE    R4, R8                  ; yes: deselect current line
+                MOVE    R2, R8                  ; R2: max rows on screen..
+                SUB     1, R8                   ; ..-1 as we count from zero
+                CMP     R4, R8                  ; R4 = R1: scrolling needed?
+                RBRA    IL_SCRL_DN, Z           ; yes: scroll down
+                MOVE    R4, R8                  ; no: deselect current line
                 MOVE    SA_COL_STD, R9          
                 RSUB    SELECT_LINE, 1
                 ADD     1, R4                   ; one line down
                 RBRA    SELECT_LOOP, 1          ; select new line and continue
 
+                ; scroll down by iterating the currently visible head of the
+                ; SLL by 1 step - or, if this is not possible: do not scroll,
+                ; because we reached the end of the list
+IL_SCRL_DN      MOVE    R3, R8                  ; R8: currently visible head
+                MOVE    1, R9                   ; R9: iterate forward
+                MOVE    1, R10                  ; R10: iterate by 1 element
+                RSUB    SLL$ITERATE, 1          ; find element
+                CMP     0, R11                  ; found element?
+                RBRA    IL_SCRL_DN_DO, !Z       ; yes: continue
+                RBRA    INPUT_LOOP, 1           ; no: ignore keypress
+IL_SCRL_DN_DO   MOVE    R11, R3                 ; new visible head
+                RBRA    DRAW_DIRLIST, 1         ; redraw directory list
+
                 ; iterate the linked list: find the currently seleted element
 IL_KEY_RETURN   MOVE    R3, R8                  ; R8: currently visible head
                 MOVE    1, R9                   ; R9: iterate forward
-                MOVE    R4, R10                 ; R10: iterate by R4 elements
+                MOVE    R4, R10                  ; R10: iterate by R4 elements
                 RSUB    SLL$ITERATE, 1          ; find element
                 CMP     0, R11                  ; found element?
                 RBRA    ELEMENT_FOUND, !Z       ; yes: continue
@@ -200,59 +218,9 @@ CART_OK         MOVE    STR_LOAD_DONE, R8       ; log success to UART only
 
                 SYSCALL(exit, 1)
 
-                MOVE    GBC$CSR, R0             ; R0 = control & status reg.
-
-                MOVE    @R0, R8
-                RSUB    PRINTHEX, 1
-                RSUB    PRINTCRLF, 1
-
-                MOVE    TEST_STR1, R8
-                RSUB    PRINTSTR, 1
-                SYSCALL(getc, 1)
-
-                AND     GBC$CSR_UN_RESET, @R0   ; un-reset => system runs now
-                AND     GBC$CSR_UN_OSM, @R0     ; hide OSM
-
-                MOVE    @R0, R8
-                RSUB    PRINTHEX, 1
-                RSUB    PRINTCRLF, 1
-
-                MOVE    TEST_STR2, R8
-                RSUB    PRINTSTR, 1
-                SYSCALL(getc, 1)
-
-                ; pause
-                OR      GBC$CSR_PAUSE, @R0      ; pause
-                OR      GBC$CSR_OSM, @R0        ; show OSM
-
-                MOVE    @R0, R8
-                RSUB    PRINTHEX, 1
-                RSUB    PRINTCRLF, 1
-
-                MOVE    TEST_STR3, R8
-                RSUB    PRINTSTR, 1
-                SYSCALL(getc, 1)
-
-                ; un-pause
-                AND     GBC$CSR_UN_PAUSE, @R0   ; un-pause
-                AND     GBC$CSR_UN_OSM, @R0     ; hide OSM
-
-                MOVE    @R0, R8
-                RSUB    PRINTHEX, 1
-                RSUB    PRINTCRLF, 1
-
-                MOVE    TEST_STR4, R8
-                RSUB    PRINTSTR, 1
-
-                SYSCALL(exit, 1)
-
-TEST_STR1       .ASCII_W "GBC is reset and paused\n"
-TEST_STR2       .ASCII_W "GBC is running\n"
-TEST_STR3       .ASCII_W "GBC is paused\n"
-TEST_STR4       .ASCII_W "GBC is running\n"
-
-TMP_TETRIS      .ASCII_W "/gbc/tetris.gb"
-TMP_KWIRK       .ASCII_W "/gbc/kwirk.gb"
+; ----------------------------------------------------------------------------
+; Strings
+; ----------------------------------------------------------------------------
 
 STR_TITLE       .ASCII_W "Game Boy Color for MEGA65\nMiSTer port done by sy2002 in 2021\n\n"
 
@@ -448,6 +416,7 @@ RESETGB_WELCOME INCRB
 ; R8: position inside the directory linked-list from which to show it
 ; R9: maximum amount of entries to show
 SHOW_DIR        RSUB    ENTER, 1
+                SUB     1, R9                   ; we start counting from 0
 
                 XOR     R0, R0                  ; R0: amount of entries shown
 
@@ -455,8 +424,12 @@ _SHOWDIR_L      MOVE    R8, R1                  ; R1: ptr to next LL element
                 ADD     SLL$NEXT, R1
                 ADD     SLL$DATA, R8            ; R8: entry name
 
-                RSUB    PRINTSTR, 1             ; print dirname/filename
-                RSUB    PRINTCRLF, 1
+                ; for performance reasons: do not output to UART
+                ; if you need to debug: delete "SCR" in the following
+                ; two function calls to use the dual-output routines
+                RSUB    PRINTSTRSCR, 1          ; print dirname/filename
+                RSUB    PRINTCRLFSCR, 1
+
                 ADD     1, R0
                 CMP     R0, R9                  ; shown <= maximum?
                 RBRA    _SHOWDIR_RET, N         ; no: leave
@@ -468,9 +441,12 @@ _SHOWDIR_RET    RSUB    LEAVE, 1
 
 ; Print the string in R8 on the current cursor position on the screen
 ; and in parallel to the UART
-PRINTSTR        RSUB    ENTER, 1
+PRINTSTR        SYSCALL(puts, 1)                ; output on serial console
+                RSUB    PRINTSTRSCR, 1          ; output on screen
+                RET
 
-                SYSCALL(puts, 1)                ; output on serial console
+; Print the string in R8 on the screen only
+PRINTSTRSCR     RSUB    ENTER, 1
 
                 MOVE    R8, R0                  ; R0: string to be printed
                 MOVE    CUR_X, R1               ; R1: running x-cursor
@@ -519,10 +495,21 @@ PRINTHEX        INCRB
                 DECRB
                 RET
 
-; Move the cursor to the next line
+; Move the cursor to the next line: screen only
+PRINTCRLFSCR    INCRB
+                MOVE    R8, R0
+                MOVE    _PRINTCRLF_S, R8
+                RSUB    PRINTSTRSCR, 1
+                MOVE    R0, R8
+                DECRB
+                RET
+
+; Move the cursor to the next line: screen and UART
 PRINTCRLF       INCRB
+                MOVE    R8, R0
                 MOVE    _PRINTCRLF_S, R8
                 RSUB    PRINTSTR, 1
+                MOVE    R0, R8
                 DECRB
                 RET
 
