@@ -56,6 +56,7 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 MOVE    HEAP, R10               ; start address of heap   
                 MOVE    HEAP_SIZE, R11          ; maximum memory available
                                                 ; for storing the linked list
+                MOVE    FILTERROMNAMES, R12     ; do not show ROM file names
                 RSUB    DIRBROWSE_READ, 1       ; read directory content
                 CMP     0, R11                  ; errors?
                 RBRA    BROWSE_OK, Z            ; no
@@ -214,16 +215,18 @@ STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM inste
 STR_CART_LOAD   .ASCII_W "Loading cartridge: "
 STR_CART_DONE   .ASCII_W "\nDone.\n"
 
-FN_ROM_OFS      .EQU 5 ; offset to add to rom filen. to get the name w/o path
-FN_DMG_ROM      .ASCII_W "/gbc/dmg_boot.bin"
-FN_GBC_ROM      .ASCII_W "/gbc/cgb_bios.bin"
-FN_START_DIR    .ASCII_W "/gbc"
-FN_ROOT_DIR     .ASCII_W "/"
-
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
 ERR_LOAD_CART   .ASCII_W "  ERROR!\n"
 ERR_BROWSE_UNKN .ASCII_W "SD Card: Unknown error while trying to browse.\n"
+
+; ROM/BIOS file names and standard path 
+; (the file names need to be in upper case)
+FN_ROM_OFS      .EQU 5 ; offset to add to rom filen. to get the name w/o path
+FN_DMG_ROM      .ASCII_W "/GBC/DMG_BOOT.BIN"
+FN_GBC_ROM      .ASCII_W "/GBC/CGB_BIOS.BIN"
+FN_START_DIR    .ASCII_W "/GBC"
+FN_ROOT_DIR     .ASCII_W "/"
 
 ; ----------------------------------------------------------------------------
 ; SD Card / file system functions
@@ -337,6 +340,36 @@ _LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
                 DECRB
                 RET
 
+; While browsing directories, make sure that the users are not seeing the
+; BIOS/ROM files of the Game Boy. Expects string pointer in R8 and returns 0,
+; if nothing is to be filtered otherwise returns 1.
+; The string in R8 is always upper case. Make sure that the ROM file names
+; are always upper case.
+FILTERROMNAMES  INCRB
+                MOVE    R9, R0
+                MOVE    R10, R1
+
+                MOVE    FN_DMG_ROM, R9
+                ADD     FN_ROM_OFS, R9
+                SYSCALL(strcmp, 1)
+                CMP     0, R10
+                RBRA    _FILTRN_RET1, Z
+
+                MOVE    FN_GBC_ROM, R9
+                ADD     FN_ROM_OFS, R9
+                SYSCALL(strcmp, 1)
+                CMP     0, R10
+                RBRA    _FILTRN_RET1, Z
+
+_FILTRN_RET0    XOR     R8, R8
+                RBRA    _FILTRN_RET, 1
+_FILTRN_RET1    MOVE    1, R8
+
+_FILTRN_RET     MOVE    R0, R9
+                MOVE    R1, R10
+                DECRB
+                RET
+
 ; ----------------------------------------------------------------------------
 ; Screen and Serial IO functions
 ; ----------------------------------------------------------------------------
@@ -351,21 +384,6 @@ SHOW_DIR        RSUB    ENTER, 1
 _SHOWDIR_L      MOVE    R8, R1                  ; R1: ptr to next LL element
                 ADD     SLL$NEXT, R1
                 ADD     SLL$DATA, R8            ; R8: entry name
-
-                ; filter the ROMs
-                MOVE    R9, R2
-                MOVE    FN_DMG_ROM, R9
-                ADD     FN_ROM_OFS, R9                
-                SYSCALL(strcmp, 1)
-                MOVE    R2, R9
-                CMP     0, R10
-                RBRA    _SHOWDIR_NEXT, Z
-                MOVE    FN_GBC_ROM, R9
-                ADD     FN_ROM_OFS, R9
-                SYSCALL(strcmp, 1)
-                MOVE    R2, R9
-                CMP     0, R10
-                RBRA    _SHOWDIR_NEXT, Z
 
                 RSUB    PRINTSTR, 1             ; print dirname/filename
                 RSUB    PRINTCRLF, 1

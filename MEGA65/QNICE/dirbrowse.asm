@@ -21,6 +21,11 @@
 ;   R9: Pointer to path that shall be listed (zero-terminated string)
 ;  R10: Pointer to heap
 ;  R11: Maximum amount of available heap memory
+;  R12: Optional filter function that filters out files of a certain name.
+;       The filter function takes a pointer to a string in R8 and returns
+;       0 in R8, if the file shall not be filtered and 1 if it shall be
+;       filtered. The string provided in R8 is always in upper case.
+;       If R12 is zero, then no filter is applied.
 ; Output:
 ;   R8: (unchanged) Pointer to valid device handle
 ;   R9: Amount of directory entries read
@@ -34,6 +39,7 @@
 
 DIRBROWSE_READ  INCRB
                 MOVE    R8, R0
+                MOVE    R12, R1
                 INCRB
 
                 MOVE    R10, R0                 ; R0: head of the heap
@@ -42,11 +48,18 @@ DIRBROWSE_READ  INCRB
                 XOR     R3, R3                  ; R3: current heap mem. usage
                 XOR     R4, R4                  ; R4: amount of entries read
                 XOR     R5, R5                  ; R5: head of linked list
+                XOR     R6, R6                  ; R6: filter function or 0
                                                 ; R7: directory handle
+
+                CMP     0, R12                  ; filter function given?
+                RBRA    _DIRBR_START, Z         ; no: get started
+                MOVE    _DIRBR_FILTERFN, R6     ; yes: remember custom func.
+                MOVE    R12, @R6
+                MOVE    _DIRBR_FILTWRAP, R6     ; R6: internal wrapper func.
 
                 ; change directory to given path and then obtain the
                 ; directory handle: R8: device handle, R9: path
-                XOR     R10, R10                ; use "/" as separator char
+_DIRBR_START    XOR     R10, R10                ; use "/" as separator char
                 SYSCALL(f32_cd, 1)              ; change directory
                 CMP     0, R9                   ; everything OK?
                 RBRA    _DIRBR_RD_ECD, !Z       ; no: error and exit
@@ -89,6 +102,8 @@ _DIRBR_LOOP     MOVE    R7, R8                  ; R8: directory handle
                 MOVE    R5, R8                  ; R8: head of linked list
                                                 ; R9: still has new element
                 MOVE    _DIRBR_COMPARE, R10     ; R10: compare function
+                MOVE    R6, R11                 ; R11: filter func. or 0
+
                 RSUB    SLL$S_INSERT, 1
                 MOVE    R8, R5                  ; R5: (new) head of linked lst
                 RBRA    _DIRBR_LOOP, 1          ; next iteration
@@ -107,12 +122,15 @@ _DIRBR_RD_WOOM  MOVE    2, R11                  ; out-of-memory
 _DIRBR_RD_EDH   MOVE    3, R11                  ; unknown error
 _DIRBR_RD_RET   DECRB
                 MOVE    R0, R8
+                MOVE    R1, R12
                 DECRB
                 RET
 
 ; ----------------------------------------------------------------------------
-; Internal helper functions
+; Internal helper variables and functions
 ; ----------------------------------------------------------------------------
+
+_DIRBR_FILTERFN .BLOCK  1
 
 _DIRBR_FH       .BLOCK  FAT32$FDH_STRUCT_SIZE   ; file handle
 _DIRBR_ENTRY    .BLOCK  FAT32$DE_STRUCT_SIZE    ; directory entry
@@ -258,7 +276,6 @@ _DIRBR_CMP      MOVE    R0, R8                  ; copy string to stack
                 SYSCALL(str2upper, 1)
                 MOVE    R8, R0
 
-
                 ; copy R1 to the stack and make it upper case
                 MOVE    R1, R8
                 SYSCALL(strlen, 1)
@@ -281,6 +298,32 @@ _DIRBR_CMP      MOVE    R0, R8                  ; copy string to stack
 _DIRBR_CMP_RET  DECRB                
                 MOVE    R0, R8
                 MOVE    R1, R9   
+                DECRB
+                RET
+
+; SLL$S_INSERT filter function which is a wrapper for the user-defined
+; function specified for DIRBROWSE_READ. This is a simplification so that
+; DIRBROWSE_READ just expects a filter function that compares strings and
+; that does not need to be aware of the SLL semantics
+_DIRBR_FILTWRAP INCRB
+                MOVE    R9, R0
+        
+                ; copy the string to the stack and make it upper case
+                ADD     SLL$DATA, R8            ; R8: pointer to string
+                SYSCALL(strlen, 1)              ; R9: length of string
+                ADD     1, R9
+                SUB     R9, SP
+                MOVE    R9, R2
+                MOVE    SP, R9
+                RSUB    _DIRBR_STRCPY, 1
+                MOVE    R9, R8
+                SYSCALL(str2upper, 1)           ; R8 contains upper string
+
+                MOVE    _DIRBR_FILTERFN, R1
+                ASUB    @R1, 1
+
+                ADD     R2, SP                  ; restore stack
+                MOVE    R0, R9
                 DECRB
                 RET
 
