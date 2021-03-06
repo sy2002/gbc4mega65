@@ -30,7 +30,8 @@
 
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
-                MOVE    1, R8
+                MOVE    1, R8                   ; show welcome message
+                MOVE    GBC$CSR_RESET, R9       ; put machine in reset state 
                 RSUB    RESETGB_WELCOME, 1
 
                 ; Mount SD card and load original ROMs, if available.
@@ -147,7 +148,22 @@ INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 RBRA    IL_CUR_RIGHT, Z
                 CMP     KEY_RETURN, R8          ; return key
                 RBRA    IL_KEY_RETURN, Z
+                CMP     KEY_RUNSTOP, R8         ; Run/Stop key
+                RBRA    IL_KEY_RUNSTOP, Z
                 RBRA    INPUT_LOOP, 1           ; unknown key
+
+                ; RUN/STOP has been pressed
+                ; Exit file browser, if game is running
+IL_KEY_RUNSTOP  MOVE    GAME_RUNNING, R8
+                MOVE    @R8, R8
+                RBRA    INPUT_LOOP, Z           ; ignore if no game running
+                MOVE    R4, @--SP               ; remember cursor position
+                MOVE    FB_HEAD, R8             ; remember currently vis. head
+                MOVE    R3, @R8
+                MOVE    GBC$CSR, R8             ; continue game
+                AND     GBC$CSR_UN_OSM, @R8
+                AND     GBC$CSR_UN_PAUSE, @R8
+                RBRA    GAME_RUNS, 1
 
                 ; CURSOR UP has been pressed
 IL_CUR_UP       CMP     R4, 0                   ; > 0?
@@ -306,7 +322,15 @@ CHANGEDIR       MOVE    R8, R9                  ; use this directory
                 MOVE    SD_DEVHANDLE, R8  
                 RBRA    CD_AND_READ, 1          ; create new linked-list
 
-LOAD            MOVE    R4, @--SP               ; remember cursor position
+LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
+                AND     GBC$CSR_UN_PAUSE, @R8   ; it does matter, that we..
+                                                ; ..unpause before unreset..
+                                                ; ..otherwise the palette is..
+                                                ; ..for some reason not ..
+                                                ; ..correctly changed
+                OR      GBC$CSR_RESET, @R8      ; put Game Boy in reset state                                                                                                
+
+                MOVE    R4, @--SP               ; remember cursor position
                 MOVE    FB_HEAD, R8             ; remember currently vis. head
                 MOVE    R3, @R8
                 MOVE    STR_LOAD_CART, R8       ; log cartridge name to UART
@@ -320,12 +344,12 @@ LOAD            MOVE    R4, @--SP               ; remember cursor position
                 RSUB    LOAD_CART, 1
                 CMP     0, R11
                 RBRA    CART_OK, Z
-                HALT 
+                HALT                            ; TODO: more graceful handling
 
 CART_OK         MOVE    STR_LOAD_DONE, R8       ; log success to UART only
                 SYSCALL(puts, 1)
 
-                ; start Game Boy by "un-resetting" and hide the OSM
+                ; start Game Boy by "un-resetting"  and hide the OSM
                 MOVE    GBC$CSR, R0
                 AND     GBC$CSR_UN_RESET, @R0
                 AND     GBC$CSR_UN_OSM, @R0
@@ -349,7 +373,8 @@ GAME_RUNS       MOVE    GAME_RUNNING, R8        ; set game running flag
                 RBRA    GR_HELP, Z
                 RBRA    GAME_RUNS, 1
 
-GR_RUNSTOP      XOR     R8, R8                  ; reset gameboy and show OSD
+GR_RUNSTOP      XOR     R8, R8                  ; reset Game Boy and show OSD
+                MOVE    GBC$CSR_PAUSE, R9       ; pause Game Boy
                 RSUB    RESETGB_WELCOME, 1
                 RBRA    BROWSE_START, 1         ; file browser
 
@@ -569,12 +594,12 @@ _FILTRN_RET     MOVE    R0, R9
 
 ; reset Game Boy, set visibility parameters, print frame and pnt welcome msg
 ; R8: 0=without welcome message, 1=with welcome message
+; R9: target state of Game Boy
 RESETGB_WELCOME INCRB
                 MOVE    R8, R7
 
                 MOVE    GBC$CSR, R0             ; R0: GBC control & status reg
-                MOVE    0, @R0
-                OR      GBC$CSR_RESET, @R0      ; put machine in reset state 
+                MOVE    R9, @R0                 ; set target state
                 OR      GBC$CSR_OSM, @R0        ; show on-screen-menu
                 RSUB    CLRSCR, 1               ; clear VRAM
                 XOR     R8, R8                  ; x|y for frame = (0, 0)
