@@ -27,6 +27,10 @@
                 MOVE    0, @R8
                 MOVE    FB_HEAD, R8             ; no active head of file brws.
                 MOVE    0, @R8
+                MOVE    FB_ITEMS_COUNT, R8      ; no directory browsed so far
+                MOVE    0, @R8
+                MOVE    FB_ITEMS_SHOWN, R8      ; no dir. items shown so far
+                MOVE    0, @R8
 
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
@@ -120,12 +124,29 @@ BROWSE_SETUP    MOVE    R0, R8
                 XOR     R5, R5                  ; R5: counts the amount of ..
                                                 ; ..files that have been shown
 
+                MOVE    FB_ITEMS_COUNT, R8      ; existing persistent # items?
+                CMP     0, @R8
+                RBRA    BROWSE_SETUP2, Z        ; no
+                MOVE    @R8, R1                 ; yes: store ..
+                MOVE    0, @R8                  ; .. and clear value / flag
+BROWSE_SETUP2   MOVE    FB_ITEMS_SHOWN, R8      ; exist. pers. # shown items?
+                CMP     0, @R8
+                RBRA    DRAW_DIRLIST, Z         ; no
+                MOVE    @R8, R5                 ; yes: store
+
                 ; list (maximum one screen of) directory entries
 DRAW_DIRLIST    RSUB    CLRINNER, 1
                 MOVE    R3, R8                  ; R8: pos in LL to show list
                 MOVE    R2, R9                  ; R9: amount if lines to show
                 RSUB    SHOW_DIR, 1             ; print directory listing
-                ADD     R10, R5                 ; R5: overall # of files shown
+
+                MOVE    FB_ITEMS_SHOWN, R8      ; do not add SHOW_DIR result..
+                CMP     0, @R8                  ; ..if R5 was restored using..
+                RBRA    ADD_SHOWN_ITMS, Z       ; FB_ITEMS_SHOWN and..
+                MOVE    0, @R8                  ; ..clear FB_ITEMS_SHOWN
+                RBRA    SELECT_LOOP, 1
+
+ADD_SHOWN_ITMS  ADD     R10, R5                 ; R5: overall # of files shown
 
 SELECT_LOOP     MOVE    R4, R8                  ; invert currently sel. line
                 MOVE    SA_COL_STD_INV, R9
@@ -160,6 +181,10 @@ IL_KEY_RUNSTOP  MOVE    GAME_RUNNING, R8
                 MOVE    R4, @--SP               ; remember cursor position
                 MOVE    FB_HEAD, R8             ; remember currently vis. head
                 MOVE    R3, @R8
+                MOVE    FB_ITEMS_COUNT, R8      ; remember # of items in dir.
+                MOVE    R1, @R8
+                MOVE    FB_ITEMS_SHOWN, R8      ; remember # of items shown
+                MOVE    R5, @R8                
                 MOVE    GBC$CSR, R8             ; continue game
                 AND     GBC$CSR_UN_OSM, @R8
                 AND     GBC$CSR_UN_PAUSE, @R8
@@ -333,6 +358,11 @@ LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
                 MOVE    R4, @--SP               ; remember cursor position
                 MOVE    FB_HEAD, R8             ; remember currently vis. head
                 MOVE    R3, @R8
+                MOVE    FB_ITEMS_COUNT, R8      ; remember # of items in dir.
+                MOVE    R1, @R8
+                MOVE    FB_ITEMS_SHOWN, R8      ; remember # of items shown
+                MOVE    R5, @R8
+
                 MOVE    STR_LOAD_CART, R8       ; log cartridge name to UART
                 SYSCALL(puts, 1)
                 ADD     SLL$DATA, R11
@@ -955,6 +985,8 @@ GAME_RUNNING   .BLOCK 1                         ; 1 = game loaded and running
 
 ; file browser persistent status: currently displayed head of linked list
 FB_HEAD        .BLOCK 1
+FB_ITEMS_COUNT .BLOCK 1
+FB_ITEMS_SHOWN .BLOCK 1
 
 ; ----------------------------------------------------------------------------
 ; Keyboard controller
