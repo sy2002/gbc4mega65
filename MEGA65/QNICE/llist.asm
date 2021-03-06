@@ -43,17 +43,24 @@ SLL$ITERATE     INCRB
                 CMP     0, R10                  ; nothing to iterate?
                 RBRA    _SLLIT_RETORG, Z        ; yes: return original
                 CMP     -1, R9                  ; valid R9 (-1)?
-                RBRA    _SLLIT_START, Z         ; yes: start
+                RBRA    _SLLIT_PREV, Z          ; yes: remember and start
                 CMP     1, R9                   ; another valid R9 (1)?
-                RBRA    _SLLIT_START, Z         ; yes: start
+                RBRA    _SLLIT_NEXT, Z          ; yes: remember and start
                 RBRA    _SLLIT_RET0, 1          ; no: return 0
+
+                ; R7: depending on if we are iterating forward or backward:
+                ; contains the address to be added to the SLL element to
+                ; extract either the NEXT or the PREV pointer
+_SLLIT_PREV     MOVE    SLL$PREV, R7            ; -1: iterate backward
+                RBRA    _SLLIT_START, 1
+_SLLIT_NEXT     MOVE    SLL$NEXT, R7            ; +1: iterate forward
 
                 ; iterate through the list by the given amount
                 ; return 0 in case we cross boundaries                
 _SLLIT_START    MOVE    R8, R0                  ; R0: iteration pointer
                 MOVE    R10, R1                 ; R1: amount of iterations
 
-_SLLIT_ITERATE  ADD     SLL$NEXT, R0            ; ptr. to next element
+_SLLIT_ITERATE  ADD     R7, R0                  ; ptr. to next/prev element
                 MOVE    @R0, R0                 ; try to go to next element                
                 RBRA    _SLLIT_RET0, Z          ; no next element? return 0!
                 SUB     1, R1                   ; one less iteration
