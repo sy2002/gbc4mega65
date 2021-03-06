@@ -49,6 +49,10 @@ port (
    SD_MOSI        : out std_logic;
    SD_MISO        : in std_logic;
    
+   -- 3.5mm analog audio jack
+   pwm_l          : out std_logic;
+   pwm_r          : out std_logic;
+      
    -- Joysticks
    joy_1_up_n     : in std_logic;
    joy_1_down_n   : in std_logic;
@@ -61,12 +65,7 @@ port (
 --   joy_2_left_n   : in std_logic;
 --   joy_2_right_n  : in std_logic;
 --   joy_2_fire_n   : in std_logic;
-   
-   -- 3.5mm analog audio jack
---   pwm_l          : out std_logic;
---   pwm_r          : out std_logic
-   
-      
+            
    -- HDMI via ADV7511
 --   hdmi_vsync     : out std_logic;
 --   hdmi_hsync     : out std_logic;
@@ -146,6 +145,10 @@ signal vga_col_next        : integer range 0 to VGA_DX - 1;
 signal vga_row_next        : integer range 0 to VGA_DY - 1;
 signal vga_hs_int          : std_logic;
 signal vga_vs_int          : std_logic;
+
+-- Audio signals
+signal pcm_audio_left      : std_logic_vector(15 downto 0);
+signal pcm_audio_right     : std_logic_vector(15 downto 0);
 
 -- debounced signals for the reset button and the joysticks; joystick signals are also inverted
 signal dbnce_reset_n       : std_logic;
@@ -237,7 +240,7 @@ begin
          sys_clk_i         => CLK,
          pixelclk_o        => vga_pixelclk      -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
       );
-   
+         
    -- signals neccessary due to Verilog in VHDL embedding
    i_fast_boot       <= '0';
    i_joystick        <= x"FF";
@@ -280,8 +283,8 @@ begin
          gbc_bios_do             => gbc_bios_data,
                
          -- audio    
-         audio_l                 => open,
-         audio_r                 => open,
+         audio_l                 => pcm_audio_left,
+         audio_r                 => pcm_audio_right,
                
          -- lcd interface     
          lcd_clkena              => lcd_clkena,
@@ -349,6 +352,20 @@ begin
          refresh                 => open,
          ff_on                   => open         
       );
+      
+   -- Convert the Game Boy's PCM output to pulse density modulation
+   -- TODO: Is this component configured correctly when it comes to clock speed, constants used within
+   -- the component, subtracting 32768 while converting to signed, etc.
+   pcm2pdm : entity work.pcm_to_pdm
+      port map
+      (
+         cpuclock       => qnice_clk,
+         pcm_left       => signed(signed(pcm_audio_left) - 32768),
+         pcm_right      => signed(signed(pcm_audio_right) - 32768),
+         pdm_left       => pwm_l,
+         pdm_right      => pwm_r,
+         audio_mode     => '0'
+      ); 
                 
    -- BIOS ROM / BOOT ROM
    bios_rom : entity work.dualport_2clk_ram
