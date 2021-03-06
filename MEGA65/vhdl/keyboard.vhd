@@ -58,13 +58,14 @@ signal m65_capslock_n      : std_logic;
 
 -- Game Boy's keyboard matrix: low active matrix with 2 rows and 4 columns
 -- Refer to "doc/assets/spectrum_keyboard_ports.png" to learn how it works
-type matrix_reg_t is array(0 to 1) of std_logic_vector(3 downto 0);
+-- One more column was added to support additional keys used by QNICE
+type matrix_reg_t is array(0 to 2) of std_logic_vector(3 downto 0);
 signal matrix : matrix_reg_t := (others => "1111");  -- low active, i.e. "1111" means "no key pressed"
 
 begin
 
    -- keyboard matrix: convert to high-active and output full matrix
-   full_matrix <= x"00" & not matrix(1) & not matrix(0);
+   full_matrix <= x"0" & not matrix(2) & not matrix(1) & not matrix(0);
    
    m65driver : entity work.mega65kbd_to_matrix
    port map
@@ -133,7 +134,9 @@ begin
             when 1      => matrix(1)(2) <= key_status_n;       -- Return      => Select
             when 60     => matrix(1)(3) <= key_status_n;       -- Space       => Start
             when 15     => matrix(1)(0) <= key_status_n;       -- Left Shift  => A
-            when 61     => matrix(1)(1) <= key_status_n;       -- Mega key    => B    
+            when 61     => matrix(1)(1) <= key_status_n;       -- Mega key    => B
+            when 63     => matrix(2)(0) <= key_status_n;       -- Run/Stop    => File browser
+            when 67     => matrix(2)(1) <= key_status_n;       -- Help        => Options menu  
             when others => null;
          end case;
       end if;

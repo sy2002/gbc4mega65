@@ -22,10 +22,15 @@
                 MOVE    0, @R8
                 MOVE    CUR_Y, R8               ; ditto cursor Y
                 MOVE    0, @R8
-                RSUB    KEYB_INIT, 1
+                RSUB    KEYB_INIT, 1            ; initialize keyboard ctrl.
+                MOVE    GAME_RUNNING, R8        ; game is not runnnig
+                MOVE    0, @R8
+                MOVE    FB_HEAD, R8             ; no active head of file brws.
+                MOVE    0, @R8
 
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
+                MOVE    1, R8
                 RSUB    RESETGB_WELCOME, 1
 
                 ; Mount SD card and load original ROMs, if available.
@@ -39,6 +44,15 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
 
                 ; Print help screen
                 RSUB    HELP_SCREEN, 1
+
+                ; The file browser remembers the cursor position of all
+                ; nested directories so that when we climb up the directory
+                ; tree, the cursor selects the correct item on the screen.
+                ; We assume to be two levels deep at the beginning. This is
+                ; why we push two 0 on the stack and remove one of them, in
+                ; case we revert back to the root folder.
+                MOVE    0, @--SP
+                MOVE    0, @--SP
 
                 ; load sorted directory list into memory
                 MOVE    SD_DEVHANDLE, R8
@@ -57,7 +71,8 @@ CD_AND_READ     MOVE    HEAP, R10               ; start address of heap
                 RBRA    ERR_UNKNOWN, 1
 
                 ; /gbc path not found, try root instead
-ERR_PNF         MOVE    FN_ROOT_DIR, R9         ; try root
+ERR_PNF         ADD     1, SP                   ; see comment above at @--SP
+                MOVE    FN_ROOT_DIR, R9         ; try root
                 MOVE    HEAP, R10
                 MOVE    HEAP_SIZE, R11
                 RSUB    DIRBROWSE_READ, 1
@@ -87,14 +102,19 @@ _WRNMAXSPACE    RSUB    KEYB_SCAN, 1
 
 BROWSE_START    MOVE    R10, R0                 ; R0: dir. linked list head
 
+                MOVE    FB_HEAD, R8             
+                MOVE    @R8, R8                 ; persistent existing head?
+                RBRA    BROWSE_SETUP, Z         ; no: continue
+                MOVE    R8, R0                  ; yes: use it
+
                 ; how much items are there in the current directory?
-                MOVE    R0, R8
+BROWSE_SETUP    MOVE    R0, R8
                 RSUB    SLL$LASTNCOUNT, 1
                 MOVE    R10, R1                 ; R1: amount of items in dir.
                 MOVE    GBC$OSM_ROWS, R2        ; R2: max rows on screen
                 SUB     2, R2                   ; (frame is 2 rows high)
                 MOVE    R0, R3                  ; R3: currently visible head
-                XOR     R4, R4                  ; R4: currently selected ..
+                MOVE    @SP++, R4               ; R4: currently selected ..
                                                 ; .. line inside window
                 XOR     R5, R5                  ; R5: counts the amount of ..
                                                 ; ..files that have been shown
@@ -271,11 +291,25 @@ ELEMENT_FOUND   MOVE    R11, R8                 ; R11: selected SLL element
                 SYSCALL(puts, 1)                ; log it to UART
                 SYSCALL(crlf, 1)
                 SYSCALL(crlf, 1)
-                MOVE    R8, R9                  ; use this directory
-                MOVE    SD_DEVHANDLE, R8                
+    
+                MOVE    FB_HEAD, R9             ; reset head for browsing
+                MOVE    0, @R9
+
+                MOVE    FN_UPDIR, R9            ; are we going one dir. up?
+                SYSCALL(strcmp, 1)
+                CMP     0, R10
+                RBRA    CHANGEDIR, Z            ; yes: get crsr pos from stack            
+                MOVE    R4, @--SP               ; no: remember cursor pos..
+                MOVE    0, @--SP                ; ..and new dir. starts at 0
+
+CHANGEDIR       MOVE    R8, R9                  ; use this directory
+                MOVE    SD_DEVHANDLE, R8  
                 RBRA    CD_AND_READ, 1          ; create new linked-list
 
-LOAD            MOVE    STR_LOAD_CART, R8       ; log cartridge name to UART
+LOAD            MOVE    R4, @--SP               ; remember cursor position
+                MOVE    FB_HEAD, R8             ; remember currently vis. head
+                MOVE    R3, @R8
+                MOVE    STR_LOAD_CART, R8       ; log cartridge name to UART
                 SYSCALL(puts, 1)
                 ADD     SLL$DATA, R11
                 MOVE    R11, R8                 ; R8: cartridge name
@@ -298,7 +332,28 @@ CART_OK         MOVE    STR_LOAD_DONE, R8       ; log success to UART only
                 MOVE    STR_GB_STARTED, R8      ; log gameboy start to UART
                 SYSCALL(puts, 1)
 
-                SYSCALL(exit, 1)
+                ; ------------------------------------------------------------
+                ; MENUS WHILE GAME IS RUNNING
+                ; ------------------------------------------------------------
+
+GAME_RUNS       MOVE    GAME_RUNNING, R8        ; set game running flag
+                MOVE    1, @R8
+                RSUB    KEYB_SCAN, 1
+                RSUB    KEYB_GETKEY, 1
+                CMP     0, R8                   ; no key?
+                RBRA    GAME_RUNS, Z            ; then back to non-block. rd.
+
+                CMP     KEY_RUNSTOP, R8         ; Run/Stop: File browser
+                RBRA    GR_RUNSTOP, Z
+                CMP     KEY_HELP, R8            ; Help: Options menu
+                RBRA    GR_HELP, Z
+                RBRA    GAME_RUNS, 1
+
+GR_RUNSTOP      XOR     R8, R8                  ; reset gameboy and show OSD
+                RSUB    RESETGB_WELCOME, 1
+                RBRA    BROWSE_START, 1         ; file browser
+
+GR_HELP         SYSCALL(exit, 1)
 
 ; ----------------------------------------------------------------------------
 ; Strings
@@ -364,6 +419,7 @@ FN_DMG_ROM      .ASCII_W "/GBC/DMG_BOOT.BIN"
 FN_GBC_ROM      .ASCII_W "/GBC/CGB_BIOS.BIN"
 FN_START_DIR    .ASCII_W "/GBC"
 FN_ROOT_DIR     .ASCII_W "/"
+FN_UPDIR        .ASCII_W ".."
 
 ; ----------------------------------------------------------------------------
 ; SD Card / file system functions
@@ -512,7 +568,10 @@ _FILTRN_RET     MOVE    R0, R9
 ; ----------------------------------------------------------------------------
 
 ; reset Game Boy, set visibility parameters, print frame and pnt welcome msg
+; R8: 0=without welcome message, 1=with welcome message
 RESETGB_WELCOME INCRB
+                MOVE    R8, R7
+
                 MOVE    GBC$CSR, R0             ; R0: GBC control & status reg
                 MOVE    0, @R0
                 OR      GBC$CSR_RESET, @R0      ; put machine in reset state 
@@ -524,9 +583,12 @@ RESETGB_WELCOME INCRB
                 MOVE    GBC$OSM_ROWS, R11
                 RSUB    PRINTFRAME, 1           ; show frame
 
+                CMP     1, R7                   ; R7=1: show message
+                RBRA    _RESETGB_RET, !Z
                 MOVE    STR_TITLE, R8           ; welcome message
                 RSUB    PRINTSTR, 1
-                DECRB
+
+_RESETGB_RET    DECRB
                 RET
 
 ; Show directory listing
@@ -859,11 +921,15 @@ LEAVE           DECRB
 ; Variables (need to be located in RAM)
 ; ----------------------------------------------------------------------------
 
-SD_DEVHANDLE   .BLOCK  FAT32$DEV_STRUCT_SIZE   ; SD card device handle
-FILEHANDLE     .BLOCK  FAT32$FDH_STRUCT_SIZE   ; File handle
-CUR_X          .BLOCK  1                       ; OSD cursor x coordinate
-CUR_Y          .BLOCK  1                       ; ditto y
-INNER_X        .BLOCK  1                       ; first x-coord within frame
+SD_DEVHANDLE   .BLOCK FAT32$DEV_STRUCT_SIZE     ; SD card device handle
+FILEHANDLE     .BLOCK FAT32$FDH_STRUCT_SIZE     ; File handle
+CUR_X          .BLOCK 1                         ; OSD cursor x coordinate
+CUR_Y          .BLOCK 1                         ; ditto y
+INNER_X        .BLOCK 1                         ; first x-coord within frame
+GAME_RUNNING   .BLOCK 1                         ; 1 = game loaded and running
+
+; file browser persistent status: currently displayed head of linked list
+FB_HEAD        .BLOCK 1
 
 ; ----------------------------------------------------------------------------
 ; Keyboard controller

@@ -46,6 +46,8 @@ KEY_RETURN          .EQU 0x0040
 KEY_SPACE           .EQU 0x0080
 KEY_LSHIFT          .EQU 0x0010
 KEY_MEGA            .EQU 0x0020
+KEY_RUNSTOP         .EQU 0x0100
+KEY_HELP            .EQU 0x0200
 
 ; MMIO locations and sizes
 MEM_CARTRIDGE_WIN   .EQU 0xB000 ; 4kb window defined by GBC$CART_SEL
