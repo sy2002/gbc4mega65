@@ -9,7 +9,7 @@
 ; optional functionality (i.e. not part of Monitor).
 ;
 ; gbc4mega65 machine is based on Gameboy_MiSTer
-; MEGA65 port done by sy2002 in February 2021 and licensed under GPL v3
+; MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ; ****************************************************************************
 
 

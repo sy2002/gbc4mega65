@@ -7,11 +7,26 @@
 ; as pressed.
 ;
 ; gbc4mega65 machine is based on Gameboy_MiSTer
-; MEGA65 port done by sy2002 in February 2021 and licensed under GPL v3
+; MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ; ****************************************************************************
 
-KEYB_PRESSED   .BLOCK 1
-KEYB_NEWKEYS   .BLOCK 1
+; each key represented by one bit in these two words
+KEYB_PRESSED   .BLOCK 1                         ; currently pressed
+KEYB_NEWKEYS   .BLOCK 1                         ; newly pressed since last..
+                                                ; ..call of KEYB_GETKEY
+
+; typematic delay variables (expected to be a consecutive block of for words
+; overall starting with KEYB_CDN_DELAY)
+KEYB_CDN_DELAY .BLOCK 1
+KEYB_CDN_TRIG  .BLOCK 1
+KEYB_CUP_DELAY .BLOCK 1
+KEYB_CUP_TRIG  .BLOCK 1
+
+; typematic delay (DLY) means: how long needs the key to be pressed, until
+; the typematic repeat starts?
+; typematic speed (SPD) means: how fast will the pressed key be repeated?
+TYPEMATIC_DLY  .EQU     0x8000                  ; ~0.5sec in QNICE V1.6
+TYPEMATIC_SPD  .EQU     0x1000                  ; ~12 per sec
 
 ; call this before working with this library
 KEYB_INIT       INCRB
@@ -19,11 +34,21 @@ KEYB_INIT       INCRB
                 MOVE    0, @R0
                 MOVE    KEYB_NEWKEYS, R0
                 MOVE    0, @R0
+                MOVE    KEYB_CDN_DELAY, R0
+                MOVE    0, @R0++
+                MOVE    0, @R0++
+                MOVE    0, @R0++
+                MOVE    0, @R0
                 DECRB
                 RET
 
 ; perform one scan iteration; meant to be called repeatedly
 KEYB_SCAN       INCRB
+                MOVE    R8, R0
+                MOVE    R9, R1
+                MOVE    R10, R2
+                MOVE    R11, R3
+                INCRB
 
                 MOVE    GBC$KEYMATRIX, R0       ; R0: keyboard matrix
                 MOVE    @R0, R0
@@ -38,6 +63,23 @@ KEYB_SCAN       INCRB
                 ; store currently pressed keys
                 MOVE    R0, @R1
 
+                ; typematic repeat for up/down cursor keys
+                ; (only inside QNICE as Game Boy does its own thing)
+                MOVE    KEY_CUR_DOWN, R8        ; handle cursor down
+                MOVE    R1, R9
+                MOVE    KEYB_CDN_DELAY, R10
+                MOVE    KEYB_CDN_TRIG, R11
+                RSUB    _KEYB_TYPEMATIC, 1
+                MOVE    KEY_CUR_UP, R8          ; handle cursor up
+                MOVE    KEYB_CUP_DELAY, R10
+                MOVE    KEYB_CUP_TRIG, R11
+                RSUB    _KEYB_TYPEMATIC, 1
+
+                DECRB
+                MOVE    R0, R8
+                MOVE    R1, R9
+                MOVE    R2, R10
+                MOVE    R3, R11
                 DECRB
                 RET
 
@@ -62,4 +104,35 @@ _KEYBGK_RET_R2  MOVE    R2, R8                  ; return new key
 
 _KEYBGK_RET_0   MOVE    0, R8
 _KEYBGK_RET     DECRB
+                RET
+
+; internal helper function for typematic repeat
+; R8: key code of key that shall be handled
+; R9: pointer to PRESSED flag-word
+; R10: pointer to speed/delay counter
+; R11: pointer to delay-is-over-flag (trigger)
+_KEYB_TYPEMATIC INCRB
+
+                MOVE    @R9, R0
+                AND     R8, R0                  ; to-be-handled key pressed?
+                RBRA    _KEYB_TYPEM_DTD, Z      ; no: delete trg./dly. vars
+                CMP     1, @R11                 ; typem, rep. alrdy triggered?
+                RBRA    _KEYB_TYPEM_T, Z        ; yes: choose rep. speed
+                MOVE    TYPEMATIC_DLY, R6       ; no: choose delay speed
+                RBRA    _KEYB_TYPEM_C, 1
+_KEYB_TYPEM_T   MOVE    TYPEMATIC_SPD, R6       ; repeat speed     
+_KEYB_TYPEM_C   ADD     1, @R10                 ; inc speed/delay counter
+                CMP     R6, @R10                ; speed/delay reached?      
+                RBRA    _KEYB_TYPEM_RET, !Z     ; no: return
+
+                MOVE    R8, R0                  ; yes: unpress key
+                NOT     R0, R0
+                AND     R0, @R9
+                MOVE    1, @R11                 ; set triggered flag
+                RBRA    _KEYB_TYPEM_DTO, 1      ; clear delay and return
+
+_KEYB_TYPEM_DTD MOVE    0, @R11                 ; clear trigger flag
+_KEYB_TYPEM_DTO MOVE    0, @R10                 ; clear speed/delay counter
+
+_KEYB_TYPEM_RET DECRB
                 RET
