@@ -72,8 +72,18 @@ ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8
                 XOR     R9, R9               
                 RBRA    FATALERROR, 1
 
-                ; TODO: we need to warn, that we are not showing all files
-WRN_MAX         RBRA    BROWSE_START, 1
+                ; warn, that we are not showing all files
+WRN_MAX         MOVE    WRN_MAXFILES, R8        ; print warning message
+                RSUB    PRINTSTR, 1
+_WRNMAXSPACE    RSUB    KEYB_SCAN, 1
+                RSUB    KEYB_GETKEY, 1
+                CMP     KEY_SPACE, R8           ; SPACE pressed?
+                RBRA    _WRNMAXSPACE, !Z        ; no: wait
+                RSUB    CLRINNER, 1             ; clear inner part of window
+
+                ; ------------------------------------------------------------
+                ; DIRECTORY BROWSER
+                ; ------------------------------------------------------------
 
 BROWSE_START    MOVE    R10, R0                 ; R0: dir. linked list head
 
@@ -81,7 +91,6 @@ BROWSE_START    MOVE    R10, R0                 ; R0: dir. linked list head
                 MOVE    R0, R8
                 RSUB    SLL$LASTNCOUNT, 1
                 MOVE    R10, R1                 ; R1: amount of items in dir.
-
                 MOVE    GBC$OSM_ROWS, R2        ; R2: max rows on screen
                 SUB     2, R2                   ; (frame is 2 rows high)
                 MOVE    R0, R3                  ; R3: currently visible head
@@ -108,10 +117,14 @@ INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 CMP     0, R8                   ; no key?
                 RBRA    INPUT_LOOP, Z           ; then back to non-block. rd.
 
-                CMP     KEY_CUR_UP, R8          ; cursor up
+                CMP     KEY_CUR_UP, R8          ; cursor up: prev file
                 RBRA    IL_CUR_UP, Z
-                CMP     KEY_CUR_DOWN, R8        ; cursor down
+                CMP     KEY_CUR_DOWN, R8        ; cursor down: next file
                 RBRA    IL_CUR_DOWN, Z
+                CMP     KEY_CUR_LEFT, R8        ; cursor left: previous page
+                RBRA    IL_CUR_LEFT, Z                
+                CMP     KEY_CUR_RIGHT, R8       ; cursor right: next page
+                RBRA    IL_CUR_RIGHT, Z
                 CMP     KEY_RETURN, R8          ; return key
                 RBRA    IL_KEY_RETURN, Z
                 RBRA    INPUT_LOOP, 1           ; unknown key
@@ -126,26 +139,11 @@ IL_CUR_UP       CMP     R4, 0                   ; > 0?
                 RBRA    SELECT_LOOP, 1          ; select new line and continue
 IL_CUR_UP_CHK   CMP     R5, R2                  ; # shown > max rows on scr.?
                 RBRA    INPUT_LOOP, !N          ; no: do not scroll; ign. key
-
-                ; scroll down by iterating the currently visible head of the
-                ; SLL by -1 step; if this is not possible: halt, because we
-                ; should never have reached this execution path in this case
-                MOVE    R3, R8                  ; R8: currently visible head
                 MOVE    -1, R9                  ; R9: iterate backward
-                MOVE    1, R10                  ; R10: iterate one element
-                RSUB    SLL$ITERATE, 1          ; find element
-                CMP     0, R11                  ; found element?
-                RBRA    IL_SCRL_UP, !Z          ; yes: continue
-                MOVE    ERR_FATAL_ITER, R8      ; no: fatal error and halt
-                XOR     R9, R9
-                RBRA    FATALERROR, 1
+                MOVE    1, R10                  ; R10: scroll by one element
+                RBRA    SCROLL, 1               ; scroll, then input loop
 
-IL_SCRL_UP      MOVE    R11, R3                 ; new visible head
-                SUB     1, R5                   ; one less visible file
-                SUB     R2, R5                  ; compensate for SHOW_DIR
-                RBRA    DRAW_DIRLIST, 1         ; redraw directory list                
-
-                ; CURSOR DOWN has been pressed
+                ; CURSOR DOWN has been pressed: next file
 IL_CUR_DOWN     MOVE    R1, R8                  ; R1: amount of items in dir..
                 SUB     1, R8                   ; ..-1 as we count from zero
                 CMP     R4, R8                  ; R4 = R1 (bottom reached?)
@@ -165,18 +163,73 @@ IL_CUR_DOWN     MOVE    R1, R8                  ; R1: amount of items in dir..
                 ; because we reached the end of the list
 IL_SCRL_DN      CMP     R5, R1                  ; all items already shown?
                 RBRA    INPUT_LOOP, Z           ; yes: ignore key press
-                MOVE    R3, R8                  ; R8: currently visible head
                 MOVE    1, R9                   ; R9: iterate forward
-                MOVE    1, R10                  ; R10: iterate by 1 element
+                MOVE    1, R10                  ; R10: scroll by one element
+                RBRA    SCROLL, 1               ; scroll, then input loop
+
+                ; CURSOR LEFT has been pressed: previous page
+                ; check if amount of entries shown minus the amount
+                ; of entries on the screen is larger than zero; if yes, then
+                ; go back one page; if no then go back to the very first entry
+IL_CUR_LEFT     MOVE    R5, R8                  ; R8: entries shown
+                SUB     R2, R8                  ; R2: max entries on screen
+                RBRA    INPUT_LOOP, N           ; if < 0 then no scroll
+                CMP     R8, R2                  ; R8 > max entries on screen?
+                RBRA    IL_PAGE_DEFUP, N        ; yes: scroll one page up
+                MOVE    R8, R10                 ; no: move the residual up..
+                RBRA    IL_PAGE_UP, !Z          ; .. if it is > 0
+                RBRA    INPUT_LOOP, 1
+IL_PAGE_DEFUP   MOVE    R2, R10                 ; R10: one page up
+IL_PAGE_UP      MOVE    -1, R9                  ; R9: iterate backward
+                RBRA    SCROLL, 1               ; scroll, then input loop
+
+                ; CURSOR RIGHT has been pressed: next page
+                ; first: check if amount of entries in the directory minus
+                ; the amount of files already shown is larger than zero;
+                ; if not, then we are already showing all files
+                ; second: check if this difference is larger than the maximum
+                ; amount of files that we can show on one screen; if yes
+                ; then scroll by one screen, if no then scroll by exactly this
+                ; difference
+IL_CUR_RIGHT    MOVE    R1, R8                  ; R8: entries in current dir.
+                SUB     R5, R8                  ; R5: # of files already shown
+                RBRA    INPUT_LOOP, Z           ; no more files: ignore key
+                CMP     R8, R2                  ; R8 > max rows on screen?
+                RBRA    IL_PAGE_DEFDN, N        ; yes: scroll one page down
+                MOVE    R8, R10                 ; R10: remaining elm. down
+                RBRA    IL_PAGE_DN, 1
+IL_PAGE_DEFDN   MOVE    R2, R10                 ; R10: one page down    
+IL_PAGE_DN      MOVE    1, R9                   ; R9: iterate forward
+                RBRA    SCROLL, 1               ; scroll, then input loop
+
+                ; this code segment is used by all four scrolling modes:
+                ; up/down and page up/page down; it is meant to called via
+                ; RBRA and not via RSUB because it will return to DRAW_DIRLIST
+                ; 
+                ; iterates forward or backward depending on R9 being +1 or -1
+                ; the iteration amount if given in R10
+                ; if the element is not found, then a fatal error is raised
+                ; destroys the value of R10
+SCROLL          MOVE    R3, R8                  ; R8: currently visible head
+                                                ; R9: iteration direction
+                                                ; R10: iteration amount
                 RSUB    SLL$ITERATE, 1          ; find element
                 CMP     0, R11                  ; found element?
-                RBRA    IL_SCRL_DN_DO, !Z       ; yes: continue
-                RBRA    INPUT_LOOP, 1           ; no: ignore keypress
-IL_SCRL_DN_DO   MOVE    R11, R3                 ; new visible head
-                ADD     1, R5                   ; one more visible file
+                RBRA    SCROLL_DO, !Z           ; yes: continue
+                MOVE    ERR_FATAL_ITER, R8      ; no: fatal error and halt
+                XOR     R9, R9
+                RBRA    FATALERROR, 1                
+SCROLL_DO       CMP     -1, R9                  ; negative iteration dir.?
+                RBRA    SCROLL_DO2, !Z          ; no: continue
+                XOR     R3, R3                  ; yes: inverse sign of R10
+                SUB     R10, R3
+                MOVE    R3, R10
+SCROLL_DO2      MOVE    R11, R3                 ; new visible head
+                ADD     R10, R5                 ; R10 more/less visible files
                 SUB     R2, R5                  ; compensate for SHOW_DIR
                 RBRA    DRAW_DIRLIST, 1         ; redraw directory list
 
+                ; ENTER has been pressed: change directory or load file
                 ; iterate the linked list: find the currently seleted element
 IL_KEY_RETURN   MOVE    R3, R8                  ; R8: currently visible head
                 MOVE    1, R9                   ; R9: iterate forward
@@ -262,31 +315,39 @@ STR_LOAD_DONE   .ASCII_W "\nDone.\n"
 STR_GB_STARTED  .ASCII_W "Game Boy started.\n"
 
 STR_HELP        .ASCII_P "\n"
-                .ASCII_P "  MEGA65              Game Boy\n"
+                .ASCII_P " MEGA65               Game Boy\n"
                 ; 196 = horizontal line in Anikki font
                 ; 32 = space, (13, 10) = \n
-                .DW 32, 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 196, 196, 196, 13, 10 
-                .ASCII_P "  Cursor keys         Joypad\n"
-                .ASCII_P "  Space               Start\n"
-                .ASCII_P "  Enter               Select\n"
-                .ASCII_P "  Left Shift          A\n"
-                .ASCII_P "  MEGA65 key          B\n"
-                .ASCII_P "  Help                Options menu\n\n"
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 13, 10                 
+                .ASCII_P " Cursor keys          Joypad\n"
+                .ASCII_P " Space                Start\n"
+                .ASCII_P " Enter                Select\n"
+                .ASCII_P " Left Shift           A\n"
+                .ASCII_P " MEGA65 key           B\n"
+                .ASCII_P " Help                 Options menu\n\n\n"
 
-                .ASCII_P "  File Browser\n"
-                .DW 32, 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .ASCII_P " File Browser\n"
+                .DW 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 13, 10                 
-                .ASCII_P "  Run/Stop            Enter/leave file browser\n"
-                .ASCII_P "  Up/Down cursor key  Navigate one file up/down\n"
-                .ASCII_P "  Left/Right cursor   One page forward/backward\n"
-                .ASCII_P "  Enter               Start game / Change dir.\n"
-                .ASCII_W "\n\n  Press any of these keys to continue."
+                .DW 196, 196, 196, 196, 13, 10                 
+                .ASCII_P " Run/Stop             Enter/leave file browser\n"
+                .ASCII_P " Up/Down cursor key   Navigate one file up/down\n"
+                .ASCII_P " Left/Right cursor    One page forward/backward\n"
+                .ASCII_P " Enter                Start game/change folder\n"
+                .ASCII_W "\n\n Press any of these keys to continue."
+
+WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files than\n"
+                .ASCII_P "this core is able to load into memory.\n\n"
+                .ASCII_P "Please split the files into multiple folders.\n\n"
+                .ASCII_P "If you choose to continue by pressing SPACE,\n"
+                .ASCII_P "be aware that random files will be missing.\n\n"
+                .ASCII_W "Press SPACE to continue."
 
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
