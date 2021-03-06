@@ -23,7 +23,6 @@ SLL$DATA        .EQU    0x0003                  ; pointer: data
 SLL$OVRHD_SIZE  .EQU    0x0003                  ; size of the structural
                                                 ; overhead other than data
 
-
 ; ----------------------------------------------------------------------------
 ; Find n elements after or before the given point in the list
 ; Input:

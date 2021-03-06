@@ -27,7 +27,6 @@
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
                 RSUB    RESETGB_WELCOME, 1
-                ;RSUB    WAIT_2S, 1
 
                 ; Mount SD card and load original ROMs, if available.
                 RSUB    CHKORMNT, 1             ; mount SD card partition #1 
@@ -37,7 +36,9 @@
 MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 MOVE    MEM_BIOS, R9            ; MMIO location of "ROM RAM"
                 RSUB    LOAD_ROM, 1
-                ;RSUB    WAIT_2S, 1
+
+                ; Print help screen
+                RSUB    HELP_SCREEN, 1
 
                 ; load sorted directory list into memory
                 MOVE    SD_DEVHANDLE, R8
@@ -230,7 +231,34 @@ STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM inste
 STR_CD          .ASCII_W "\nChanging directory to: "
 STR_LOAD_CART   .ASCII_W "\nLoading cartridge: "
 STR_LOAD_DONE   .ASCII_W "\nDone.\n"
-STR_GB_STARTED  .ASCII_W "Gameboy started.\n"
+STR_GB_STARTED  .ASCII_W "Game Boy started.\n"
+
+STR_HELP        .ASCII_P "\n"
+                .ASCII_P "  MEGA65              Game Boy\n"
+                ; 196 = horizontal line in Anikki font
+                ; 32 = space, (13, 10) = \n
+                .DW 32, 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 13, 10 
+                .ASCII_P "  Cursor keys         Joypad\n"
+                .ASCII_P "  Space               Start\n"
+                .ASCII_P "  Enter               Select\n"
+                .ASCII_P "  Left Shift          A\n"
+                .ASCII_P "  MEGA65 key          B\n"
+                .ASCII_P "  Help                Options menu\n\n"
+
+                .ASCII_P "  File Browser\n"
+                .DW 32, 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 13, 10                 
+                .ASCII_P "  Run/Stop            Enter/leave file browser\n"
+                .ASCII_P "  Up/Down cursor key  Navigate one file up/down\n"
+                .ASCII_P "  Left/Right cursor   One page forward/backward\n"
+                .ASCII_P "  Enter               Start game / Change dir.\n"
+                .ASCII_W "\n\n  Press any of these keys to continue."
 
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
@@ -691,6 +719,19 @@ _FATAL_END      RSUB    PRINTCRLF, 1
                 RSUB    PRINTSTR, 1
                 SYSCALL(exit, 1)
 
+HELP_SCREEN     RSUB    ENTER, 1
+
+                MOVE    STR_HELP, R8
+                RSUB    PRINTSTRSCR, 1
+
+_HS_IL          RSUB    KEYB_SCAN, 1
+                RSUB    KEYB_GETKEY, 1
+                CMP     0, R8                   ; no key?
+                RBRA    _HS_IL, Z               ; then back to non-block. rd.
+
+                RSUB    LEAVE, 1
+                RET
+
 ; ----------------------------------------------------------------------------
 ; Misc helper functions
 ; ----------------------------------------------------------------------------
@@ -712,17 +753,6 @@ LEAVE           DECRB
                 MOVE    R2, R10
                 MOVE    R3, R11
                 MOVE    R4, R12
-                DECRB
-                RET
-
-; Wait for about 2 seconds
-WAIT_2S         INCRB
-                MOVE    200, R0
-_WAITLOOP2      MOVE    0xFFFF, R1
-_WAITLOOP1      SUB     1, R1
-                RBRA    _WAITLOOP1, !Z
-                SUB     1, R0
-                RBRA    _WAITLOOP2, !Z
                 DECRB
                 RET
 
