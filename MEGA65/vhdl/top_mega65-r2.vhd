@@ -112,6 +112,8 @@ constant CART_RAM_MAX_R2   : integer := 32 * 1024;
 constant CART_ROM_MAX      : integer := CART_ROM_MAX_R2; 
 constant CART_RAM_MAX      : integer := CART_RAM_MAX_R2;
 
+constant CART_ROM_WIDTH    : integer := f_log2(CART_ROM_MAX);
+
 -- ROM options
 constant GBC_ORG_ROM       : string := "../../rom/cgb_bios.rom";        -- Copyrighted original GBC ROM, not checked-in into official repo
 constant GBC_OSS_ROM       : string := "../../BootROMs/cgb_boot.rom";   -- Alternative Open Source GBC ROM
@@ -200,6 +202,11 @@ signal cart_old_licensee   : std_logic_vector(7 downto 0);
 signal isGBC_Game          : boolean;     -- current cartridge is dedicated GBC game
 signal isSGB_Game          : boolean;     -- current cartridge is dedicated SBC game
 
+-- MBC signals
+signal cartrom_addr        : std_logic_vector(CART_ROM_WIDTH - 1 downto 0); 
+signal cartrom_rd          : std_logic;
+signal cartrom_data        : std_logic_vector(7 downto 0);
+
 -- joypad: p54 selects matrix entry and data contains either
 -- the direction keys or the other buttons
 signal joypad_p54          : std_logic_vector(1 downto 0);
@@ -286,11 +293,11 @@ begin
          isGBC                   => is_CGB,
          isGBC_game              => isGBC_Game,
       
-         -- Cartridge interface: Connects with the Memory Management Unit (MMU) 
+         -- Cartridge interface: Connects with the Memory Bank Controller (MBC) 
          cart_addr               => cart_addr,
          cart_rd                 => cart_rd,
          cart_wr                 => cart_wr, 
-         cart_di                 => open,  
+         cart_di                 => cart_di,  
          cart_do                 => cart_do,  
          
          -- Game Boy BIOS interface
@@ -368,6 +375,36 @@ begin
          ff_on                   => open         
       );
       
+   -- Memory Bank Controller (MBC)
+   gb_mbc : entity work.mbc
+      generic map
+      (
+         ROM_WIDTH      => CART_ROM_WIDTH
+      )
+      port map
+      (
+         -- Game Boy's clock and reset
+         gb_clk                  => main_clk,
+         gb_reset                => qngbc_reset,
+               
+         -- Game Boy's cartridge interface
+         cart_addr               => cart_addr,
+         cart_rd                 => cart_rd,
+         cart_wr                 => cart_wr,
+         cart_do                 => cart_do,
+         cart_di                 => cart_di,
+         
+         -- Cartridge ROM interface
+         rom_addr                => cartrom_addr,
+         rom_rd                  => cartrom_rd,
+         rom_data                => cartrom_data,
+         
+         -- Cartridge flags
+         cart_mbc_type           => cart_mbc_type,
+         cart_rom_size           => cart_rom_size,
+         cart_ram_size           => cart_ram_size                  
+      );
+      
    -- Convert the Game Boy's PCM output to pulse density modulation
    -- TODO: Is this component configured correctly when it comes to clock speed, constants used within
    -- the component, subtracting 32768 while converting to signed, etc.
@@ -407,10 +444,11 @@ begin
          q_b            => qngbc_bios_data_out         
       );
      
+   -- Cartridge ROM
    game_cart : entity work.dualport_2clk_ram
       generic map
       (
-         ADDR_WIDTH        => f_log2(CART_ROM_MAX),   -- TODO: depends on R2 vs. R3 and TODO adjust address_b
+         ADDR_WIDTH        => CART_ROM_WIDTH,   -- TODO: depends on R2 vs. R3 and TODO adjust address_b
          DATA_WIDTH        => 8,
          ROM_PRELOAD       => false,
          LATCH_ADDR_A      => true,       -- the gbc core expects that the RAM latches the address on cart_rd
@@ -420,11 +458,11 @@ begin
       (
          -- GBC Game Cartridge Interface
          clock_a           => main_clk,
-         address_a         => cart_addr,
-         do_latch_addr_a   => cart_rd,
+         address_a         => cartrom_addr,
+         do_latch_addr_a   => cartrom_rd,
 --         data_a            => cart_di,
 --         wren_a            => cart_wr,
-         q_a               => cart_do,
+         q_a               => cartrom_data,
          
          -- QNICE RAM interface
          clock_b           => qnice_clk,
