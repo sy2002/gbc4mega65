@@ -421,6 +421,12 @@ STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM inste
 
 STR_CD          .ASCII_W "\nChanging directory to: "
 STR_LOAD_CART   .ASCII_W "\nLoading cartridge: "
+STR_FLAG_CGB    .ASCII_W "\n  CGB flag     : "
+STR_FLAG_SGB    .ASCII_W "\n  SGB flag     : "
+STR_FLAG_MBC    .ASCII_W "\n  MBC type     : "
+STR_FLAG_ROM    .ASCII_W "\n  ROM size     : "
+STR_FLAG_RAM    .ASCII_W "\n  RAM size     : "
+STR_FLAG_OLDLIC .ASCII_W "\n  Old licensee : "
 STR_LOAD_DONE   .ASCII_W "\nDone.\n"
 STR_GB_STARTED  .ASCII_W "Game Boy started.\n"
 
@@ -576,7 +582,62 @@ _LC_LOAD_LOOP1  MOVE    R0, R2                  ; R2: write pointer to 4k win.
 _LC_LOAD_LOOP2  SYSCALL(f32_fread, 1)
                 CMP     FAT32$EOF, R10          ; EOF?
                 RBRA    _LC_LOAD_OK, Z          ; yes: close file and end  
-                MOVE    R9, @R2++               ; store byte in cart. mem.
+
+                ; extract cartridge flags
+                CMP     0, @R1
+                RBRA    _LC_LOAD_STORE, !Z      ; no: skip cart. flag checks
+
+                MOVE    GBC$CF_CGB_CHA, R5      ; CGB flag
+                MOVE    STR_FLAG_CGB, R6        
+                MOVE    GBC$CF_CGB, R7
+                RSUB    _LC_HANDLE_CF, 1
+
+                MOVE    GBC$CF_SGB_CHA, R5      ; SGB flag
+                MOVE    STR_FLAG_SGB, R6        
+                MOVE    GBC$CF_SGB, R7
+                RSUB    _LC_HANDLE_CF, 1
+
+                MOVE    GBC$CF_MBC_CHA, R5      ; MBC type
+                MOVE    STR_FLAG_MBC, R6        
+                MOVE    GBC$CF_MBC, R7
+                RSUB    _LC_HANDLE_CF, 1
+
+                MOVE    GBC$CF_ROM_SIZE_CHA, R5 ; ROM size
+                MOVE    STR_FLAG_ROM, R6
+                MOVE    GBC$CF_ROM_SIZE, R7
+                RSUB    _LC_HANDLE_CF, 1
+
+                MOVE    GBC$CF_RAM_SIZE_CHA, R5 ; ROM size
+                MOVE    STR_FLAG_RAM, R6
+                MOVE    GBC$CF_RAM_SIZE, R7
+                RSUB    _LC_HANDLE_CF, 1
+
+                MOVE    GBC$CF_OLDLIC_CHA, R5   ; Old licensee flag
+                MOVE    STR_FLAG_OLDLIC, R6
+                MOVE    GBC$CF_OLDLICENSEE, R7
+                RSUB    _LC_HANDLE_CF, 1
+
+                RBRA    _LC_LOAD_STORE, 1       ; skip the sub-routine code
+
+                ; internal sub routine code, meant to be called via RSUB
+                ; flag address is given in R5
+                ; stores cartridge flag value in R9 to where R7 points to
+                ; and prints the value using the string in R6
+_LC_HANDLE_CF   ADD     MEM_CARTRIDGE_WIN, R5   ; adjust for MMIO
+                CMP     R5, R2                  ; address = flag address?
+                RBRA    _LC_HCF_RET, !Z         ; no: continue
+                MOVE    R9, @R7                 ; store flag in register                
+                MOVE    R8, @--SP 
+                MOVE    R6, R8                  ; UART: print name of flag
+                SYSCALL(puts, 1)
+                MOVE    @R7, R8                 ; UART: print value of flag
+                SYSCALL(puthex, 1)
+                MOVE    @SP++, R8
+_LC_HCF_RET     RET
+
+                ; store byte in cartridge memory and handle the "paging"
+                ; via the memory windows
+_LC_LOAD_STORE  MOVE    R9, @R2++               ; store byte in cart. mem.
                 CMP     R3, R2                  ; window boundary reached?
                 RBRA    _LC_LOAD_LOOP2, !Z      ; no: continue with next byte
                 ADD     1, @R1                  ; next cart. mem. window
@@ -586,7 +647,7 @@ _LC_LOAD_OK     XOR     R11, R11                ; end with code 0
 _LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
                 MOVE    0, @R8            
                 DECRB
-                RET
+                RET  
 
 ; While browsing directories, make sure that the users are not seeing the
 ; BIOS/ROM files of the Game Boy. Expects string pointer in R8 and returns 0,

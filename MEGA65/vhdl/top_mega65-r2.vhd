@@ -189,6 +189,17 @@ signal cart_wr             : std_logic;
 signal cart_do             : std_logic_vector(7 downto 0);
 signal cart_di             : std_logic_vector(7 downto 0);
 
+-- cartridge flags
+signal cart_cgb_flag       : std_logic_vector(7 downto 0);
+signal cart_sgb_flag       : std_logic_vector(7 downto 0);
+signal cart_mbc_type       : std_logic_vector(7 downto 0);
+signal cart_rom_size       : std_logic_vector(7 downto 0);
+signal cart_ram_size       : std_logic_vector(7 downto 0);
+signal cart_old_licensee   : std_logic_vector(7 downto 0);
+
+signal isGBC_Game          : boolean;     -- current cartridge is dedicated GBC game
+signal isSGB_Game          : boolean;     -- current cartridge is dedicated SBC game
+
 -- joypad: p54 selects matrix entry and data contains either
 -- the direction keys or the other buttons
 signal joypad_p54          : std_logic_vector(1 downto 0);
@@ -208,7 +219,6 @@ signal qngbc_cart_data_out : std_logic_vector(7 downto 0);
 signal qngbc_osm_on        : std_logic;
 signal qngbc_osm_rgb       : std_logic_vector(23 downto 0);
 signal qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
-
 
 -- signals neccessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -255,7 +265,12 @@ begin
    i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
 
    is_CGB <= '1';
-   
+
+   -- Cartridge header flags
+   -- Infos taken from: https://gbdev.io/pandocs/#the-cartridge-header and from MiSTer's mbc.sv
+   isGBC_Game <= true when cart_cgb_flag = x"80" or cart_cgb_flag = x"C0" else false;
+   isSGB_Game <= true when cart_sgb_flag = x"03" and cart_old_licensee = x"33" else false;
+         
    -- The actual machine (GB/GBC core)
    gameboy : entity work.gb
       port map
@@ -269,11 +284,11 @@ begin
          fast_boot               => i_fast_boot,
          joystick                => i_joystick,
          isGBC                   => is_CGB,
-         isGBC_game              => false,
+         isGBC_game              => isGBC_Game,
       
          -- Cartridge interface: Connects with the Memory Management Unit (MMU) 
          cart_addr               => cart_addr,
-         cart_rd                 => cart_rd,  
+         cart_rd                 => cart_rd,
          cart_wr                 => cart_wr, 
          cart_di                 => open,  
          cart_do                 => cart_do,  
@@ -677,6 +692,14 @@ begin
          gbc_cart_addr     => qngbc_cart_addr,
          gbc_cart_we       => qngbc_cart_we,
          gbc_cart_data_in  => qngbc_cart_data_in,
-         gbc_cart_data_out => qngbc_cart_data_out             
+         gbc_cart_data_out => qngbc_cart_data_out,
+         
+         -- Cartridge flags
+         cart_cgb_flag     => cart_cgb_flag,
+         cart_sgb_flag     => cart_sgb_flag,
+         cart_mbc_type     => cart_mbc_type,
+         cart_rom_size     => cart_rom_size,
+         cart_ram_size     => cart_ram_size,
+         cart_old_licensee => cart_old_licensee                   
       );   
 end beh;

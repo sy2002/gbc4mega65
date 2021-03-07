@@ -72,92 +72,110 @@ end QNICE;
 architecture beh of QNICE is
 
 -- Constants for VGA output
-constant FONT_DX                 : integer := 16;
-constant FONT_DY                 : integer := 16;
-constant CHARS_DX                : integer := VGA_DX / FONT_DX;
-constant CHARS_DY                : integer := VGA_DY / FONT_DY;
-constant CHAR_MEM_SIZE           : integer := CHARS_DX * CHARS_DY;
-constant VRAM_ADDR_WIDTH         : integer := f_log2(CHAR_MEM_SIZE);
+constant FONT_DX                  : integer := 16;
+constant FONT_DY                  : integer := 16;
+constant CHARS_DX                 : integer := VGA_DX / FONT_DX;
+constant CHARS_DY                 : integer := VGA_DY / FONT_DY;
+constant CHAR_MEM_SIZE            : integer := CHARS_DX * CHARS_DY;
+constant VRAM_ADDR_WIDTH          : integer := f_log2(CHAR_MEM_SIZE);
 
 -- CPU control signals
-signal cpu_addr                  : std_logic_vector(15 downto 0);
-signal cpu_data_in               : std_logic_vector(15 downto 0);
-signal cpu_data_out              : std_logic_vector(15 downto 0);
-signal cpu_data_dir              : std_logic;
-signal cpu_data_valid            : std_logic;
-signal cpu_wait_for_data         : std_logic;
-signal cpu_halt                  : std_logic;
+signal cpu_addr                   : std_logic_vector(15 downto 0);
+signal cpu_data_in                : std_logic_vector(15 downto 0);
+signal cpu_data_out               : std_logic_vector(15 downto 0);
+signal cpu_data_dir               : std_logic;
+signal cpu_data_valid             : std_logic;
+signal cpu_wait_for_data          : std_logic;
+signal cpu_halt                   : std_logic;
 
 -- reset control
-signal reset_ctl                 : std_logic;
-signal reset_pre_pore            : std_logic;
-signal reset_post_pore           : std_logic;
+signal reset_ctl                  : std_logic;
+signal reset_pre_pore             : std_logic;
+signal reset_post_pore            : std_logic;
 
 -- QNICE standard MMIO signals
-signal rom_en                    : std_logic;
-signal rom_data_out              : std_logic_vector(15 downto 0);
-signal ram_en                    : std_logic;
-signal ram_en_maybe              : std_logic;                        -- output of standard MMIO module without taking care of gbc specific MMIO 
-signal ram_busy                  : std_logic;
-signal ram_data_out              : std_logic_vector(15 downto 0);
-signal switch_data_out           : std_logic_vector(15 downto 0);
-signal uart_en                   : std_logic;
-signal uart_we                   : std_logic;
-signal uart_reg                  : std_logic_vector(1 downto 0);
-signal uart_cpu_ws               : std_logic;
-signal uart_data_out             : std_logic_vector(15 downto 0);
-signal eae_en                    : std_logic;
-signal eae_we                    : std_logic;
-signal eae_reg                   : std_logic_vector(2 downto 0);
-signal eae_data_out              : std_logic_vector(15 downto 0);
-signal sd_en                     : std_logic;
-signal sd_we                     : std_logic;
-signal sd_reg                    : std_logic_vector(2 downto 0);
-signal sd_data_out               : std_logic_vector(15 downto 0);
+signal rom_en                     : std_logic;
+signal rom_data_out               : std_logic_vector(15 downto 0);
+signal ram_en                     : std_logic;
+signal ram_en_maybe               : std_logic;                        -- output of standard MMIO module without taking care of gbc specific MMIO 
+signal ram_busy                   : std_logic;
+signal ram_data_out               : std_logic_vector(15 downto 0);
+signal switch_data_out            : std_logic_vector(15 downto 0);
+signal uart_en                    : std_logic;
+signal uart_we                    : std_logic;
+signal uart_reg                   : std_logic_vector(1 downto 0);
+signal uart_cpu_ws                : std_logic;
+signal uart_data_out              : std_logic_vector(15 downto 0);
+signal eae_en                     : std_logic;
+signal eae_we                     : std_logic;
+signal eae_reg                    : std_logic_vector(2 downto 0);
+signal eae_data_out               : std_logic_vector(15 downto 0);
+signal sd_en                      : std_logic;
+signal sd_we                      : std_logic;
+signal sd_reg                     : std_logic_vector(2 downto 0);
+signal sd_data_out                : std_logic_vector(15 downto 0);
 
 -- GBC specific MMIO signals
-signal csr_en                    : std_logic;                        -- $FFE0
-signal csr_we                    : std_logic;
-signal csr_data_out              : std_logic_vector(15 downto 0);
-signal gbc_cart_sel_en           : std_logic;                        -- $FFE1
-signal gbc_cart_sel_we           : std_logic;
-signal osm_xy_en                 : std_logic;                        -- $FFE2
-signal osm_xy_we                 : std_logic;
-signal osm_xy_data_out           : std_logic_vector(15 downto 0);
-signal osm_dxdy_en               : std_logic;                        -- $FFE3
-signal osm_dxdy_we               : std_logic;
-signal osm_dxdy_data_out         : std_logic_vector(15 downto 0);
-signal keyb_en                   : std_logic;                        -- $FFE4
-signal keyb_data_out             : std_logic_vector(15 downto 0);
-signal gbc_cart_sel_data_out     : std_logic_vector(15 downto 0);
-signal vram_en                   : std_logic;                        -- $D000
-signal vram_we                   : std_logic;
-signal vram_data_out_i           : std_logic_vector(7 downto 0);
-signal vram_data_out_16bit       : std_logic_vector(15 downto 0);
-signal vram_attr_en              : std_logic;
-signal vram_attr_we              : std_logic;
-signal vram_attr_data_out_i      : std_logic_vector(7 downto 0);
-signal vram_attr_data_out_16bit  : std_logic_vector(15 downto 0);
-signal gbc_bios_en               : std_logic;                        -- $C000
-signal gbc_bios_data_out_16bit   : std_logic_vector(15 downto 0);
-signal gbc_cart_en               : std_logic;                        -- $B000
-signal gbc_cart_data_out_16bit   : std_logic_vector(15 downto 0);
+signal csr_en                     : std_logic;                        -- $FFE0
+signal csr_we                     : std_logic;
+signal csr_data_out               : std_logic_vector(15 downto 0);
+signal gbc_cart_sel_en            : std_logic;                        -- $FFE1
+signal gbc_cart_sel_we            : std_logic;
+signal osm_xy_en                  : std_logic;                        -- $FFE2
+signal osm_xy_we                  : std_logic;
+signal osm_xy_data_out            : std_logic_vector(15 downto 0);
+signal osm_dxdy_en                : std_logic;                        -- $FFE3
+signal osm_dxdy_we                : std_logic;
+signal osm_dxdy_data_out          : std_logic_vector(15 downto 0);
+signal keyb_en                    : std_logic;                        -- $FFE4
+signal keyb_data_out              : std_logic_vector(15 downto 0);
+signal gbc_cart_sel_data_out      : std_logic_vector(15 downto 0);
+signal vram_en                    : std_logic;                        -- $D000
+signal vram_we                    : std_logic;
+signal vram_data_out_i            : std_logic_vector(7 downto 0);
+signal vram_data_out_16bit        : std_logic_vector(15 downto 0);
+signal vram_attr_en               : std_logic;
+signal vram_attr_we               : std_logic;
+signal vram_attr_data_out_i       : std_logic_vector(7 downto 0);
+signal vram_attr_data_out_16bit   : std_logic_vector(15 downto 0);
+signal gbc_bios_en                : std_logic;                        -- $C000
+signal gbc_bios_data_out_16bit    : std_logic_vector(15 downto 0);
+signal gbc_cart_en                : std_logic;                        -- $B000
+signal gbc_cart_data_out_16bit    : std_logic_vector(15 downto 0);   
+signal cf_cgb_en                  : std_logic;                        -- $FFE5             
+signal cf_cgb_we                  : std_logic;
+signal cf_cgb_data_out_16bit      : std_logic_vector(15 downto 0);
+signal cf_sgb_en                  : std_logic;                        -- $FFE6
+signal cf_sgb_we                  : std_logic;
+signal cf_sgb_data_out_16bit      : std_logic_vector(15 downto 0);
+signal cf_mbc_en                  : std_logic;                        -- $FFE7
+signal cf_mbc_we                  : std_logic;
+signal cf_mbc_data_out_16bit      : std_logic_vector(15 downto 0);
+signal cf_rom_size_en             : std_logic;                        -- $FFE8
+signal cf_rom_size_we             : std_logic;
+signal cf_rom_size_data_out_16bit : std_logic_vector(15 downto 0);
+signal cf_ram_size_en             : std_logic;                        -- $FFE9
+signal cf_ram_size_we             : std_logic;
+signal cf_ram_size_data_out_16bit : std_logic_vector(15 downto 0);
+signal cf_oldlic_en               : std_logic;                        -- $FFEA
+signal cf_oldlic_we               : std_logic;
+signal cf_oldlic_data_out_16bit   : std_logic_vector(15 downto 0);    
 
 -- The cartridge address is up to 8 MB large and is calculated like this: (gbc_cart_sel x 4096) + gbc_cart_win
-signal gbc_cart_sel              : integer range 0 to 2047;
+signal gbc_cart_sel               : integer range 0 to 2047;
 
 -- On-Screen-Menu (OSM)
-signal vga_x_old                 : integer range 0 to VGA_DX - 1;
-signal vga_y_old                 : integer range 0 to VGA_DY - 1;
-signal osm_vram_addr             : std_logic_vector(VRAM_ADDR_WIDTH - 1 downto 0);
-signal osm_vram_data             : std_logic_vector(7 downto 0);
-signal osm_vram_attr_data        : std_logic_vector(7 downto 0);
-signal osm_font_addr             : std_logic_vector(11 downto 0);
-signal osm_font_data             : std_logic_vector(15 downto 0);
-signal osm_xy                    : std_logic_vector(15 downto 0);
-signal osm_dxdy                  : std_logic_vector(15 downto 0);
-signal osm_x1, osm_x2            : integer range 0 to CHARS_DX - 1;
-signal osm_y1, osm_y2            : integer range 0 to CHARS_DY - 1;
+signal vga_x_old                  : integer range 0 to VGA_DX - 1;
+signal vga_y_old                  : integer range 0 to VGA_DY - 1;
+signal osm_vram_addr              : std_logic_vector(VRAM_ADDR_WIDTH - 1 downto 0);
+signal osm_vram_data              : std_logic_vector(7 downto 0);
+signal osm_vram_attr_data         : std_logic_vector(7 downto 0);
+signal osm_font_addr              : std_logic_vector(11 downto 0);
+signal osm_font_data              : std_logic_vector(15 downto 0);
+signal osm_xy                     : std_logic_vector(15 downto 0);
+signal osm_dxdy                   : std_logic_vector(15 downto 0);
+signal osm_x1, osm_x2             : integer range 0 to CHARS_DX - 1;
+signal osm_y1, osm_y2             : integer range 0 to CHARS_DY - 1;
 
 begin
 
@@ -177,7 +195,13 @@ begin
                   gbc_cart_data_out_16bit    or
                   gbc_cart_sel_data_out      or
                   osm_xy_data_out            or
-                  osm_dxdy_data_out;
+                  osm_dxdy_data_out          or                  
+                  cf_cgb_data_out_16bit      or
+                  cf_sgb_data_out_16bit      or
+                  cf_mbc_data_out_16bit      or
+                  cf_rom_size_data_out_16bit or
+                  cf_ram_size_data_out_16bit or
+                  cf_oldlic_data_out_16bit;                      
                                     
    -- generate the general reset signal
    reset_ctl <= '1' when (reset_pre_pore = '1' or reset_post_pore = '1') else '0';                     
@@ -373,43 +397,69 @@ begin
    -- 0xFFE1        : Selector for the gliding Cartridge RAM window (multiplied by 4096)
    -- 0xFFE2        : X and Y coordinate (in chars, hi/lo) where the OSM window will start
    -- 0xFFE3        : DX and DY size (in chars, hi/lo) of the OSM window
-   ram_en                   <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
-   csr_en                   <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
-   csr_we                   <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out             <= x"000" & "0" & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
-   vram_en                  <= '1' when cpu_addr(15 downto 11) = x"D" & "0" else '0'; -- $D000 .. $D7FF
-   vram_we                  <= vram_en and cpu_data_dir and cpu_data_valid;
-   vram_data_out_16bit      <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
-   vram_attr_en             <= '1' when cpu_addr(15 downto 11) = x"D" & "1" else '0'; -- $D800 .. $DFFF
-   vram_attr_we             <= vram_attr_en and cpu_data_dir and cpu_data_valid;
-   vram_attr_data_out_16bit <= x"00" & vram_attr_data_out_i when vram_attr_en = '1' and vram_attr_we = '0' else (others => '0');
-   gbc_bios_addr            <= cpu_addr(11 downto 0);
-   gbc_bios_en              <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
-   gbc_bios_we              <= gbc_bios_en and cpu_data_dir and cpu_data_valid;
-   gbc_bios_data_in         <= cpu_data_out(7 downto 0);
-   gbc_bios_data_out_16bit  <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0');
-   gbc_cart_addr            <= std_logic_vector(to_unsigned(gbc_cart_sel, 11)) & cpu_addr(11 downto 0); -- up to 8 MB ROM size: 4096 x gbc_cart_sel + address in window
-   gbc_cart_en              <= '1' when cpu_addr(15 downto 12) = x"B" else '0';
-   gbc_cart_we              <= gbc_cart_en and cpu_data_dir and cpu_data_valid;
-   gbc_cart_data_in         <= cpu_data_out(7 downto 0);
-   gbc_cart_data_out_16bit  <= x"00" & gbc_cart_data_out when gbc_cart_en = '1' and gbc_cart_we = '0' else (others => '0');
-   gbc_cart_sel_en          <= '1' when cpu_addr = x"FFE1" else '0';
-   gbc_cart_sel_we          <= gbc_cart_sel_en and cpu_data_dir and cpu_data_valid;
-   gbc_cart_sel_data_out    <= "00000" & std_logic_vector(to_unsigned(gbc_cart_sel, 11)) when gbc_cart_sel_en = '1' and gbc_cart_sel_we = '0' else (others => '0');
-   osm_xy_en                <= '1' when cpu_addr = x"FFE2" else '0';
-   osm_xy_we                <= osm_xy_en and cpu_data_dir and cpu_data_valid;
-   osm_xy_data_out          <= osm_xy when osm_xy_en = '1' and osm_xy_we = '0' else (others => '0');
-   osm_dxdy_en              <= '1' when cpu_addr = x"FFE3" else '0';
-   osm_dxdy_we              <= osm_dxdy_en and cpu_data_dir and cpu_data_valid;
-   osm_dxdy_data_out        <= osm_dxdy when osm_dxdy_en = '1' and osm_dxdy_we = '0' else (others => '0');
-   keyb_en                  <= '1' when cpu_addr = x"FFE4" else '0';
-   keyb_data_out            <= full_matrix when keyb_en = '1' and cpu_data_dir = '0' else (others => '0');
-               
+   -- 0xFFE4        : keyboard
+   -- 0xFFE5        : Cartridge flag: CGB
+   -- 0xFFE6        : Cartridge flag: SGB
+   -- 0xFFE7        : Cartridge flag: MBC
+   -- 0xFFE8        : Cartridge flag: ROM size
+   -- 0xFFE9        : Cartridge flag: RAM size
+   -- 0xFFEA        : Cartridge flag: Old Licensee   
+   ram_en                     <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
+   csr_en                     <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
+   csr_we                     <= csr_en and cpu_data_dir and cpu_data_valid;
+   csr_data_out               <= x"000" & "0" & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
+   vram_en                    <= '1' when cpu_addr(15 downto 11) = x"D" & "0" else '0'; -- $D000 .. $D7FF
+   vram_we                    <= vram_en and cpu_data_dir and cpu_data_valid;
+   vram_data_out_16bit        <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
+   vram_attr_en               <= '1' when cpu_addr(15 downto 11) = x"D" & "1" else '0'; -- $D800 .. $DFFF
+   vram_attr_we               <= vram_attr_en and cpu_data_dir and cpu_data_valid;
+   vram_attr_data_out_16bit   <= x"00" & vram_attr_data_out_i when vram_attr_en = '1' and vram_attr_we = '0' else (others => '0');
+   gbc_bios_addr              <= cpu_addr(11 downto 0);
+   gbc_bios_en                <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
+   gbc_bios_we                <= gbc_bios_en and cpu_data_dir and cpu_data_valid;
+   gbc_bios_data_in           <= cpu_data_out(7 downto 0);
+   gbc_bios_data_out_16bit    <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0');
+   gbc_cart_addr              <= std_logic_vector(to_unsigned(gbc_cart_sel, 11)) & cpu_addr(11 downto 0); -- up to 8 MB ROM size: 4096 x gbc_cart_sel + address in window
+   gbc_cart_en                <= '1' when cpu_addr(15 downto 12) = x"B" else '0';
+   gbc_cart_we                <= gbc_cart_en and cpu_data_dir and cpu_data_valid;
+   gbc_cart_data_in           <= cpu_data_out(7 downto 0);
+   gbc_cart_data_out_16bit    <= x"00" & gbc_cart_data_out when gbc_cart_en = '1' and gbc_cart_we = '0' else (others => '0');
+   gbc_cart_sel_en            <= '1' when cpu_addr = x"FFE1" else '0';
+   gbc_cart_sel_we            <= gbc_cart_sel_en and cpu_data_dir and cpu_data_valid;
+   gbc_cart_sel_data_out      <= "00000" & std_logic_vector(to_unsigned(gbc_cart_sel, 11)) when gbc_cart_sel_en = '1' and gbc_cart_sel_we = '0' else (others => '0');
+   osm_xy_en                  <= '1' when cpu_addr = x"FFE2" else '0';
+   osm_xy_we                  <= osm_xy_en and cpu_data_dir and cpu_data_valid;
+   osm_xy_data_out            <= osm_xy when osm_xy_en = '1' and osm_xy_we = '0' else (others => '0');
+   osm_dxdy_en                <= '1' when cpu_addr = x"FFE3" else '0';
+   osm_dxdy_we                <= osm_dxdy_en and cpu_data_dir and cpu_data_valid;
+   osm_dxdy_data_out          <= osm_dxdy when osm_dxdy_en = '1' and osm_dxdy_we = '0' else (others => '0');
+   keyb_en                    <= '1' when cpu_addr = x"FFE4" else '0';
+   keyb_data_out              <= full_matrix when keyb_en = '1' and cpu_data_dir = '0' else (others => '0');
+   cf_cgb_en                  <= '1' when cpu_addr = x"FFE5" else '0';
+   cf_cgb_we                  <= cf_cgb_en and cpu_data_dir and cpu_data_valid;
+   cf_cgb_data_out_16bit      <= x"00" & cart_cgb_flag when cf_cgb_en = '1' and cf_cgb_we = '0' else (others => '0');
+   cf_sgb_en                  <= '1' when cpu_addr = x"FFE6" else '0';
+   cf_sgb_we                  <= cf_sgb_en and cpu_data_dir and cpu_data_valid;
+   cf_sgb_data_out_16bit      <= x"00" & cart_sgb_flag when cf_sgb_en = '1' and cf_sgb_we = '0' else (others => '0');   
+   cf_mbc_en                  <= '1' when cpu_addr = x"FFE7" else '0';
+   cf_mbc_we                  <= cf_mbc_en and cpu_data_dir and cpu_data_valid;
+   cf_mbc_data_out_16bit      <= x"00" & cart_mbc_type when cf_mbc_en = '1' and cf_mbc_we = '0' else (others => '0');   
+   cf_rom_size_en             <= '1' when cpu_addr = x"FFE8" else '0';
+   cf_rom_size_we             <= cf_rom_size_en and cpu_data_dir and cpu_data_valid;
+   cf_rom_size_data_out_16bit <= x"00" & cart_rom_size when cf_rom_size_en = '1' and cf_rom_size_we = '0' else (others => '0');
+   cf_ram_size_en             <= '1' when cpu_addr = x"FFE9" else '0';
+   cf_ram_size_we             <= cf_ram_size_en and cpu_data_dir and cpu_data_valid;
+   cf_ram_size_data_out_16bit <= x"00" & cart_ram_size when cf_ram_size_en = '1' and cf_ram_size_we = '0' else (others => '0');
+   cf_oldlic_en               <= '1' when cpu_addr = x"FFEA" else '0';
+   cf_oldlic_we               <= cf_oldlic_en and cpu_data_dir and cpu_data_valid;
+   cf_oldlic_data_out_16bit   <= x"00" & cart_old_licensee when cf_oldlic_en = '1' and cf_oldlic_we = '0' else (others => '0');
+                        
    -- Registers
    --   CSR: Control and status register: Reset & Pause
    --   cart_sel: Cartridge "ROM RAM" 4096-byte window selector
    --   osm_xy: X and Y coordinate (in chars, hi/lo) where the OSM window will start
    --   osm_dxdy: DX and DY size (in chars, hi/lo) of the OSM window
+   --   cf*: Cartridge flag registers
    handle_regs : process(clk50)
    begin
       if falling_edge(clk50) then
@@ -439,6 +489,26 @@ begin
             if osm_dxdy_we = '1' then
                osm_dxdy <= cpu_data_out;
             end if;
+            
+            -- cf*: Cartridge flag registers
+            if cf_cgb_we  = '1' then            
+               cart_cgb_flag <= cpu_data_out(7 downto 0);
+            end if;
+            if cf_sgb_we = '1' then
+               cart_sgb_flag <= cpu_data_out(7 downto 0);
+            end if;   
+            if cf_mbc_we = '1' then
+               cart_mbc_type <= cpu_data_out(7 downto 0);
+            end if;   
+            if cf_rom_size_we = '1' then
+               cart_rom_size <= cpu_data_out(7 downto 0);
+            end if;
+            if cf_ram_size_we = '1' then            
+               cart_ram_size <= cpu_data_out(7 downto 0);
+            end if;
+            if cf_oldlic_we = '1' then
+               cart_old_licensee <= cpu_data_out(7 downto 0);
+            end if;            
          end if;
       end if;
    end process;
