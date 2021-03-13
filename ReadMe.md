@@ -1,6 +1,6 @@
-# WIP MEGA65 porting experiment
+# Game Boy and Game Boy Color for MEGA65
 
-This is a work-in-progress (WIP) porting experiment of MiSTer's Game Boy and Gameboy Color core to MEGA65.
+![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg.jpg)
 
 done by sy2002 in 2021
 
