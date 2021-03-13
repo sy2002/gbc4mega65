@@ -1,4 +1,4 @@
-Game Boy and Game Boy Color for MEGA65  
+Game Boy and Game Boy Color for MEGA65
 ======================================
 
 Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
@@ -48,6 +48,17 @@ Constraints of the current Alpha version 0.5
 * No joystick support
 * No options menu, yet (no configuration possibilities such as
   "switch to Game Boy classic without color", palette switching, ...)
+
+Some demo pictures
+------------------
+
+| ![gbc01](doc/gbc01.jpg)      | ![gbc02](doc/gbc02.jpg)     | ![gbc03](doc/gbc03.jpg)       | 
+|:----------------------------:|:---------------------------:|:-----------------------------:| 
+| *MEGA65 Core Selection*      | *Game Boy Core: Start*      | *Game Boy Core: File Browser* |
+|:----------------------------:|:---------------------------:|:-----------------------------:| 
+| ![gbc04](doc/gbc04.jpg)      | ![gbc05](doc/gbc05.jpg)     | ![gbc06](doc/gbc06.jpg)       | 
+|:----------------------------:|:---------------------------:|:-----------------------------:| 
+| *Game Boy Color Boot Screen* | *Super Mario Start Screen*  | *Super Mario Sample Screen*   |
 
 # ORIGINAL MiSTer README.md text
 
