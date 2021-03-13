@@ -1,8 +1,8 @@
 Game Boy and Game Boy Color for MEGA65  
 ======================================
 
-Play Game Boy and Game Boy Color games on your [MEGA 65](https://mega65.org/)! Download the bitstream and
-the core file for your R2 or R3 machine from the [bin](bin) folder.
+Play Game Boy and Game Boy Color games on your [MEGA 65](https://mega65.org/)! [Download](bin)
+the bitstream and the core file for your R2 or R3 machine from the [bin](bin) folder.
 
 **WARNING: Alpha version 0.5 - See constraints below**
 
