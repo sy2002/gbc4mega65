@@ -1,6 +1,6 @@
 # Game Boy and Game Boy Color for MEGA65
 
-![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg.jpg)
+![Game Boy and Game Boy Color](gb-and-gbc.jpg)
 
 done by sy2002 in 2021
 
