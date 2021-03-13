@@ -228,7 +228,7 @@ begin
    rom : entity work.BROM
       generic map
       (
-         FILE_NAME            => "../../QNICE/monitor/monitor.rom",
+         FILE_NAME            => ROM_FILE,
          ADDR_WIDTH           => 15,
          DATA_WIDTH           => 16,
          LATCH_ACTIVE         => false

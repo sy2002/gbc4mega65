@@ -70,7 +70,7 @@
 ; - The labels of the dispatch table entries are written in lower case and should match as closely
 ;   as possible the standard names from a typical C-runtime library.
 ;
-reset!          RBRA    QMON$COLDSTART, 1       ; Skip the dispatch table on reset
+reset!          RBRA    INIT_FIRMWARE, 1       ; Skip the dispatch table on reset
 getc!           RBRA    IO$GETCHAR, 1
 putc!           RBRA    IO$PUTCHAR, 1
 gets!           RBRA    IO$GETS, 1

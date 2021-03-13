@@ -1098,7 +1098,10 @@ LEAVE           DECRB
 
 ; ----------------------------------------------------------------------------
 ; Variables and Stack: Need to be located in RAM
-; 5k words of RAM are needed
+;
+; 5k words of RAM are needed: The amount of RAM needed by this firmware needs
+; to be consistent with the amount of RAM provided in the hardware as
+; specified in qnice_globals.vhd
 ; ----------------------------------------------------------------------------
 
 #ifdef RELEASE
@@ -1125,7 +1128,7 @@ FB_ITEMS_SHOWN .BLOCK 1
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE      .EQU 4096        
+HEAP_SIZE      .EQU 4096                        ; 4k words of the 5k words RAM
 HEAP           .BLOCK 1
 
 #ifdef RELEASE
