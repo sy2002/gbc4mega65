@@ -107,7 +107,7 @@ architecture beh of MEGA65_R2 is
 -- Maximum size of cartridge ROM and RAM
 -- as long as we are not yet leveraging HyperRAM, these two parameters
 -- are the main distinction between the MEGA65 R2 and R3, as R3 has a much larger FPGA
-constant CART_ROM_MAX_R2   : integer := 64 * 1024;
+constant CART_ROM_MAX_R2   : integer := 256 * 1024;
 constant CART_RAM_MAX_R2   : integer := 32 * 1024;
 constant CART_ROM_MAX      : integer := CART_ROM_MAX_R2; 
 constant CART_RAM_MAX      : integer := CART_RAM_MAX_R2;
@@ -466,7 +466,7 @@ begin
          
          -- QNICE RAM interface
          clock_b           => qnice_clk,
-         address_b         => qngbc_cart_addr(15 downto 0),
+         address_b         => qngbc_cart_addr(CART_ROM_WIDTH - 1 downto 0),
          data_b            => qngbc_cart_data_in,
          wren_b            => qngbc_cart_we,
          q_b               => qngbc_cart_data_out  

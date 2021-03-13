@@ -75,15 +75,17 @@ begin
    calc_rom_addr : process(cart_mbc_type, cart_addr, mbc_rom_bank_reg, rom_mask)
    variable rom_bank : std_logic_vector(8 downto 0);
    begin
+      rom_addr <= (others => '0');
+      
       -- no MBC: direct mapped ROM
       if cart_mbc_type = x"00" then
-         rom_addr <= cart_addr;
+         rom_addr(15 downto 0) <= cart_addr;
       
       -- MBC 1
       elsif cart_mbc_type = x"01" then
          -- $0000-$3FFF: lower 16KB are hard wired
          if cart_addr(15 downto 14) = "00" then
-            rom_addr <= "00" & cart_addr(13 downto 0);
+            rom_addr(13 downto 0) <= cart_addr(13 downto 0);
             
          -- $4000-$7FFF: ROM bank $01-$7F
          elsif cart_addr(15 downto 14) = "01" then
@@ -91,17 +93,9 @@ begin
             if rom_bank = x"00" then
                rom_bank := x"01";
             end if;
-            rom_addr <= rom_bank(1 downto 0) & cart_addr(13 downto 0);
-            
-         -- invalid RAM access
-         else
-            rom_addr <= (others => '0');
+            rom_addr <= rom_bank(ROM_WIDTH - 14 - 1 downto 0) & cart_addr(13 downto 0);            
          end if;
-                     
-      -- invalid/unknown MBC         
-      else
-         rom_addr <= (others => '0');
-      end if;   
+      end if;
    end process;    
 
    write_registers : process(gb_clk)
