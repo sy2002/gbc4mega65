@@ -16,7 +16,9 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#undef RELEASE
+#define RELEASE
+
+#include "../../QNICE/dist_kit/sysdef.asm"
 
 ; ----------------------------------------------------------------------------
 ; Release Mode: Run in ROM
@@ -25,15 +27,37 @@
 #ifdef RELEASE
                 .ORG    0x0000                  ; start in ROM
 
+#include "qmon_gbc.asm"
+#include "../../QNICE/monitor/io_library.asm"
+#include "../../QNICE/monitor/string_library.asm"
+#include "../../QNICE/monitor/mem_library.asm"
+#include "../../QNICE/monitor/debug_library.asm"
+#include "../../QNICE/monitor/misc_library.asm"
+#include "../../QNICE/monitor/uart_library.asm"
+#include "../../QNICE/monitor/usb_keyboard_library.asm"
+#include "../../QNICE/monitor/vga_library.asm"
+#include "../../QNICE/monitor/math_library.asm"
+#include "../../QNICE/monitor/sd_library.asm"
+#include "../../QNICE/monitor/fat32_library.asm"
+
+QMON$LAST_ADDR  HALT
+
+INIT_FIRMWARE   AND     0x00FF, SR              ; Make sure we are in register bank 0
+                MOVE    VAR$STACK_START, SP     ; Initialize stack pointer                
+                MOVE    IO$KBD_STATE, R8        ; Set DE keyboard locale as default    
+                OR      KBD$LOCALE_DE, @R8
+                MOVE    _SD$DEVICEHANDLE, R8    ; Unmount the SD Card
+                XOR     @R8, @R8
+                RBRA    START_FIRMWARE, 1       ; skip redundant warmstart commands
+
+
 ; ----------------------------------------------------------------------------
 ; Develop & Debug Mode: Run in RAM
 ; ----------------------------------------------------------------------------
 
 #else
 
-#include "../../QNICE/dist_kit/sysdef.asm"
 #include "../../QNICE/dist_kit/monitor.def"
-#include "gbc.asm"
 
                 .ORG    0x8000                  ; start in RAM
 #endif                
@@ -41,6 +65,8 @@
 ; ----------------------------------------------------------------------------
 ; Firmware: Main Code
 ; ----------------------------------------------------------------------------
+
+#include "gbc.asm"
 
                 ; initialize system
 START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
@@ -1071,7 +1097,8 @@ LEAVE           DECRB
 #include "keyboard.asm"
 
 ; ----------------------------------------------------------------------------
-; Variables (need to be located in RAM)
+; Variables and Stack: Need to be located in RAM
+; 5k words of RAM are needed
 ; ----------------------------------------------------------------------------
 
 #ifdef RELEASE
@@ -1095,7 +1122,20 @@ FB_ITEMS_COUNT .BLOCK 1
 FB_ITEMS_SHOWN .BLOCK 1
 
 ; heap for storing the sorted structure of the current directory entries
-; this needs to be the last variable as it is only defined as "BLOCK 1" to
-; avoid a large amount of null-values in the ROM file
+; this needs to be the last variable before the monitor variables as it is
+; only defined as "BLOCK 1" to avoid a large amount of null-values in
+; the ROM file
 HEAP_SIZE      .EQU 4096        
 HEAP           .BLOCK 1
+
+#ifdef RELEASE
+
+; the monitor variables use 20 words, round to 32 for being safe and subtract
+; it from 1024 so that the overall 5k-word RAM size is sufficient to
+; accomodate HEAP_SIZE plus the bunch of internal variables plus something
+; around 674 words of remaining stack (use osm_rom.lis to calculate the exact
+; value by subtracting the address of HEAP from the addr. of VAR$STACK_START)
+                .ORG    0x93E0
+#include "monitor_vars.asm"
+
+#endif
