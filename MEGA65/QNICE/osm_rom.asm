@@ -7,14 +7,43 @@
 ; MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ; ****************************************************************************
 
+; If the define RELEASE is defined, then the ROM will be a self-contained and
+; self-starting ROM that includes the Monitor (QNICE "operating system") and
+; jumps to START_FIRMWARE. In this case it is assumed, that the firmware is
+; located in ROM and the variables are located in RAM.
+;
+; If RELEASE is not defined, that it is assumed that we are in the develop and
+; debug mode so that the firmware runs in RAM and can be changed/loaded using
+; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
+
+#undef RELEASE
+
+; ----------------------------------------------------------------------------
+; Release Mode: Run in ROM
+; ----------------------------------------------------------------------------
+
+#ifdef RELEASE
+                .ORG    0x0000                  ; start in ROM
+
+; ----------------------------------------------------------------------------
+; Develop & Debug Mode: Run in RAM
+; ----------------------------------------------------------------------------
+
+#else
+
 #include "../../QNICE/dist_kit/sysdef.asm"
 #include "../../QNICE/dist_kit/monitor.def"
 #include "gbc.asm"
 
-                .ORG    0x8000                  ; start at 0x8000
+                .ORG    0x8000                  ; start in RAM
+#endif                
+
+; ----------------------------------------------------------------------------
+; Firmware: Main Code
+; ----------------------------------------------------------------------------
 
                 ; initialize system
-                MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
+START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 MOVE    0, @R8
                 MOVE    FILEHANDLE, R8          ; ditto file handle
                 MOVE    0, @R8
@@ -1033,9 +1062,25 @@ LEAVE           DECRB
                 DECRB
                 RET
 
+
+; ----------------------------------------------------------------------------
+; Directory browser and keyboard controller
+; ----------------------------------------------------------------------------
+
+#include "dirbrowse.asm"
+#include "keyboard.asm"
+
 ; ----------------------------------------------------------------------------
 ; Variables (need to be located in RAM)
 ; ----------------------------------------------------------------------------
+
+#ifdef RELEASE
+                .ORG    0x8000                  ; RAM starts at 0x8000
+#endif
+
+; variables of dirbrowse.asm and keyboard.asm
+#include "dirbrowse_vars.asm"
+#include "keyboard_vars.asm"
 
 SD_DEVHANDLE   .BLOCK FAT32$DEV_STRUCT_SIZE     ; SD card device handle
 FILEHANDLE     .BLOCK FAT32$FDH_STRUCT_SIZE     ; File handle
@@ -1049,17 +1094,8 @@ FB_HEAD        .BLOCK 1
 FB_ITEMS_COUNT .BLOCK 1
 FB_ITEMS_SHOWN .BLOCK 1
 
-; ----------------------------------------------------------------------------
-; Keyboard controller
-; ----------------------------------------------------------------------------
-
-#include "keyboard.asm"
-
-; ----------------------------------------------------------------------------
-; Directory browser including heap for storing the sorted structure
-; ----------------------------------------------------------------------------
-
-#include "dirbrowse.asm"
-
+; heap for storing the sorted structure of the current directory entries
+; this needs to be the last variable as it is only defined as "BLOCK 1" to
+; avoid a large amount of null-values in the ROM file
 HEAP_SIZE      .EQU 4096        
 HEAP           .BLOCK 1

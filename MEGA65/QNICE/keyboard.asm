@@ -10,18 +10,6 @@
 ; MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ; ****************************************************************************
 
-; each key represented by one bit in these two words
-KEYB_PRESSED   .BLOCK 1                         ; currently pressed
-KEYB_NEWKEYS   .BLOCK 1                         ; newly pressed since last..
-                                                ; ..call of KEYB_GETKEY
-
-; typematic delay variables (expected to be a consecutive block of for words
-; overall starting with KEYB_CDN_DELAY)
-KEYB_CDN_DELAY .BLOCK 1
-KEYB_CDN_TRIG  .BLOCK 1
-KEYB_CUP_DELAY .BLOCK 1
-KEYB_CUP_TRIG  .BLOCK 1
-
 ; typematic delay (DLY) means: how long needs the key to be pressed, until
 ; the typematic repeat starts?
 ; typematic speed (SPD) means: how fast will the pressed key be repeated?

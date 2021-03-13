@@ -14,6 +14,11 @@
 
 #include "llist.asm"
 
+_DIRBR_DOT      .ASCII_W "."                    ; filter this from dir. views
+_DIRBR_DS       .EQU    0x3C                    ; ASCII of "<"
+_DIRBR_DE       .EQU    0x3E                    ; ASCII of ">"
+_DIRBR_DSDESIZE .EQU    2                       ; amount of characters in sum
+
 ; ----------------------------------------------------------------------------
 ; Read and sort all contents of the given path into a heap memory structure
 ; Input:
@@ -127,18 +132,8 @@ _DIRBR_RD_RET   DECRB
                 RET
 
 ; ----------------------------------------------------------------------------
-; Internal helper variables and functions
+; Internal helper functions
 ; ----------------------------------------------------------------------------
-
-_DIRBR_FILTERFN .BLOCK  1
-
-_DIRBR_FH       .BLOCK  FAT32$FDH_STRUCT_SIZE   ; file handle
-_DIRBR_ENTRY    .BLOCK  FAT32$DE_STRUCT_SIZE    ; directory entry
-
-_DIRBR_DOT      .ASCII_W "."                    ; filter this from dir. views
-_DIRBR_DS       .EQU    0x3C                    ; ASCII of "<"
-_DIRBR_DE       .EQU    0x3E                    ; ASCII of ">"
-_DIRBR_DSDESIZE .EQU    2                       ; amount of characters in sum
 
 ; Create new linked-list element on the heap, manage the heap-head and return
 ; a pointer to the new element in R8
