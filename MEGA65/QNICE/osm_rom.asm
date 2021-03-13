@@ -12,7 +12,7 @@
 ; jumps to START_FIRMWARE. In this case it is assumed, that the firmware is
 ; located in ROM and the variables are located in RAM.
 ;
-; If RELEASE is not defined, that it is assumed that we are in the develop and
+; If RELEASE is not defined, then it is assumed that we are in the develop and
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
@@ -27,6 +27,7 @@
 #ifdef RELEASE
                 .ORG    0x0000                  ; start in ROM
 
+; include QNICE Monitor for SYSCALL "operating system" functions
 #include "qmon_gbc.asm"
 #include "../../QNICE/monitor/io_library.asm"
 #include "../../QNICE/monitor/string_library.asm"

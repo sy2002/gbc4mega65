@@ -595,7 +595,7 @@ begin
       
    -- render OSM: calculate the pixel that needs to be shown at the given position  
    -- TODO: either here or in the top file: we are +1 pixel too much to the right (what about the vertical axis?) 
-   render_osm : process(vga_x, vga_x_old, vga_y_old, osm_vram_data, osm_font_data, osm_x1, osm_y1, osm_x2, osm_y2, gbc_osm)
+   render_osm : process(vga_x, vga_y, vga_x_old, vga_y_old, osm_vram_data, osm_vram_attr_data, osm_font_data, osm_x1, osm_y1, osm_x2, osm_y2, gbc_osm)
       variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
       variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
       variable vga_x_mod_16 : integer range 0 to 15;
