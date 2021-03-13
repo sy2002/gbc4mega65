@@ -1,8 +1,10 @@
 Game Boy and Game Boy Color for MEGA65  
 ======================================
 
-Play Game Boy and Game Boy Color games on your [MEGA 65](https://mega65.org/)! [Download](bin)
-the bitstream and the core file for your R2 or R3 machine from the [bin](bin) folder.
+Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
+[Game Boy Color](https://en.wikipedia.org/wiki/Game_Boy_Color) games on your
+[MEGA 65](https://mega65.org/)!
+[Download](bin) the bitstream and the core file for your R2 or R3 machine from the [bin](bin) folder.
 
 **WARNING: Alpha version 0.5 - See constraints below**
 
@@ -18,15 +20,27 @@ Special thanks to [Robert Peip](https://github.com/RobertPeip) for his invaluabl
 The core uses [QNICE-FPGA](https://github.com/sy2002/QNICE-FPGA) for loading the Game Boy's
 BIOS as well as for the on-screen-menu and for loading game roms.
 
-## Installation
+Installation
+------------
 
-1. Either use MEGA65's bitstream utility or install the core file so that you can use MEGA65's <kbd>No Scroll</kbd> boot menu to load the core.
-2. The core needs a FAT32 formatted SD card to load game roms.
-3. If you put your ROMs into a folder called `/gbc`, then the core will display this folder on startup.
-4. The core includes an Open Source Game Boy BIOS. For more authenticity, go to https://gbdev.gg8.se/files/roms/bootroms/ and
+1. [Download](bin) the bitstream and the core file for your R2 or R3 machine from the [bin](bin) folder.
+2. Either use MEGA65's bitstream utility or install the core file so that you can use MEGA65's <kbd>No Scroll</kbd> boot menu to load the core.
+3. The core needs a FAT32 formatted SD card to load game roms.
+4. If you put your ROMs into a folder called `/gbc`, then the core will display this folder on startup.
+5. The core includes an Open Source Game Boy BIOS. For more authenticity, go to https://gbdev.gg8.se/files/roms/bootroms/ and
    and download dmg_boot.bin and cgb_bios.bin and place both in the `/gbc` folder
 
-# [Gameboy](https://en.wikipedia.org/wiki/Game_Boy)  / [Gameboy Color](https://en.wikipedia.org/wiki/Game_Boy_Color) for MiSTer Platform
+Constraints of the current Alpha version 0.5
+--------------------------------------------
+
+* Only plays 32kB ROM files and some selected 64kB ROM files such as Super Mario Land 1, QIX and Castlevania 1
+* VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
+* No joystick support
+* No options menu, yet (no configuration possibilities such as "switch to Game Boy classic without color", palette switching, ...)
+
+# ORIGINAL MiSTer README.md text
+
+**TODO: Take what is needed for MEGA65 and delete the rest**
 
 This is port of [Gameboy for MiST](https://github.com/mist-devel/mist-board/tree/master/cores/gameboy)
 
