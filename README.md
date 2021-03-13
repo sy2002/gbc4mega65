@@ -58,6 +58,9 @@ Some demo pictures
 | ![gbc04](doc/gbc04.jpg)      | ![gbc05](doc/gbc05.jpg)     | ![gbc06](doc/gbc06.jpg)       | 
 | *Game Boy Color Boot Screen* | *Super Mario Start Screen*  | *Super Mario Gameplay Screen* |
 
+Clarification: These screen shots are just for illustration purposes. This repository does not
+contain any copyrighted ROMs such as BIOS ROMs or game ROMs.
+
 # ORIGINAL MiSTer README.md text
 
 **TODO: Take what is needed for MEGA65 and delete the rest**
