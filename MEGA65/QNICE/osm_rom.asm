@@ -43,13 +43,13 @@
 
 QMON$LAST_ADDR  HALT
 
-INIT_FIRMWARE   AND     0x00FF, SR              ; Make sure we are in register bank 0
-                MOVE    VAR$STACK_START, SP     ; Initialize stack pointer                
-                MOVE    IO$KBD_STATE, R8        ; Set DE keyboard locale as default    
+INIT_FIRMWARE   AND     0x00FF, SR              ; activate register bank 0
+                MOVE    VAR$STACK_START, SP     ; initialize stack pointer
+                MOVE    IO$KBD_STATE, R8        ; set DE keyboard locale
                 OR      KBD$LOCALE_DE, @R8
-                MOVE    _SD$DEVICEHANDLE, R8    ; Unmount the SD Card
+                MOVE    _SD$DEVICEHANDLE, R8    ; unmount the SD Card
                 XOR     @R8, @R8
-                RBRA    START_FIRMWARE, 1       ; skip redundant warmstart commands
+                RBRA    START_FIRMWARE, 1
 
 
 ; ----------------------------------------------------------------------------
@@ -61,7 +61,7 @@ INIT_FIRMWARE   AND     0x00FF, SR              ; Make sure we are in register b
 #include "../../QNICE/dist_kit/monitor.def"
 
                 .ORG    0x8000                  ; start in RAM
-#endif                
+#endif
 
 ; ----------------------------------------------------------------------------
 ; Firmware: Main Code
@@ -91,11 +91,11 @@ START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
                 MOVE    1, R8                   ; show welcome message
-                MOVE    GBC$CSR_RESET, R9       ; put machine in reset state 
+                MOVE    GBC$CSR_RESET, R9       ; put machine in reset state
                 RSUB    RESETGB_WELCOME, 1
 
                 ; Mount SD card and load original ROMs, if available.
-                RSUB    CHKORMNT, 1             ; mount SD card partition #1 
+                RSUB    CHKORMNT, 1             ; mount SD card partition #1
                 CMP     0, R9
                 RBRA    MOUNT_OK, Z
                 HALT                            ; TODO: replace by retry
@@ -118,7 +118,7 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 ; load sorted directory list into memory
                 MOVE    SD_DEVHANDLE, R8
                 MOVE    FN_START_DIR, R9        ; start path
-CD_AND_READ     MOVE    HEAP, R10               ; start address of heap   
+CD_AND_READ     MOVE    HEAP, R10               ; start address of heap
                 MOVE    HEAP_SIZE, R11          ; maximum memory available
                                                 ; for storing the linked list
                 MOVE    FILTERROMNAMES, R12     ; do not show ROM file names
@@ -137,15 +137,15 @@ ERR_PNF         ADD     1, SP                   ; see comment above at @--SP
                 MOVE    HEAP, R10
                 MOVE    HEAP_SIZE, R11
                 RSUB    DIRBROWSE_READ, 1
-                CMP     0, R11                  
+                CMP     0, R11
                 RBRA    BROWSE_START, Z
                 CMP     2, R11
                 RBRA    WRN_MAX, Z
                 RBRA    ERR_UNKNOWN, 1
 
                 ; unknown error: end (TODO: we might want to retry in future)
-ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8 
-                XOR     R9, R9               
+ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8
+                XOR     R9, R9
                 RBRA    FATALERROR, 1
 
                 ; warn, that we are not showing all files
@@ -163,7 +163,7 @@ _WRNMAXSPACE    RSUB    KEYB_SCAN, 1
 
 BROWSE_START    MOVE    R10, R0                 ; R0: dir. linked list head
 
-                MOVE    FB_HEAD, R8             
+                MOVE    FB_HEAD, R8
                 MOVE    @R8, R8                 ; persistent existing head?
                 RBRA    BROWSE_SETUP, Z         ; no: continue
                 MOVE    R8, R0                  ; yes: use it
@@ -220,7 +220,7 @@ INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 CMP     KEY_CUR_DOWN, R8        ; cursor down: next file
                 RBRA    IL_CUR_DOWN, Z
                 CMP     KEY_CUR_LEFT, R8        ; cursor left: previous page
-                RBRA    IL_CUR_LEFT, Z                
+                RBRA    IL_CUR_LEFT, Z
                 CMP     KEY_CUR_RIGHT, R8       ; cursor right: next page
                 RBRA    IL_CUR_RIGHT, Z
                 CMP     KEY_RETURN, R8          ; return key
@@ -240,7 +240,7 @@ IL_KEY_RUNSTOP  MOVE    GAME_RUNNING, R8
                 MOVE    FB_ITEMS_COUNT, R8      ; remember # of items in dir.
                 MOVE    R1, @R8
                 MOVE    FB_ITEMS_SHOWN, R8      ; remember # of items shown
-                MOVE    R5, @R8                
+                MOVE    R5, @R8
                 MOVE    GBC$CSR, R8             ; continue game
                 AND     GBC$CSR_UN_OSM, @R8
                 AND     GBC$CSR_UN_PAUSE, @R8
@@ -250,7 +250,7 @@ IL_KEY_RUNSTOP  MOVE    GAME_RUNNING, R8
 IL_CUR_UP       CMP     R4, 0                   ; > 0?
                 RBRA    IL_CUR_UP_CHK, !N       ; no: check if need to scroll
                 MOVE    R4, R8                  ; yes: deselect current line
-                MOVE    SA_COL_STD, R9          
+                MOVE    SA_COL_STD, R9
                 RSUB    SELECT_LINE, 1
                 SUB     1, R4                   ; one line up
                 RBRA    SELECT_LOOP, 1          ; select new line and continue
@@ -270,7 +270,7 @@ IL_CUR_DOWN     MOVE    R1, R8                  ; R1: amount of items in dir..
                 CMP     R4, R8                  ; R4 = R1: scrolling needed?
                 RBRA    IL_SCRL_DN, Z           ; yes: scroll down
                 MOVE    R4, R8                  ; no: deselect current line
-                MOVE    SA_COL_STD, R9          
+                MOVE    SA_COL_STD, R9
                 RSUB    SELECT_LINE, 1
                 ADD     1, R4                   ; one line down
                 RBRA    SELECT_LOOP, 1          ; select new line and continue
@@ -315,14 +315,14 @@ IL_CUR_RIGHT    MOVE    R1, R8                  ; R8: entries in current dir.
                 RBRA    IL_PAGE_DEFDN, N        ; yes: scroll one page down
                 MOVE    R8, R10                 ; R10: remaining elm. down
                 RBRA    IL_PAGE_DN, 1
-IL_PAGE_DEFDN   MOVE    R2, R10                 ; R10: one page down    
+IL_PAGE_DEFDN   MOVE    R2, R10                 ; R10: one page down
 IL_PAGE_DN      MOVE    1, R9                   ; R9: iterate forward
                 RBRA    SCROLL, 1               ; scroll, then input loop
 
                 ; this code segment is used by all four scrolling modes:
                 ; up/down and page up/page down; it is meant to called via
                 ; RBRA and not via RSUB because it will return to DRAW_DIRLIST
-                ; 
+                ;
                 ; iterates forward or backward depending on R9 being +1 or -1
                 ; the iteration amount if given in R10
                 ; if the element is not found, then a fatal error is raised
@@ -335,7 +335,7 @@ SCROLL          MOVE    R3, R8                  ; R8: currently visible head
                 RBRA    SCROLL_DO, !Z           ; yes: continue
                 MOVE    ERR_FATAL_ITER, R8      ; no: fatal error and halt
                 XOR     R9, R9
-                RBRA    FATALERROR, 1                
+                RBRA    FATALERROR, 1
 SCROLL_DO       CMP     -1, R9                  ; negative iteration dir.?
                 RBRA    SCROLL_DO2, !Z          ; no: continue
                 XOR     R3, R3                  ; yes: inverse sign of R10
@@ -372,8 +372,8 @@ ELEMENT_FOUND   MOVE    R11, R8                 ; R11: selected SLL element
 
                 ; change directory
                 MOVE    R4, R8                  ; deselect current line
-                MOVE    SA_COL_STD, R9          
-                RSUB    SELECT_LINE, 1                
+                MOVE    SA_COL_STD, R9
+                RSUB    SELECT_LINE, 1
                 MOVE    STR_CD, R8              ; log directory change to UART
                 SYSCALL(puts, 1)
                 RSUB    CLRINNER, 1             ; clear inner part of frame
@@ -388,19 +388,19 @@ ELEMENT_FOUND   MOVE    R11, R8                 ; R11: selected SLL element
                 SYSCALL(puts, 1)                ; log it to UART
                 SYSCALL(crlf, 1)
                 SYSCALL(crlf, 1)
-    
+
                 MOVE    FB_HEAD, R9             ; reset head for browsing
                 MOVE    0, @R9
 
                 MOVE    FN_UPDIR, R9            ; are we going one dir. up?
                 SYSCALL(strcmp, 1)
                 CMP     0, R10
-                RBRA    CHANGEDIR, Z            ; yes: get crsr pos from stack            
+                RBRA    CHANGEDIR, Z            ; yes: get crsr pos from stack
                 MOVE    R4, @--SP               ; no: remember cursor pos..
                 MOVE    0, @--SP                ; ..and new dir. starts at 0
 
 CHANGEDIR       MOVE    R8, R9                  ; use this directory
-                MOVE    SD_DEVHANDLE, R8  
+                MOVE    SD_DEVHANDLE, R8
                 RBRA    CD_AND_READ, 1          ; create new linked-list
 
 LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
@@ -409,7 +409,7 @@ LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
                                                 ; ..otherwise the palette is..
                                                 ; ..for some reason not ..
                                                 ; ..correctly changed
-                OR      GBC$CSR_RESET, @R8      ; put Game Boy in reset state                                                                                                
+                OR      GBC$CSR_RESET, @R8      ; put Game Boy in reset state
 
                 MOVE    R4, @--SP               ; remember cursor position
                 MOVE    FB_HEAD, R8             ; remember currently vis. head
@@ -426,7 +426,7 @@ LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
                 SYSCALL(puts, 1)
 
                 MOVE    MEM_CARTRIDGE_WIN, R9
-                MOVE    GBC$CART_SEL, R10  
+                MOVE    GBC$CART_SEL, R10
                 RSUB    LOAD_CART, 1
                 CMP     0, R11
                 RBRA    CART_OK, Z
@@ -494,7 +494,7 @@ STR_HELP        .ASCII_P "\n"
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 196, 13, 10                 
+                .DW 196, 196, 196, 196, 13, 10
                 .ASCII_P " Cursor keys          Joypad\n"
                 .ASCII_P " Space                Start\n"
                 .ASCII_P " Enter                Select\n"
@@ -507,7 +507,7 @@ STR_HELP        .ASCII_P "\n"
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 196, 13, 10                 
+                .DW 196, 196, 196, 196, 13, 10
                 .ASCII_P " Run/Stop             Enter/leave file browser\n"
                 .ASCII_P " Up/Down cursor key   Navigate one file up/down\n"
                 .ASCII_P " Left/Right cursor    One page forward/backward\n"
@@ -529,7 +529,7 @@ ERR_FATAL       .ASCII_W "FATAL ERROR:\n"
 ERR_FATAL_STOP  .ASCII_W "Core stopped. Please reset the machine."
 ERR_FATAL_ITER  .ASCII_W "Corrupt memory structure: Linked-list boundary.\n"
 
-; ROM/BIOS file names and standard path 
+; ROM/BIOS file names and standard path
 ; (the file names need to be in upper case)
 FN_ROM_OFS      .EQU 5 ; offset to add to rom filen. to get the name w/o path
 FN_DMG_ROM      .ASCII_W "/GBC/DMG_BOOT.BIN"
@@ -562,8 +562,8 @@ CHKORMNT        XOR     R9, R9
                 RSUB    PRINTHEX, 1
                 RSUB    PRINTCRLF, 1
                 MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
-                XOR     @R8, @R8 
-                XOR     R8, R8                  ; return 0 as device handle                   
+                XOR     @R8, @R8
+                XOR     R8, R8                  ; return 0 as device handle
 _CHKORMNT_RET   RET
 
 ; Check, if original ROM is available and load it.
@@ -592,7 +592,7 @@ _LR_FOPEN_OK    MOVE    STR_ROM_FF, R8
                 MOVE    R9, R8                  ; R8: valid file handle
                 MOVE    R7, R0                  ; R0: MMIO BIOS "ROM RAM"
                 MOVE    R0, R1                  ; R1: maximum length
-                ADD     MEM_BIOS_MAXLEN, R1                
+                ADD     MEM_BIOS_MAXLEN, R1
 
 _LR_LOAD_LOOP   SYSCALL(f32_fread, 1)           ; read one byte
                 CMP     FAT32$EOF, R10          ; EOF?
@@ -605,7 +605,7 @@ _LR_LOAD_LOOP   SYSCALL(f32_fread, 1)           ; read one byte
                 RBRA    PRINTSTR, 1
                 RBRA    _LR_FCLOSE, 1           ; end with code 2
 
-_LR_LOAD_OK     XOR     R10, R10                ; R10 = 0: file load OK                
+_LR_LOAD_OK     XOR     R10, R10                ; R10 = 0: file load OK
 _LR_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
                 MOVE    0, @R8
 _LOAD_ROM_RET   DECRB
@@ -637,24 +637,24 @@ _LC_FOPEN_OK    MOVE    R9, R8                  ; R8: valid file handle
 _LC_LOAD_LOOP1  MOVE    R0, R2                  ; R2: write pointer to 4k win.
 _LC_LOAD_LOOP2  SYSCALL(f32_fread, 1)
                 CMP     FAT32$EOF, R10          ; EOF?
-                RBRA    _LC_LOAD_OK, Z          ; yes: close file and end  
+                RBRA    _LC_LOAD_OK, Z          ; yes: close file and end
 
                 ; extract cartridge flags
                 CMP     0, @R1
                 RBRA    _LC_LOAD_STORE, !Z      ; no: skip cart. flag checks
 
                 MOVE    GBC$CF_CGB_CHA, R5      ; CGB flag
-                MOVE    STR_FLAG_CGB, R6        
+                MOVE    STR_FLAG_CGB, R6
                 MOVE    GBC$CF_CGB, R7
                 RSUB    _LC_HANDLE_CF, 1
 
                 MOVE    GBC$CF_SGB_CHA, R5      ; SGB flag
-                MOVE    STR_FLAG_SGB, R6        
+                MOVE    STR_FLAG_SGB, R6
                 MOVE    GBC$CF_SGB, R7
                 RSUB    _LC_HANDLE_CF, 1
 
                 MOVE    GBC$CF_MBC_CHA, R5      ; MBC type
-                MOVE    STR_FLAG_MBC, R6        
+                MOVE    STR_FLAG_MBC, R6
                 MOVE    GBC$CF_MBC, R7
                 RSUB    _LC_HANDLE_CF, 1
 
@@ -682,8 +682,8 @@ _LC_LOAD_LOOP2  SYSCALL(f32_fread, 1)
 _LC_HANDLE_CF   ADD     MEM_CARTRIDGE_WIN, R5   ; adjust for MMIO
                 CMP     R5, R2                  ; address = flag address?
                 RBRA    _LC_HCF_RET, !Z         ; no: continue
-                MOVE    R9, @R7                 ; store flag in register                
-                MOVE    R8, @--SP 
+                MOVE    R9, @R7                 ; store flag in register
+                MOVE    R8, @--SP
                 MOVE    R6, R8                  ; UART: print name of flag
                 SYSCALL(puts, 1)
                 MOVE    @R7, R8                 ; UART: print value of flag
@@ -701,9 +701,9 @@ _LC_LOAD_STORE  MOVE    R9, @R2++               ; store byte in cart. mem.
 
 _LC_LOAD_OK     XOR     R11, R11                ; end with code 0
 _LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
-                MOVE    0, @R8            
+                MOVE    0, @R8
                 DECRB
-                RET  
+                RET
 
 ; While browsing directories, make sure that the users are not seeing the
 ; BIOS/ROM files of the Game Boy. Expects string pointer in R8 and returns 0,
@@ -750,7 +750,7 @@ RESETGB_WELCOME INCRB
                 OR      GBC$CSR_OSM, @R0        ; show on-screen-menu
                 RSUB    CLRSCR, 1               ; clear VRAM
                 XOR     R8, R8                  ; x|y for frame = (0, 0)
-                XOR     R9, R9                  
+                XOR     R9, R9
                 MOVE    GBC$OSM_COLS, R10       ; full screen size
                 MOVE    GBC$OSM_ROWS, R11
                 RSUB    PRINTFRAME, 1           ; show frame
@@ -813,7 +813,7 @@ PRINTSTRSCR     RSUB    ENTER, 1
                 MOVE    CUR_X, R1               ; R1: running x-cursor
                 MOVE    CUR_Y, R2               ; R2: running y-cursor
                 MOVE    INNER_X, R3             ; R3: inner-left x-coord for..
-                MOVE    @R3, R3                 ; ..not printing outside frame                                                
+                MOVE    @R3, R3                 ; ..not printing outside frame
 
                 RSUB    CALC_VRAM, 1            ; R8: VRAM addr of curs. pos.
 
@@ -824,7 +824,7 @@ _PS_L1          MOVE    @R0++, R4               ; read char
                 RBRA    _PS_L4, !Z
                 MOVE    CHR_DIR_L, R4
                 RBRA    _PS_L6, 1
-_PS_L4          CMP     '>', R4                 ; replace > by special                
+_PS_L4          CMP     '>', R4                 ; replace > by special
                 RBRA    _PS_L5, !Z
                 MOVE    CHR_DIR_R, R4
                 RBRA    _PS_L6, 1
@@ -874,13 +874,13 @@ PRINTCRLF       INCRB
                 DECRB
                 RET
 
-_PRINTCRLF_S    .ASCII_W "\n"                
+_PRINTCRLF_S    .ASCII_W "\n"
 
 ; Calculates the VRAM address for the current cursor pos in CUR_X & CUR_Y
 ; R8: VRAM address
 CALC_VRAM       RSUB    ENTER, 1
 
-                MOVE    MEM_VRAM, R0            ; video ram address equals ..    
+                MOVE    MEM_VRAM, R0            ; video ram address equals ..
                 MOVE    CUR_Y, R8               ; .. CUR_Y x GBC$OSM_COLS ..
                 MOVE    @R8, R8
                 MOVE    GBC$OSM_COLS, R9
@@ -903,7 +903,7 @@ CLRSCR          INCRB
 _CLRSCR_L       MOVE    0, @R0++                ; 0 = CLR = space character
                 MOVE    SA_COL_STD, @R1++       ; foreground/backgr. color
                 SUB     1, R2
-                RBRA    _CLRSCR_L, !Z                 
+                RBRA    _CLRSCR_L, !Z
                 DECRB
                 RET
 
@@ -913,7 +913,7 @@ CLRINNER        INCRB
                 MOVE    GBC$OSM_COLS, R1        ; R1: amount of cols to fill
                 SUB     2, R1
                 MOVE    GBC$OSM_ROWS, R2        ; R2: amount of lines to fill
-                SUB     2, R2                
+                SUB     2, R2
                 ADD     GBC$OSM_COLS, R0        ; skip first row
                 ADD     1, R0                   ; skip first col
                 MOVE    R2, R5
@@ -965,7 +965,7 @@ PRINTFRAME      RSUB    ENTER, 1
 
                 ; calculate delta to next line in VRAM
                 MOVE    R10, R0                 ; R10: dx
-                SUB     1, R0              
+                SUB     1, R0
                 MOVE    GBC$OSM_COLS, R1
                 SUB     R0, R1                  ; R1: delta = cols - (dx - 1)
 
@@ -997,14 +997,14 @@ _PF_DL2         ADD     R1, R8                  ; next line
 _PF_DL3         MOVE    CHR_FC_SH, @R8++        ; horizontal line
                 SUB     1, R2
                 RBRA    _PF_DL3, !Z
-                MOVE    CHR_FC_BR, @R8          ; draw bottom/right corner                   
+                MOVE    CHR_FC_BR, @R8          ; draw bottom/right corner
 
                 RSUB    LEAVE, 1
                 RET
 
 ; Change the attribute of the line in R8 to R9
 ; R8 is considered as "inside the window", i.e. screenrow = R8 + 1
-SELECT_LINE     INCRB   
+SELECT_LINE     INCRB
                 MOVE    R8, R0
                 MOVE    R9, R1
                 MOVE    R10, R2                 ; R10 & R11: changed by mulu
