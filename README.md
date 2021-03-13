@@ -1,6 +1,18 @@
-# Game Boy and Game Boy Color for MEGA65
+Game Boy and Game Boy Color for MEGA65  
+======================================
+
+Play Game Boy and Game Boy Color games on your [MEGA 65](https://mega65.org/)! Download the bitstream or the core file for your machine from the [bin](bin) folder.
 
 ![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg)
+
+This core is based on the [MiSTer](https://github.com/MiSTer-devel/Gameboy_MiSTer) Game Boy core
+which itself is based on the [MiST](https://github.com/mist-devel/gameboy) Game Boy core.
+
+[sy2002](http://www.sy2002.de) ported the core to the MEGA65.
+
+Special thanks to [Robert Peip](https://github.com/RobertPeip) for his invaluable support.
+
+The core uses [QNICE] 
 
 done by sy2002 in 2021
 
