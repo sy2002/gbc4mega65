@@ -61,6 +61,11 @@ Some demo pictures
 Clarification: These screenshots are just for illustration purposes. This repository does not
 contain any copyrighted ROMs such as BIOS ROMs or game ROMs.
 
+MEGA65 demo video
+-----------------
+
+[![MEGA65 Update Video on YouTube](doc/demovideo-youtube.jpg)](https://www.youtube.com/watch?v=AsWDnoU2T_Q&t=897s)
+
 # ORIGINAL MiSTer README.md text
 
 **TODO: Take what is needed for MEGA65 and delete the rest**
