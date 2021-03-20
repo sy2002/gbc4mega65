@@ -794,8 +794,8 @@ _SHOWDIR_L      MOVE    R8, R1                  ; R1: ptr to next LL element
                 RBRA    _SHOWDIR_PRINT, !N      ; R3 <= R2: print items
                 MOVE    SP, R4                  ; save SP to restore it later
                 MOVE    R9, R5                  ; save R9 to restore it later
-                SUB     100, SP                  ; reserve max. size of str. ..
-                ;SUB     2, SP                   ; .. including zero-terminator
+                SUB     R3, SP                  ; reserve strlen
+                SUB     1, SP                   ; .. including zero-terminator
                 MOVE    SP, R9                  ; modified entry name
                 RSUB    _DIRBR_STRCPY, 1        ; copy item name to stack
                                                 ; TODO: switch to strcpy..
