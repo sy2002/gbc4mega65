@@ -388,7 +388,7 @@ begin
       );
       
    -- Memory Bank Controller (MBC)
-   gb_mbc : entity work.mbc
+   gb_mbc : entity work.mbc_wrapper
       generic map
       (
          ROM_WIDTH      => CART_ROM_WIDTH
@@ -397,6 +397,7 @@ begin
       (
          -- Game Boy's clock and reset
          gb_clk                  => main_clk,
+         gb_ce_2x                => sc_ce_2x,
          gb_reset                => qngbc_reset,
                
          -- Game Boy's cartridge interface
