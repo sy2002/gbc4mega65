@@ -1,3 +1,11 @@
+/* Game Boy Memory Bank Controller
+
+   Modified version of Robert Peip's MiSTer testbench code:
+   https://github.com/MiSTer-devel/Gameboy_MiSTer/blob/master/sim/src/gameboy/mbc.sv
+   
+   Adjusted for gbc4mega65 by sy2002 in 2021
+*/
+
 module mbc
 (
    input         clk_sys,
@@ -129,15 +137,6 @@ wire mbc_battery = (cart_mbc_type == 8'h03) || (cart_mbc_type == 8'h06) || (cart
 
 // --------------------- CPU register interface ------------------
 
-wire [15:0] SS_Ext;
-wire [15:0] SS_Ext_BACK;
-
-assign SS_Ext_BACK[ 8: 0] = mbc_rom_bank_reg;
-assign SS_Ext_BACK[12: 9] = mbc_ram_bank_reg;
-assign SS_Ext_BACK[   13] = mbc1_mode;
-assign SS_Ext_BACK[   14] = mbc3_mode;
-assign SS_Ext_BACK[   15] = mbc_ram_enable;
-
 always @(posedge clk_sys) begin
 	if(reset) begin
 		mbc_rom_bank_reg <= 5'd1;
@@ -196,8 +195,6 @@ wire [9:0] mbc_bank =
 //	HuC3?HuC3_addr:              
 	{8'd0, cart_addr[14:13]};  // no MBC, 32k linear address
 	
-
-
 //reg [127:0] palette = 128'h828214517356305A5F1A3B4900000000;
 
 // MBC1M detect
@@ -241,8 +238,6 @@ assign rom_addr = {mbc_bank, cart_addr[12:0]};
 //	if(status[15:14]) isGBC <= status[15];
 //	else if(cart_download) isGBC <= !filetype[7:4];
 //end
-
-
 
 /////////////////////////  BRAM SAVE/LOAD  /////////////////////////////
 
