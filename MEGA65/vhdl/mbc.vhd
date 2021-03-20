@@ -76,26 +76,43 @@ begin
    variable rom_bank : std_logic_vector(8 downto 0);
    begin
       rom_addr <= (others => '0');
-      
-      -- no MBC: direct mapped ROM
-      if cart_mbc_type = x"00" then
-         rom_addr(15 downto 0) <= cart_addr;
-      
-      -- MBC 1
-      elsif cart_mbc_type = x"01" then
-         -- $0000-$3FFF: lower 16KB are hard wired
-         if cart_addr(15 downto 14) = "00" then
-            rom_addr(13 downto 0) <= cart_addr(13 downto 0);
+      rom_bank := mbc_rom_bank_reg and rom_mask;
             
-         -- $4000-$7FFF: ROM bank $01-$7F
-         elsif cart_addr(15 downto 14) = "01" then
-            rom_bank := mbc_rom_bank_reg and rom_mask;
-            if rom_bank = x"00" then
-               rom_bank := x"01";
+      case cart_mbc_type is      
+         -- no MBC: direct mapped ROM
+         when x"00" =>
+            rom_addr(15 downto 0) <= cart_addr;
+
+         -- MBC 1
+         when x"01" =>
+            -- $0000-$3FFF: lower 16KB are hard wired
+            if cart_addr(15 downto 14) = "00" then
+               rom_addr(13 downto 0) <= cart_addr(13 downto 0);
+            -- $4000-$7FFF: ROM bank $01-$7F
+            elsif cart_addr(15 downto 14) = "01" then            
+               if rom_bank = x"00" then
+                  rom_bank := x"01";
+               end if;
+               rom_addr <= rom_bank(ROM_WIDTH - 14 - 1 downto 0) & cart_addr(13 downto 0);            
             end if;
-            rom_addr <= rom_bank(ROM_WIDTH - 14 - 1 downto 0) & cart_addr(13 downto 0);            
-         end if;
-      end if;
+            
+         -- MBC 2 & MBC 2 + Battery
+         when x"05" =>
+         when x"06" =>
+            -- $0000-$3FFF: lower 16KB are hard wired
+            if cart_addr(15 downto 14) = "00" then
+               rom_addr(13 downto 0) <= cart_addr(13 downto 0);
+            -- $4000-$7FFF: ROM bank $01-$7F
+            elsif cart_addr(15 downto 14) = "01" then            
+               if rom_bank = x"00" then
+                  rom_bank := x"01";
+               end if;
+               rom_addr <= rom_bank(ROM_WIDTH - 14 - 1 downto 0) & cart_addr(13 downto 0);            
+            end if;
+                  
+         -- unsupported MBC
+         when others => null;
+      end case;                        
    end process;    
 
    write_registers : process(gb_clk)
@@ -104,9 +121,27 @@ begin
          if gb_reset = '1' then
             mbc_rom_bank_reg <= "0" & x"01";
          else
-            -- $2000-$3FFF: ROM bank number (write only)
-            if cart_wr = '1' and cart_addr(15 downto 13) = "001" then
-               mbc_rom_bank_reg <= "0" & cart_di; 
+            if cart_wr = '1' then
+               case cart_mbc_type is
+                  -- MBC 1, MBC2, MBC 2 + Battery 
+                  when x"01" =>
+                  when x"05" =>
+                  when x"06" =>
+                     case cart_addr(15 downto 13) is
+                        -- $2000-$3FFF: ROM bank number (write only)
+                        when "001" =>
+                           mbc_rom_bank_reg(4 downto 0) <= cart_di(4 downto 0);
+                        -- $4000-$5FFF:: RAM bank number or upper bits of ROM bank number (write only)
+                        when "010" =>                        
+                           mbc_rom_bank_reg(6 downto 5) <= cart_di(1 downto 0); 
+                                             
+                        -- unsupported MBC registers
+                        when others => null;
+                     end case;                  
+                                       
+                  -- unsupported MBC
+                  when others => null;
+               end case;
             end if;
          end if;
       end if;
