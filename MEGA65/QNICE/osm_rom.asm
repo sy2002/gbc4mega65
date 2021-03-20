@@ -61,6 +61,7 @@ INIT_FIRMWARE   AND     0x00FF, SR              ; activate register bank 0
 #include "../../QNICE/dist_kit/monitor.def"
 
                 .ORG    0x8000                  ; start in RAM
+                RBRA    START_FIRMWARE, 1
 #endif
 
 ; ----------------------------------------------------------------------------
@@ -68,6 +69,7 @@ INIT_FIRMWARE   AND     0x00FF, SR              ; activate register bank 0
 ; ----------------------------------------------------------------------------
 
 #include "gbc.asm"
+#include "mbcs.asm"
 
                 ; initialize system
 START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
@@ -427,6 +429,7 @@ LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
 
                 MOVE    MEM_CARTRIDGE_WIN, R9
                 MOVE    GBC$CART_SEL, R10
+                MOVE    R4, R11                 ; R11: line to blink on screen
                 RSUB    LOAD_CART, 1
                 CMP     0, R11
                 RBRA    CART_OK, Z
@@ -485,6 +488,10 @@ STR_FLAG_RAM    .ASCII_W "\n  RAM size     : "
 STR_FLAG_OLDLIC .ASCII_W "\n  Old licensee : "
 STR_LOAD_DONE   .ASCII_W "\nDone.\n"
 STR_GB_STARTED  .ASCII_W "Game Boy started.\n"
+
+STR_LOADING     .DW CHR_FC_HE_LEFT
+                .ASCII_P " Loading ... "
+                .DW CHR_FC_HE_RIGHT, 0
 
 STR_HELP        .ASCII_P "\n"
                 .ASCII_P " MEGA65               Game Boy\n"
@@ -612,13 +619,32 @@ _LR_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
 _LOAD_ROM_RET   DECRB
                 RET
 
-; Check, if original ROM is available and load it.
+; Load game cartridge
+; Input:
 ;  R8: full path to file to be loaded
 ;  R9: MMIO address of "ROM RAM"
 ; R10: MMIO address of window selector
+; R11: line on screen to blink during loading
+; Output:
 ; R11: 0 = OK
 ;      1 = file not found
 LOAD_CART       INCRB
+
+                ; show on screen that the loading starts
+                MOVE    R11, R4                 ; R4: line on screen to blink
+                MOVE    SA_COL_SEL, R5          ; visually select the line
+                RSUB    _LC_BLINKLNS, 1
+                MOVE    R8, R5                  ; save R8 to be restored later
+                MOVE    CUR_X, R8               ; print "Loading ... " to ..
+                MOVE    17, @R8                 ; .. the bottom line
+                MOVE    CUR_Y, R8
+                MOVE    GBC$OSM_ROWS, @R8
+                SUB     1, @R8
+                MOVE    STR_LOADING, R8
+                RSUB    PRINTSTRSCR, 1
+                MOVE    R5, R8                  ; rest. R8: full path of file
+
+                ; open file
                 MOVE    R9, R0                  ; R0: MMIO addr. of 4k win.
                 MOVE    R10, R1                 ; R1: MMIO of win. selector
                 MOVE    R8, R10                 ; R9: full path to cart. file
@@ -698,12 +724,46 @@ _LC_LOAD_STORE  MOVE    R9, @R2++               ; store byte in cart. mem.
                 CMP     R3, R2                  ; window boundary reached?
                 RBRA    _LC_LOAD_LOOP2, !Z      ; no: continue with next byte
                 ADD     1, @R1                  ; next cart. mem. window
+                MOVE    @R1, R5
+                RSUB    _LC_BLINK_LN, 1
                 RBRA    _LC_LOAD_LOOP1, 1
 
 _LC_LOAD_OK     XOR     R11, R11                ; end with code 0
 _LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
                 MOVE    0, @R8
                 DECRB
+                RET
+
+                ; sub-sub-routine to blink the line while loading
+                ; R4 = line to blink
+                ; R5 = current cart. mem. window
+_LC_BLINK_LN    CMP     1, R5                   ; first action: init blink ..
+                RBRA    _LC_BLINKLN1, !Z        ; .. status
+                MOVE    LCBLKLN_STATUS, R5
+                MOVE    1, @R5                  ; next color will be standard
+_LC_BLINK_RET   RET
+
+_LC_BLINKLN1    AND     3, R5                   ; modulo 8 = 0?
+                                                ; (slows down blinking freq.)
+                RBRA    _LC_BLINK_RET, !Z       ; no
+                MOVE    LCBLKLN_STATUS, R5
+                CMP     0, @R5                  ; status 0: next = selected
+                RBRA    _LC_BLINKLN2, !Z
+                MOVE    1, @R5                
+                MOVE    SA_COL_SEL, R5
+                RBRA    _LC_BLINKLN3, 1
+_LC_BLINKLN2    MOVE    0, @R5                  ; status 1: next = standard
+                MOVE    SA_COL_STD, R5
+_LC_BLINKLN3    RSUB    _LC_BLINKLNS, 1
+                RET
+
+_LC_BLINKLNS    MOVE    R8, @--SP
+                MOVE    R9, @--SP
+                MOVE    R4, R8
+                MOVE    R5, R9
+                RSUB    SELECT_LINE, 1
+                MOVE    @SP++, R9
+                MOVE    @SP++, R8
                 RET
 
 ; While browsing directories, make sure that the users are not seeing the
@@ -1160,6 +1220,9 @@ GAME_RUNNING   .BLOCK 1                         ; 1 = game loaded and running
 FB_HEAD        .BLOCK 1
 FB_ITEMS_COUNT .BLOCK 1
 FB_ITEMS_SHOWN .BLOCK 1
+
+; variables needed by sub-routines
+LCBLKLN_STATUS .BLOCK 1
 
 ; heap for storing the sorted structure of the current directory entries
 ; this needs to be the last variable before the monitor variables as it is

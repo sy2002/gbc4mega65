@@ -106,6 +106,7 @@ SA_FG_BLUE          .EQU 0x01
 ; Screen attributes: Common bit-combinations
 SA_COL_STD          .EQU 0x0B   ; cyan font on blue background
 SA_COL_STD_INV      .EQU 0x8B   ; inverse standard
+SA_COL_SEL          .EQU 0x0F   ; selection: white font on blue background
 
 ; Special characters in font Anikki-16x16
 CHR_FC_TL           .EQU 201    ; fat top/left corner
@@ -114,5 +115,7 @@ CHR_FC_TR           .EQU 187    ; fat top/right corner
 CHR_FC_SV           .EQU 186    ; fat straight vertical
 CHR_FC_BL           .EQU 200    ; fat bottom/left corner
 CHR_FC_BR           .EQU 188    ; fat bottom/right corner
+CHR_FC_HE_LEFT      .EQU 185    ; fat straight horiz. line ends: left part
+CHR_FC_HE_RIGHT     .EQU 204    ; fat straight horiz. line ends: right part
 CHR_DIR_L           .EQU 17     ; left char for displaying a directory
 CHR_DIR_R           .EQU 16     ; right char for displaying a directory
