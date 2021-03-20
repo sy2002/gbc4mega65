@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#define RELEASE
+#undef RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -537,6 +537,7 @@ FN_GBC_ROM      .ASCII_W "/GBC/CGB_BIOS.BIN"
 FN_START_DIR    .ASCII_W "/GBC"
 FN_ROOT_DIR     .ASCII_W "/"
 FN_UPDIR        .ASCII_W ".."
+FN_ELLIPSIS     .ASCII_W "..." ; hardcoded to a len. of 3, see comment below
 
 ; ----------------------------------------------------------------------------
 ; SD Card / file system functions
@@ -780,14 +781,49 @@ SHOW_DIR        INCRB
 _SHOWDIR_L      MOVE    R8, R1                  ; R1: ptr to next LL element
                 ADD     SLL$NEXT, R1
                 ADD     SLL$DATA, R8            ; R8: entry name
+                XOR     R7, R7                  ; R7: flag: clean up stack?
+
+                ; replace the end part of a too long string by "..."
+                MOVE    GBC$OSM_COLS, R2
+                SUB     2, R2                   ; R2: max stringlen to display
+                MOVE    R9, R4                  ; save R9 to restore it later
+                SYSCALL(strlen, 1)
+                MOVE    R9, R3                  ; R3: length of current item
+                MOVE    R4, R9                  ; restore R9: # items to show
+                CMP     R3, R2                  ; current length > max strlen?
+                RBRA    _SHOWDIR_PRINT, !N      ; R3 <= R2: print items
+                MOVE    SP, R4                  ; save SP to restore it later
+                MOVE    R9, R5                  ; save R9 to restore it later
+                SUB     100, SP                  ; reserve max. size of str. ..
+                ;SUB     2, SP                   ; .. including zero-terminator
+                MOVE    SP, R9                  ; modified entry name
+                RSUB    _DIRBR_STRCPY, 1        ; copy item name to stack
+                                                ; TODO: switch to strcpy..
+                                                ; .. as of QNICE V1.7
+                MOVE    R9, R8                  ; R8: modified item name
+                MOVE    R5, R9                  ; restore R9: # items to show               
+                MOVE    R8, R5
+                ADD     R2, R5
+                SUB     3, R5                   ; hardcoded len of FN_ELLIPSIS
+                                                ; plus zero-terminator
+                MOVE    FN_ELLIPSIS, R6
+                MOVE    @R6++, @R5++            ; hardcoded len of FN_ELLIPSIS
+                MOVE    @R6++, @R5++            ; TODO: switch to strcpy..
+                MOVE    @R6++, @R5++            ; .. as of QNICE V1.7
+                MOVE    0, @R5
+                MOVE    1, R7                   ; flag to clean up stack
 
                 ; for performance reasons: do not output to UART
                 ; if you need to debug: delete "SCR" in the following
                 ; two function calls to use the dual-output routines
-                RSUB    PRINTSTRSCR, 1          ; print dirname/filename
+_SHOWDIR_PRINT  RSUB    PRINTSTRSCR, 1          ; print dirname/filename
                 RSUB    PRINTCRLFSCR, 1
 
-                ADD     1, R0
+                CMP     0, R7                   ; clean up stack?
+                RBRA    _SHOWDIR_NOCLN, Z       ; no: go on
+                MOVE    R4, SP                  ; yes: clean up stack
+
+_SHOWDIR_NOCLN  ADD     1, R0
                 CMP     R0, R9                  ; shown <= maximum?
                 RBRA    _SHOWDIR_RET, N         ; no: leave
 _SHOWDIR_NEXT   MOVE    @R1, R8                 ; more entries available?
