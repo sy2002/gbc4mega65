@@ -153,10 +153,7 @@ ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8
                 ; warn, that we are not showing all files
 WRN_MAX         MOVE    WRN_MAXFILES, R8        ; print warning message
                 RSUB    PRINTSTR, 1
-_WRNMAXSPACE    RSUB    KEYB_SCAN, 1
-                RSUB    KEYB_GETKEY, 1
-                CMP     KEY_SPACE, R8           ; SPACE pressed?
-                RBRA    _WRNMAXSPACE, !Z        ; no: wait
+                RSUB    WAITFORSPACE, 1
                 RSUB    CLRINNER, 1             ; clear inner part of window
 
                 ; ------------------------------------------------------------
@@ -433,8 +430,32 @@ LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
                 RSUB    LOAD_CART, 1
                 CMP     0, R11
                 RBRA    CART_OK, Z
+
+                ; loading was unsuccessful: file not found, e.g. because
+                ; the SD card was in the meantime removed
+                CMP     1, R11
+                RBRA    LOAD_ERR2, !Z
                 HALT                            ; TODO: more graceful handling
 
+                ; loading was unsuccessful: unsupported MBC
+LOAD_ERR2       CMP     2, R11
+                RBRA    LOAD_ERR3, !Z
+                RSUB    SHOW_FRAME, 1
+                MOVE    WRN_CANNOTRUN, R8
+                RSUB    PRINTSTR, 1
+                MOVE    WRN_UNSUPPMBC, R8
+                RSUB    PRINTSTR, 1
+                MOVE    WRN_SPACECNT, R8
+                RSUB    PRINTSTR, 1
+                RSUB    WAITFORSPACE, 1
+                MOVE    GAME_RUNNING, R8        ; make sure that Run/Stop ..
+                MOVE    0, @R8                  ; ..does not go back to game
+                RBRA    BROWSE_START, 1
+
+                ; unknown load error
+LOAD_ERR3       HALT                            ; TODO: more graceful handling
+                
+                ; loading was successful
 CART_OK         MOVE    STR_LOAD_DONE, R8       ; log success to UART only
                 SYSCALL(puts, 1)
 
@@ -526,7 +547,14 @@ WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files than\n"
                 .ASCII_P "Please split the files into multiple folders.\n\n"
                 .ASCII_P "If you choose to continue by pressing SPACE,\n"
                 .ASCII_P "be aware that random files will be missing.\n\n"
-                .ASCII_W "Press SPACE to continue."
+                .ASCII_W "Press SPACE to continue.\n"
+
+WRN_CANNOTRUN   .ASCII_W "\n\n  Cannot run this cartridge !\n\n\n"
+WRN_SPACECNT    .ASCII_W "  Press SPACE to continue.\n"
+
+WRN_UNSUPPMBC   .ASCII_P "  This is either not a valid cartridge at all\n"
+                .ASCII_P "  or this cartridge uses a currently still\n"
+                .ASCII_W "  unsuported Memory Bank Controller (MBC).\n\n\n"
 
 ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
@@ -628,6 +656,7 @@ _LOAD_ROM_RET   DECRB
 ; Output:
 ; R11: 0 = OK
 ;      1 = file not found
+;      2 = unsupported MBC
 LOAD_CART       INCRB
 
                 ; show on screen that the loading starts
@@ -661,10 +690,12 @@ _LC_FOPEN_OK    MOVE    R9, R8                  ; R8: valid file handle
                 MOVE    0, @R1                  ; start with 0 as win. sel.
                 MOVE    R0, R3                  ; window boundary + 1
                 ADD     MEM_CARTWIN_MAXLEN, R3
+                XOR     R11, R11                ; R11: 0=loading is still OK
+
 _LC_LOAD_LOOP1  MOVE    R0, R2                  ; R2: write pointer to 4k win.
 _LC_LOAD_LOOP2  SYSCALL(f32_fread, 1)
                 CMP     FAT32$EOF, R10          ; EOF?
-                RBRA    _LC_LOAD_OK, Z          ; yes: close file and end
+                RBRA    _LC_FCLOSE, Z           ; yes: close file and end
 
                 ; extract cartridge flags
                 CMP     0, @R1
@@ -683,7 +714,7 @@ _LC_LOAD_LOOP2  SYSCALL(f32_fread, 1)
                 MOVE    GBC$CF_MBC_CHA, R5      ; MBC type
                 MOVE    STR_FLAG_MBC, R6
                 MOVE    GBC$CF_MBC, R7
-                RSUB    _LC_HANDLE_CF, 1
+                RSUB    _LC_HANDLE_CF, 1                
 
                 MOVE    GBC$CF_ROM_SIZE_CHA, R5 ; ROM size
                 MOVE    STR_FLAG_ROM, R6
@@ -715,12 +746,24 @@ _LC_HANDLE_CF   ADD     MEM_CARTRIDGE_WIN, R5   ; adjust for MMIO
                 SYSCALL(puts, 1)
                 MOVE    @R7, R8                 ; UART: print value of flag
                 SYSCALL(puthex, 1)
-                MOVE    @SP++, R8
+
+                ; perform MBC check
+                SUB     MEM_CARTRIDGE_WIN, R5
+                CMP     R5, GBC$CF_MBC_CHA
+                RBRA    _LC_HCF_RETSP, !Z
+                MOVE    @R7, R8
+                RSUB    CHECK_MBC, 1
+                RBRA    _LC_HCF_RETSP, C        ; supported MBC
+                MOVE    2, R11                  ; unsupported MBC
+
+_LC_HCF_RETSP   MOVE    @SP++, R8
 _LC_HCF_RET     RET
 
                 ; store byte in cartridge memory and handle the "paging"
                 ; via the memory windows
-_LC_LOAD_STORE  MOVE    R9, @R2++               ; store byte in cart. mem.
+_LC_LOAD_STORE  CMP     0, R11                  ; everything still OK?
+                RBRA    _LC_FCLOSE, !Z          ; no: return R11 != 0
+                MOVE    R9, @R2++               ; store byte in cart. mem.
                 CMP     R3, R2                  ; window boundary reached?
                 RBRA    _LC_LOAD_LOOP2, !Z      ; no: continue with next byte
                 ADD     1, @R1                  ; next cart. mem. window
@@ -728,7 +771,6 @@ _LC_LOAD_STORE  MOVE    R9, @R2++               ; store byte in cart. mem.
                 RSUB    _LC_BLINK_LN, 1
                 RBRA    _LC_LOAD_LOOP1, 1
 
-_LC_LOAD_OK     XOR     R11, R11                ; end with code 0
 _LC_FCLOSE      MOVE    FILEHANDLE, R8          ; close file
                 MOVE    0, @R8
                 DECRB
@@ -809,12 +851,7 @@ RESETGB_WELCOME INCRB
                 MOVE    GBC$CSR, R0             ; R0: GBC control & status reg
                 MOVE    R9, @R0                 ; set target state
                 OR      GBC$CSR_OSM, @R0        ; show on-screen-menu
-                RSUB    CLRSCR, 1               ; clear VRAM
-                XOR     R8, R8                  ; x|y for frame = (0, 0)
-                XOR     R9, R9
-                MOVE    GBC$OSM_COLS, R10       ; full screen size
-                MOVE    GBC$OSM_ROWS, R11
-                RSUB    PRINTFRAME, 1           ; show frame
+                RSUB    SHOW_FRAME, 1           ; show full-screen frame
 
                 CMP     1, R7                   ; R7=1: show message
                 RBRA    _RESETGB_RET, !Z
@@ -824,6 +861,17 @@ RESETGB_WELCOME INCRB
 _RESETGB_RET    DECRB
                 RET
 
+; show full screen frame and set the visibility parameters accordingly
+SHOW_FRAME      RSUB    ENTER, 1
+                RSUB    CLRSCR, 1               ; clear VRAM
+                XOR     R8, R8                  ; x|y for frame = (0, 0)
+                XOR     R9, R9
+                MOVE    GBC$OSM_COLS, R10       ; full screen size
+                MOVE    GBC$OSM_ROWS, R11
+                RSUB    PRINTFRAME, 1           ; show frame
+                RSUB    LEAVE, 1
+                RET
+                
 ; Show directory listing
 ; Input:
 ;   R8: position inside the directory linked-list from which to show it
@@ -1185,6 +1233,12 @@ LEAVE           DECRB
                 DECRB
                 RET
 
+; Waits until the Space key on the MEGA65 keyboad is pressed
+WAITFORSPACE    RSUB    KEYB_SCAN, 1
+                RSUB    KEYB_GETKEY, 1
+                CMP     KEY_SPACE, R8           ; SPACE pressed?
+                RBRA    WAITFORSPACE, !Z        ; no: wait
+                RET
 
 ; ----------------------------------------------------------------------------
 ; Directory browser and keyboard controller
@@ -1238,7 +1292,7 @@ HEAP           .BLOCK 1
 ; accomodate HEAP_SIZE plus the bunch of internal variables plus something
 ; around 674 words of remaining stack (use osm_rom.lis to calculate the exact
 ; value by subtracting the address of HEAP from the addr. of VAR$STACK_START)
-                .ORG    0x93E0
+                .ORG    0x93E0                  ; TODO: automate calculation
 #include "monitor_vars.asm"
 
 #endif
