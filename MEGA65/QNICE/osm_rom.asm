@@ -51,7 +51,6 @@ INIT_FIRMWARE   AND     0x00FF, SR              ; activate register bank 0
                 XOR     @R8, @R8
                 RBRA    START_FIRMWARE, 1
 
-
 ; ----------------------------------------------------------------------------
 ; Develop & Debug Mode: Run in RAM
 ; ----------------------------------------------------------------------------
@@ -69,7 +68,7 @@ INIT_FIRMWARE   AND     0x00FF, SR              ; activate register bank 0
 ; ----------------------------------------------------------------------------
 
 #include "gbc.asm"
-#include "mbcs.asm"
+#include "constraints.asm"
 
                 ; initialize system
 START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
@@ -100,7 +99,13 @@ START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 RSUB    CHKORMNT, 1             ; mount SD card partition #1
                 CMP     0, R9
                 RBRA    MOUNT_OK, Z
-                HALT                            ; TODO: replace by retry
+
+                MOVE    WRN_TOOLARGE_3N, R8     ; TODO: replace by retry
+                RSUB    PRINTSTR, 1
+                MOVE    ERR_FATAL_STOP, R8
+                RSUB    PRINTSTR, 1
+                HALT
+
 MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 MOVE    MEM_BIOS, R9            ; MMIO location of "ROM RAM"
                 RSUB    LOAD_ROM, 1
@@ -428,14 +433,14 @@ LOAD            MOVE    GBC$CSR, R8             ; R8: GBC control & status reg
                 MOVE    GBC$CART_SEL, R10
                 MOVE    R4, R11                 ; R11: line to blink on screen
                 RSUB    LOAD_CART, 1
-                CMP     0, R11
-                RBRA    CART_OK, Z
+                CMP     0, R11                  ; loading was OK?
+                RBRA    CART_OK, Z              ; yes
 
                 ; loading was unsuccessful: file not found, e.g. because
                 ; the SD card was in the meantime removed
                 CMP     1, R11
                 RBRA    LOAD_ERR2, !Z
-                HALT                            ; TODO: more graceful handling
+                HALT                            ; TODO more graceful handling
 
                 ; loading was unsuccessful: unsupported MBC
 LOAD_ERR2       CMP     2, R11
@@ -452,9 +457,47 @@ LOAD_ERR2       CMP     2, R11
                 MOVE    0, @R8                  ; ..does not go back to game
                 RBRA    BROWSE_START, 1
 
+                ; loading was unsuccessful: ROM is too large
+LOAD_ERR3       CMP     3, R11
+                RBRA    LOAD_ERR4, !Z
+                RSUB    SHOW_FRAME, 1
+                MOVE    WRN_CANNOTRUN, R8
+                RSUB    PRINTSTR, 1
+                MOVE    WRN_TOOLARGE, R8
+                RSUB    PRINTSTR, 1
+                MOVE    R12, R8                 ; R12 contains string ptr. ..
+                RSUB    PRINTSTR, 1             ; .. to maximum allowed size
+                MOVE    WRN_TOOLARGE_3N, R8
+                RSUB    PRINTSTR, 1
+                MOVE    WRN_SPACECNT, R8
+                RSUB    PRINTSTR, 1
+                RSUB    WAITFORSPACE, 1
+                MOVE    GAME_RUNNING, R8
+                MOVE    0, @R8
+                RBRA    BROWSE_START, 1
+
+                ; loading was unsuccessful; RAM is too large
+LOAD_ERR4       CMP     4, R11
+                RBRA    LOAD_ERR5, !Z
+                RSUB    SHOW_FRAME, 1
+                MOVE    WRN_CANNOTRUN, R8
+                RSUB    PRINTSTR, 1
+                MOVE    WRN_RAMSIZE, R8
+                RSUB    PRINTSTR, 1
+                MOVE    R12, R8
+                RSUB    PRINTSTR, 1
+                MOVE    WRN_TOOLARGE_3N, R8
+                RSUB    PRINTSTR, 1
+                MOVE    WRN_SPACECNT, R8
+                RSUB    PRINTSTR, 1
+                RSUB    WAITFORSPACE, 1
+                MOVE    GAME_RUNNING, R8
+                MOVE    0, @R8
+                RBRA    BROWSE_START, 1
+
                 ; unknown load error
-LOAD_ERR3       HALT                            ; TODO: more graceful handling
-                
+LOAD_ERR5       HALT                            ; TODO: more graceful handling
+
                 ; loading was successful
 CART_OK         MOVE    STR_LOAD_DONE, R8       ; log success to UART only
                 SYSCALL(puts, 1)
@@ -556,12 +599,19 @@ WRN_UNSUPPMBC   .ASCII_P "  This is either not a valid cartridge at all\n"
                 .ASCII_P "  or this cartridge uses a currently still\n"
                 .ASCII_W "  unsuported Memory Bank Controller (MBC).\n\n\n"
 
-ERR_MNT         .ASCII_W "Error mounting device: SD Card. Error code: "
+WRN_TOOLARGE    .ASCII_P "  Cartridge ROM is too large.\n\n"
+                .ASCII_W "  Maximum supported ROM size: "             
+WRN_TOOLARGE_3N .ASCII_W "\n\n\n"
+
+WRN_RAMSIZE     .ASCII_P "  Cartridge RAM is too large.\n\n"
+                .ASCII_W "  Maximum supported RAM size: "
+
+ERR_MNT         .ASCII_W "Error mounting device: SD Card.\nError code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
 ERR_LOAD_CART   .ASCII_W "  ERROR!\n"
 ERR_BROWSE_UNKN .ASCII_W "SD Card: Unknown error while trying to browse.\n"
 ERR_FATAL       .ASCII_W "FATAL ERROR:\n"
-ERR_FATAL_STOP  .ASCII_W "Core stopped. Please reset the machine."
+ERR_FATAL_STOP  .ASCII_W "Core stopped. Please reset the machine.\n"
 ERR_FATAL_ITER  .ASCII_W "Corrupt memory structure: Linked-list boundary.\n"
 
 ; ROM/BIOS file names and standard path
@@ -657,6 +707,9 @@ _LOAD_ROM_RET   DECRB
 ; R11: 0 = OK
 ;      1 = file not found
 ;      2 = unsupported MBC
+;      3 = unsupported ROM size
+;      4 = unsupported RAM size
+; R12: in case of R11=3 or 4 pointer to string for error message
 LOAD_CART       INCRB
 
                 ; show on screen that the loading starts
@@ -747,14 +800,35 @@ _LC_HANDLE_CF   ADD     MEM_CARTRIDGE_WIN, R5   ; adjust for MMIO
                 MOVE    @R7, R8                 ; UART: print value of flag
                 SYSCALL(puthex, 1)
 
+                SUB     MEM_CARTRIDGE_WIN, R5   ; R5 back to vanilla values
+
                 ; perform MBC check
-                SUB     MEM_CARTRIDGE_WIN, R5
-                CMP     R5, GBC$CF_MBC_CHA
-                RBRA    _LC_HCF_RETSP, !Z
-                MOVE    @R7, R8
-                RSUB    CHECK_MBC, 1
+                CMP     R5, GBC$CF_MBC_CHA      ; MBC address active?
+                RBRA    _LC_ROMCHECK, !Z        ; no: maybe ROM address?
+                MOVE    @R7, R8                 ; yes: read MBC code
+                RSUB    CHECK_MBC, 1            ; check it: C flag = 1 if OK
                 RBRA    _LC_HCF_RETSP, C        ; supported MBC
                 MOVE    2, R11                  ; unsupported MBC
+                RBRA    _LC_HCF_RETSP, 1
+
+                ; perform ROM check
+_LC_ROMCHECK    CMP     R5, GBC$CF_ROM_SIZE_CHA ; ROM address active?
+                RBRA    _LC_RAMCHECK, !Z        ; no: maybe RAM address?
+                MOVE    @R7, R8                 ; yes: read ROM code
+                RSUB    CHECK_ROM, 1            ; check it: C flag = 1 if OK
+                RBRA    _LC_HCF_RETSP, C        ; supported ROM
+                MOVE    3, R11                  ; unsupported ROM
+                MOVE    R9, R12
+                RBRA    _LC_HCF_RETSP, 1
+
+                ; perform RAM check
+_LC_RAMCHECK    CMP     R5, GBC$CF_RAM_SIZE_CHA ; RAM address active?
+                RBRA    _LC_HCF_RETSP, !Z       ; no: restore R8 and return
+                MOVE    @R7, R8                 ; yes: read RAM code
+                RSUB    CHECK_RAM, 1            ; check it: C flag = 1 if OK
+                RBRA    _LC_HCF_RETSP, C        ; supported RAM
+                MOVE    4, R11                  ; unsupported RAM
+                MOVE    R9, R12
 
 _LC_HCF_RETSP   MOVE    @SP++, R8
 _LC_HCF_RET     RET

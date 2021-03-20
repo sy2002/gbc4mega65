@@ -17,7 +17,10 @@ use work.qnice_tools.all;
 entity QNICE is
 generic (
    VGA_DX            : integer;
-   VGA_DY            : integer
+   VGA_DY            : integer;
+   MAX_ROM           : integer;                       -- highest supported ROM size code from https://gbdev.io/pandocs/#_0148-rom-size
+                                                      -- but ignoring the $5x values
+   MAX_RAM           : integer                        -- highest supported RAM size code from https://gbdev.io/pandocs/#_0149-ram-size
 );
 port (
    -- QNICE MEGA65 hardware interface
@@ -159,7 +162,9 @@ signal cf_ram_size_we             : std_logic;
 signal cf_ram_size_data_out_16bit : std_logic_vector(15 downto 0);
 signal cf_oldlic_en               : std_logic;                        -- $FFEA
 signal cf_oldlic_we               : std_logic;
-signal cf_oldlic_data_out_16bit   : std_logic_vector(15 downto 0);    
+signal cf_oldlic_data_out_16bit   : std_logic_vector(15 downto 0);
+signal reg_maxramrom_en           : std_logic;                        -- $FFEB
+signal reg_maxramrom_data_out     : std_logic_vector(15 downto 0);
 
 -- The cartridge address is up to 8 MB large and is calculated like this: (gbc_cart_sel x 4096) + gbc_cart_win
 signal gbc_cart_sel               : integer range 0 to 2047;
@@ -201,7 +206,8 @@ begin
                   cf_mbc_data_out_16bit      or
                   cf_rom_size_data_out_16bit or
                   cf_ram_size_data_out_16bit or
-                  cf_oldlic_data_out_16bit;                      
+                  cf_oldlic_data_out_16bit   or
+                  reg_maxramrom_data_out;                    
                                     
    -- generate the general reset signal
    reset_ctl <= '1' when (reset_pre_pore = '1' or reset_post_pore = '1') else '0';                     
@@ -403,7 +409,8 @@ begin
    -- 0xFFE7        : Cartridge flag: MBC
    -- 0xFFE8        : Cartridge flag: ROM size
    -- 0xFFE9        : Cartridge flag: RAM size
-   -- 0xFFEA        : Cartridge flag: Old Licensee   
+   -- 0xFFEA        : Cartridge flag: Old Licensee
+   -- 0xFFEB        : Codes of the highest supported RAM and ROM amounts
    ram_en                     <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                     <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                     <= csr_en and cpu_data_dir and cpu_data_valid;
@@ -453,6 +460,8 @@ begin
    cf_oldlic_en               <= '1' when cpu_addr = x"FFEA" else '0';
    cf_oldlic_we               <= cf_oldlic_en and cpu_data_dir and cpu_data_valid;
    cf_oldlic_data_out_16bit   <= x"00" & cart_old_licensee when cf_oldlic_en = '1' and cf_oldlic_we = '0' else (others => '0');
+   reg_maxramrom_en           <= '1' when cpu_addr = x"FFEB" else '0';
+   reg_maxramrom_data_out     <= std_logic_vector(to_unsigned(MAX_RAM, 8)) & std_logic_vector(to_unsigned(MAX_ROM, 8)) when reg_maxramrom_en ='1' else (others => '0');  
                         
    -- Registers
    --   CSR: Control and status register: Reset & Pause
@@ -508,7 +517,7 @@ begin
             end if;
             if cf_oldlic_we = '1' then
                cart_old_licensee <= cpu_data_out(7 downto 0);
-            end if;            
+            end if;                    
          end if;
       end if;
    end process;

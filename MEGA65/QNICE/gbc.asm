@@ -73,6 +73,10 @@ GBC$CF_ROM_SIZE     .EQU 0xFFE8
 GBC$CF_RAM_SIZE     .EQU 0xFFE9
 GBC$CF_OLDLICENSEE  .EQU 0xFFEA
 
+; Codes of the highest supported ROM and RAM amounts
+; hi-byte: RAM code, lo-byte: ROM code
+GBC$MAXRAMROM       .EQU 0xFFEB
+
 ; Address within the cartridge header
 GBC$CF_CGB_CHA      .EQU 0x0143
 GBC$CF_SGB_CHA      .EQU 0x0146
