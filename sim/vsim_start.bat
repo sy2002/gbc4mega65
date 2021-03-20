@@ -1,1 +1,0 @@
-vsim -novopt tb.etb -t 1ps -suppress 8684
