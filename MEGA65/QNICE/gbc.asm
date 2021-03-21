@@ -43,6 +43,9 @@ GBC$OSM_DXDY        .EQU 0xFFE3 ; hi-byte = dx, lo-byte = dy
 GBC$OSM_COLS        .EQU 50     ; columns (max chars per line)
 GBC$OSM_ROWS        .EQU 37     ; rows (max lines per screen)
 
+GBC$OPT_DX          .EQU 20     ; width of option menu
+GBC$OPT_DY          .EQU 15     ; height of option menu
+
 ; ----------------------------------------------------------------------------
 ; Keyboard matrix (read-only)
 ; ----------------------------------------------------------------------------
@@ -121,5 +124,10 @@ CHR_FC_BL           .EQU 200    ; fat bottom/left corner
 CHR_FC_BR           .EQU 188    ; fat bottom/right corner
 CHR_FC_HE_LEFT      .EQU 185    ; fat straight horiz. line ends: left part
 CHR_FC_HE_RIGHT     .EQU 204    ; fat straight horiz. line ends: right part
+CHR_NC_SH           .EQU 196    ; normal straight horizontal
+CHR_NC_VE_LEFT      .EQU 199    ; normal vertical line end: left part
+CHR_NC_VE_RIGHT     .EQU 182    ; normal vertical line end: right part
 CHR_DIR_L           .EQU 17     ; left char for displaying a directory
 CHR_DIR_R           .EQU 16     ; right char for displaying a directory
+CHR_OPT_SEL         .EQU 7      ; selection char for options menu
+

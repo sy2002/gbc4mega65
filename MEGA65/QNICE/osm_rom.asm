@@ -531,7 +531,42 @@ GR_RUNSTOP      XOR     R8, R8                  ; reset Game Boy and show OSD
                 RSUB    RESETGB_WELCOME, 1
                 RBRA    BROWSE_START, 1         ; file browser
 
-GR_HELP         SYSCALL(exit, 1)
+GR_HELP         MOVE    OPTM_CLEAR, R8          ; setup screen access func.
+                MOVE    CLRSCR, @R8
+                MOVE    OPTM_FRAME, R8
+                MOVE    PRINTFRAME, @R8
+                MOVE    OPTM_PRINT, R8
+                MOVE    PRINTSTRSCR, @R8
+                MOVE    OPTM_PRINTXY, R8
+                MOVE    PRINTSTRSCRXY, @R8
+                MOVE    OPTM_LINE, R8
+                MOVE    PRINTLINE, @R8
+
+                MOVE    OPTM_X, R8              ; setup screen coordinates 
+                MOVE    GBC$OSM_COLS, R9
+                SUB     GBC$OPT_DX, R9
+                MOVE    R9, @R8
+                MOVE    OPTM_Y, R8
+                MOVE    0, @R8
+                MOVE    OPTM_DX, R8
+                MOVE    GBC$OPT_DX, @R8
+                MOVE    OPTM_DY, R8
+                MOVE    GBC$OPT_DY, @R8
+
+                MOVE    OPTM_SEL, R8            ; setup selection char
+                MOVE    CHR_OPT_SEL, @R8++
+                MOVE    0, @R8
+
+                MOVE    GBC$CSR, R8             ; show OSM
+                OR      GBC$CSR_OSM, @R8
+                MOVE    STR_OPT_MENU, R8
+                MOVE    STR_OPT_ISMENU, R9
+                MOVE    STR_OPT_DEF_ACT, R10
+                MOVE    STR_OPT_LINES, R11
+                MOVE    STR_OPT_DEF_CUR, R12
+                RSUB    OPTM_SHOW, 1
+
+                SYSCALL(exit, 1)
 
 ; ----------------------------------------------------------------------------
 ; Strings
@@ -584,6 +619,25 @@ STR_HELP        .ASCII_P "\n"
                 .ASCII_P " Left/Right cursor    One page forward/backward\n"
                 .ASCII_P " Enter                Start game/change folder\n"
                 .ASCII_W "\n\n Press any of these keys to continue."
+
+STR_OPT_MENU    .ASCII_P " Game Boy Mode\n"
+                .ASCII_P "\n"
+                .ASCII_P " Classic\n"
+                .ASCII_P " Color\n"
+                .ASCII_P "\n"
+                .ASCII_P " Joystick Mode\n"
+                .ASCII_P "\n"
+                .ASCII_P " Standard, Fire=A\n"
+                .ASCII_P " Standard, Fire=B\n"
+                .ASCII_P " Up=A, Fire=B\n"
+                .ASCII_P " Up=B, Fire=A\n"
+                .ASCII_P "\n"
+                .ASCII_W " Close Menu\n"                
+
+STR_OPT_ISMENU  .DW 0, 0, 1, 1, 0, 0, 0, 2, 2, 2, 2, 0, 0xEEEE, 0xFFFF
+STR_OPT_DEF_ACT .DW 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0xFFFF
+STR_OPT_LINES   .DW 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0xFFFF
+STR_OPT_DEF_CUR .EQU 2
 
 WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files than\n"
                 .ASCII_P "this core is able to load into memory.\n\n"
@@ -1018,10 +1072,59 @@ _SHOWDIR_RET    MOVE    R0, R10                 ; return # of entries shown
                 DECRB
                 RET
 
+; Function for menu.asm (hardcoded to work with the options menu):
+; Draws a horizontal line/menu separator at the y-pos given in R8, dx in R9
+PRINTLINE       INCRB
+
+                MOVE    SP, R0                  ; R0: use to restore stack
+                MOVE    R8, R1                  ; R1: y-pos
+                MOVE    R9, R2                  ; R2: width minus left/right..
+                SUB     2, R2                   ; ..boundary
+
+                SUB     R2, SP                  ; memory for string
+                SUB     3, SP                   ; 3: l/r boundary + zero term.
+                MOVE    SP, R3
+                MOVE    R3, R4                  ; remember for printing
+
+                MOVE    CHR_NC_VE_LEFT, @R3++                
+_PRINTLN_L      MOVE    CHR_NC_SH, @R3++
+                SUB     1, R2
+                RBRA    _PRINTLN_L, !Z
+                MOVE    CHR_NC_VE_RIGHT, @R3++
+                MOVE    0, @R3
+
+                MOVE    R4, R8
+                MOVE    OPTM_X, R9
+                MOVE    @R9, R9
+                MOVE    R1, R10
+                RSUB    PRINTSTRSCRXY, 1                
+
+                MOVE    R0, SP
+                DECRB
+                RET
+
 ; Print the string in R8 on the current cursor position on the screen
 ; and in parallel to the UART
 PRINTSTR        SYSCALL(puts, 1)                ; output on serial console
                 RSUB    PRINTSTRSCR, 1          ; output on screen
+                RET
+
+; Print the string in R8 on the screen only, x|y coords in R9|R10
+PRINTSTRSCRXY   INCRB
+
+                MOVE    CUR_X, R0               ; remember original cursor
+                MOVE    @R0, R1
+                MOVE    CUR_Y, R2
+                MOVE    @R2, R3
+
+                MOVE    R9, @R0                 ; print at actual position
+                MOVE    R10, @R2
+                RSUB    PRINTSTRSCR, 1
+
+                MOVE    R1, @R0                 ; restore original cursor
+                MOVE    R3, @R2
+
+                DECRB
                 RET
 
 ; Print the string in R8 on the screen only
@@ -1320,6 +1423,7 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
 
 #include "dirbrowse.asm"
 #include "keyboard.asm"
+#include "menu.asm"
 
 ; ----------------------------------------------------------------------------
 ; Variables and Stack: Need to be located in RAM
@@ -1336,6 +1440,7 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
 ; variables of dirbrowse.asm and keyboard.asm
 #include "dirbrowse_vars.asm"
 #include "keyboard_vars.asm"
+#include "menu_vars.asm"
 
 SD_DEVHANDLE   .BLOCK FAT32$DEV_STRUCT_SIZE     ; SD card device handle
 FILEHANDLE     .BLOCK FAT32$FDH_STRUCT_SIZE     ; File handle
