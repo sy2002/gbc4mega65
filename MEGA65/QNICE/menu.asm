@@ -12,7 +12,7 @@
 ; R9: Array of digits that define and group menu items, 0xEEEE ends the menu
 ;     and 0xFFFF terminates the array
 ; R10: Default activated elements, 0xFFFF terminates the array
-; R11: Positions of horizontal lines, 0xFFFF terminates the aarray
+; R11: Positions of horizontal lines, 0xFFFF terminates the array
 ; R12: Default cursor position/selection
 OPTM_SHOW       INCRB
                 MOVE    R8, R0                  ; R0: string to be printed

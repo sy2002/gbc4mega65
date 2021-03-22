@@ -19,18 +19,24 @@ CHECK_MBC       AND     0xFFFB, SR              ; clear carry flag
                 RBRA    _CHECK_MBC_SC, Z
                 CMP     0x0001, R8              ; MBC 1
                 RBRA    _CHECK_MBC_SC, Z
+
+                ; TODO: NO RAM RIGHT NOW AVAILALE
                 CMP     0x0002, R8              ; MBC 1 + RAM
                 RBRA    _CHECK_MBC_SC, Z                
                 CMP     0x0003, R8              ; MBC 1 + RAM + Battery
                 RBRA    _CHECK_MBC_SC, Z
+
                 CMP     0x0005, R8              ; MBC 2
                 RBRA    _CHECK_MBC_SC, Z
+
+                ; TODO: NO RAM BATTERY/PERSISTENCE RIGHT NOW AVAILABLE
                 CMP     0x0006, R8              ; MBC 2 + Battery
                 RBRA    _CHECK_MBC_SC, Z
+                
                 CMP     0x0011, R8              ; MBC 3
                 RBRA    _CHECK_MBC_SC, Z
                 CMP     0x0019, R8              ; MBC 5
-                RBRA    _CHECK_MBC_SC, Z
+                RBRA    _CHECK_MBC_SC, Z                
                 CMP     0x0020, R8              ; MBC 6
                 RBRA    _CHECK_MBC_SC, Z
 

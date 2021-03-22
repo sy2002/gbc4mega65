@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#undef RELEASE
+#define RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -1469,7 +1469,7 @@ HEAP           .BLOCK 1
 ; the monitor variables use 20 words, round to 32 for being safe and subtract
 ; it from 1024 so that the overall 5k-word RAM size is sufficient to
 ; accomodate HEAP_SIZE plus the bunch of internal variables plus something
-; around 674 words of remaining stack (use osm_rom.lis to calculate the exact
+; around 662 words of remaining stack (use osm_rom.lis to calculate the exact
 ; value by subtracting the address of HEAP from the addr. of VAR$STACK_START)
                 .ORG    0x93E0                  ; TODO: automate calculation
 #include "monitor_vars.asm"
