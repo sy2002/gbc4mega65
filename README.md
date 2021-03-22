@@ -7,7 +7,7 @@ Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
 [Download](bin) the bitstream and the core file for your R2 or R3 machine
 from the [bin](bin) folder.
 
-**WARNING: Alpha version 0.5 - See constraints below**
+**WARNING: Alpha version 0.6 - See constraints below**
 
 ![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg)
 
@@ -39,11 +39,12 @@ Installation
    go to https://gbdev.gg8.se/files/roms/bootroms/ and and download
    `dmg_boot.bin` and `cgb_bios.bin` and place both in the `/gbc` folder.
 
-Constraints of the current Alpha version 0.5
+Constraints of the current Alpha version 0.6
 --------------------------------------------
 
-* Only plays 32kB ROM files and some selected 64kB ROM files such as
-  Super Mario Land 1, QIX and Castlevania 1
+* MEGA65 R2 machines: Maximum cartridge size: 256kB
+* MEGA65 R3 machines: Maximum cartridge size: 512kB
+* Only plays cartridges that do not need RAM
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
 * No joystick support
 * No options menu, yet (no configuration possibilities such as
