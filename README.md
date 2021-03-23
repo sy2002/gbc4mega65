@@ -4,6 +4,7 @@ Game Boy and Game Boy Color for MEGA65
 Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
 [Game Boy Color](https://en.wikipedia.org/wiki/Game_Boy_Color) games on your
 [MEGA 65](https://mega65.org/)!
+
 [Download](bin) the bitstream and the core file for your R2 or R3 machine
 from the [bin](bin) folder.
 
