@@ -109,13 +109,13 @@ architecture beh of MEGA65_R2 is
 -- are the main distinction between the MEGA65 R2 and R3, as R3 has a much larger FPGA
 constant CART_ROM_MAX_R2   : integer := 256 * 1024;
 constant CART_RAM_MAX_R2   : integer := 32 * 1024;
-constant CART_ROM_MAX_R3   : integer := 512 * 1024;
+constant CART_ROM_MAX_R3   : integer := 1024 * 1024;
 constant CART_RAM_MAX_R3   : integer := 32 * 1024;
 
 -- modes according to https://gbdev.io/pandocs/#_0148-rom-size and https://gbdev.io/pandocs/#_0149-ram-size
 constant SYS_ROM_MAX_R2    : integer := 3;
 constant SYS_RAM_MAX_R2    : integer := 3;
-constant SYS_ROM_MAX_R3    : integer := 4;
+constant SYS_ROM_MAX_R3    : integer := 5;
 constant SYS_RAM_MAX_R3    : integer := 3; 
 
 -- the current system is running with these parameters
