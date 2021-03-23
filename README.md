@@ -43,7 +43,7 @@ Constraints of the current Alpha version 0.6
 --------------------------------------------
 
 * MEGA65 R2 machines: Maximum cartridge size: 256kB
-* MEGA65 R3 machines: Maximum cartridge size: 512kB
+* MEGA65 R3 machines: Maximum cartridge size: 1MB
 * Only plays cartridges that do not need extra RAM in the cartridge ("Cartridge RAM")
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
 * No joystick support
