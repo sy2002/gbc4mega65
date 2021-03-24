@@ -44,7 +44,7 @@ Installation
 3. Either use MEGA65's bitstream utility (`m65 -q yourbitstream.bit`) or install
    the core file so that you can use MEGA65's <kbd>No Scroll</kbd> boot menu to
    load the core. (Please have a look at the MEGA65 Starter Guide to learn more.)
-4. The core needs a FAT32 formatted SD card to load game roms.
+4. The core needs a FAT32 formatted SD card to load game cartridges (ROMs).
 5. If you put your ROMs into a folder called `/gbc`, then the core will
    display this folder on startup.
 6. The core includes an Open Source Game Boy BIOS. For more authenticity,
