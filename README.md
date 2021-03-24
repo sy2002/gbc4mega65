@@ -66,6 +66,7 @@ Constraints of the current Alpha version 0.6
 * No options menu, yet (no configuration possibilities such as
   "switch to Game Boy classic without color", palette switching, ...)
 * In some games, there is a flickering rightmost column and/or bottom scanline
+* Only shows ~200 files per folder
 
 Some demo pictures
 ------------------
