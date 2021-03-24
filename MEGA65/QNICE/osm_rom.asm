@@ -152,7 +152,7 @@ ERR_PNF         ADD     1, SP                   ; see comment above at @--SP
 
                 ; unknown error: end (TODO: we might want to retry in future)
 ERR_UNKNOWN     MOVE    ERR_BROWSE_UNKN, R8
-                XOR     R9, R9
+                MOVE    R11, R9
                 RBRA    FATALERROR, 1
 
                 ; warn, that we are not showing all files
@@ -572,7 +572,7 @@ GR_HELP         MOVE    OPTM_CLEAR, R8          ; setup screen access func.
 ; Strings
 ; ----------------------------------------------------------------------------
 
-STR_TITLE       .ASCII_W "Game Boy Color for MEGA65\nMiSTer port done by sy2002 in 2021\n\n"
+STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.7\nMiSTer port done by sy2002 in 2021\n\n"
 
 STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
@@ -664,9 +664,10 @@ ERR_MNT         .ASCII_W "Error mounting device: SD Card.\nError code: "
 ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
 ERR_LOAD_CART   .ASCII_W "  ERROR!\n"
 ERR_BROWSE_UNKN .ASCII_W "SD Card: Unknown error while trying to browse.\n"
-ERR_FATAL       .ASCII_W "FATAL ERROR:\n"
+ERR_FATAL       .ASCII_W "FATAL ERROR:\n\n"
 ERR_FATAL_STOP  .ASCII_W "Core stopped. Please reset the machine.\n"
 ERR_FATAL_ITER  .ASCII_W "Corrupt memory structure: Linked-list boundary.\n"
+ERR_CODE        .ASCII_W "Error code: "
 
 ; ROM/BIOS file names and standard path
 ; (the file names need to be in upper case)
@@ -1171,11 +1172,19 @@ _PS_RET         RSUB    LEAVE, 1
                 RET
 
 ; Print the number in R8 in hexadecimal
-; TODO: also print on MEGA65 screen for better error messages & debugging
 PRINTHEX        INCRB
-                SYSCALL(puthex, 1)
+                MOVE    R9, R0                  ; save R9
+                SUB     5, SP                   ; reserve memory on the stack
+
+                MOVE    SP, R9                  ; R9=string representation
+                RSUB    WORD2HEXSTR, 1          ; do conversion (R8 => R9)
+                MOVE    R9, R8                  ; print string on screen and..
+                RSUB    PRINTSTR, 1             ; ..on UART
+
+                ADD     5, SP                   ; restore stack
+                MOVE    R0, R9                  ; restore R9
                 DECRB
-                RET
+                RET               
 
 ; Move the cursor to the next line: screen only
 PRINTCRLFSCR    INCRB
@@ -1358,6 +1367,8 @@ _SL_FILL_LOOP   MOVE    R0, @R8++
 ; invisble for most normal users but which might be helpful to debug
 FATALERROR      MOVE    R8, R0
                 MOVE    R9, R1
+                XOR     R8, R8                  ; R8=0: no welcome message
+                MOVE    GBC$CSR_PAUSE, R9       ; R9=halt/pause game boy
                 RSUB    RESETGB_WELCOME, 1
                 RSUB    PRINTCRLF, 1
                 MOVE    ERR_FATAL, R8
@@ -1366,8 +1377,11 @@ FATALERROR      MOVE    R8, R0
                 RSUB    PRINTSTR, 1
                 CMP     0, R1
                 RBRA    _FATAL_END, Z
+                MOVE    ERR_CODE, R8
+                RSUB    PRINTSTR, 1
                 MOVE    R1, R8
                 RSUB    PRINTHEX, 1
+                RSUB    PRINTCRLF, 1                
 _FATAL_END      RSUB    PRINTCRLF, 1
                 MOVE    ERR_FATAL_STOP, R8
                 RSUB    PRINTSTR, 1
@@ -1390,26 +1404,6 @@ _HS_IL          RSUB    KEYB_SCAN, 1
 ; Misc helper functions
 ; ----------------------------------------------------------------------------
 
-; Alternative to a pure INCRB that also saves R8 .. R12
-ENTER           INCRB
-                MOVE    R8, R0
-                MOVE    R9, R1
-                MOVE    R10, R2
-                MOVE    R11, R3
-                MOVE    R12, R4
-                INCRB
-                RET
-
-; Alternative to a pure DECRB that also restores R8 .. R12
-LEAVE           DECRB
-                MOVE    R0, R8
-                MOVE    R1, R9
-                MOVE    R2, R10
-                MOVE    R3, R11
-                MOVE    R4, R12
-                DECRB
-                RET
-
 ; Waits until the Space key on the MEGA65 keyboad is pressed
 WAITFORSPACE    RSUB    KEYB_SCAN, 1
                 RSUB    KEYB_GETKEY, 1
@@ -1418,12 +1412,13 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
                 RET
 
 ; ----------------------------------------------------------------------------
-; Directory browser and keyboard controller
+; Directory browser, keyboard controller, On-Screen-Menu (OSM) and misc. tools
 ; ----------------------------------------------------------------------------
 
 #include "dirbrowse.asm"
 #include "keyboard.asm"
 #include "menu.asm"
+#include "tools.asm"
 
 ; ----------------------------------------------------------------------------
 ; Variables and Stack: Need to be located in RAM

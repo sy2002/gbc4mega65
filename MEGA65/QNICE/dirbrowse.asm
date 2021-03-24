@@ -39,7 +39,7 @@ _DIRBR_DSDESIZE .EQU    2                       ; amount of characters in sum
 ;       0 = OK
 ;       1 = directory not found
 ;       2 = more directory items available than memory permits
-;       3 = unknown error
+;       <other value> = error code
 ; ----------------------------------------------------------------------------
 
 DIRBROWSE_READ  INCRB
@@ -72,8 +72,8 @@ _DIRBR_START    XOR     R10, R10                ; use "/" as separator char
                 MOVE    _DIRBR_FH, R9           ; R9: empty directory handle
                 SYSCALL(f32_od, 1)              ; obtain directory handle
                 MOVE    R8, R7                  ; R7: directory handle
-                CMP     0, R9
-                RBRA    _DIRBR_RD_EDH, !Z
+                CMP     0, R9                   ; everything OK?
+                RBRA    _DIRBR_RD_EDH, !Z       ; no: exit with error code
 
                 ; iterate through the current directory
 _DIRBR_LOOP     MOVE    R7, R8                  ; R8: directory handle
@@ -82,7 +82,7 @@ _DIRBR_LOOP     MOVE    R7, R8                  ; R8: directory handle
                                                 ; non-hidden files and dirs
                 SYSCALL(f32_ld, 1)              ; get next directory entry
                 CMP     0, R11                  ; any errors?
-                RBRA    _DIRBR_RD_EDH, !Z       ; yes: exit with unknown error
+                RBRA    _DIRBR_RD_RET, !Z       ; yes: exit with error in R11
                 CMP     1, R10                  ; current entry valid?
                 RBRA    _DIRBR_LOOPEND, !Z      ; no: end loop
 
@@ -124,7 +124,7 @@ _DIRBR_RD_WOOM  MOVE    2, R11                  ; out-of-memory
                 MOVE    R4, R9                  ; amount of entries
                 MOVE    R5, R10                 ; head of linked list
                 RBRA    _DIRBR_RD_RET, 1
-_DIRBR_RD_EDH   MOVE    3, R11                  ; unknown error
+_DIRBR_RD_EDH   MOVE    R9, R11                 ; return R9 as error code
 _DIRBR_RD_RET   DECRB
                 MOVE    R0, R8
                 MOVE    R1, R12
