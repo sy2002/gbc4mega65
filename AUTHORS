@@ -34,6 +34,10 @@ gbc4mega65:
   The Z80 processor is based on T80
       done by Daniel Wallner
       improved by MikeJ, Sean Riddle, TobiFlex, RobertPeip, sorgelig, paulb-nl, brNX
+      
+  Open Source Game Boy and Game Boy Color ROMs
+      done by the SameBoy Development Team
+      Original GitHub Repository https://github.com/LIJI32/SameBoy
 
 Other than that and my own work, gbc4mega65 uses:
 -------------------------------------------------
