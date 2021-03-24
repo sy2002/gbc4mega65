@@ -31,21 +31,24 @@ Features
 
 * Game Boy and Game Boy Color support
 * Super Gameboy Support - Borders, Palettes and Multiplayer (Work-in-Progress)
-* Joystick support including special mappings so that you can for example play Super Mario Land via joystock (Work-in-Progress)
+* Joystick support including special mappings so that you can for example play
+  Super Mario Land via joystick (Work-in-Progress)
 * Custom Palette Loading (Work-in-Progress)
 * Convenient game cartridge browser which supports long filenames
 
 Installation
 ------------
 
-1. [Download](bin) the bitstream and the core file for your R2 or R3 machine
-   from the [bin](bin) folder.
-2. Either use MEGA65's bitstream utility or install the core file so that you
-   can use MEGA65's <kbd>No Scroll</kbd> boot menu to load the core.
-3. The core needs a FAT32 formatted SD card to load game roms.
-4. If you put your ROMs into a folder called `/gbc`, then the core will
+1. [Download](https://github.com/sy2002/gbc4mega65/releases/download/V0.6/bitstream-and-core.zip)
+   the ZIP file that contains the bitstream and the core file and unpack it.
+2. Choose the right subfolder depending on the type of your MEGA65: R2 or R3
+3. Either use MEGA65's bitstream utility (`m65 -q yourbitstream.bit`) or install
+   the core file so that you can use MEGA65's <kbd>No Scroll</kbd> boot menu to
+   load the core. (Please have a look at the MEGA65 Starter Guide to learn more.)
+4. The core needs a FAT32 formatted SD card to load game roms.
+5. If you put your ROMs into a folder called `/gbc`, then the core will
    display this folder on startup.
-5. The core includes an Open Source Game Boy BIOS. For more authenticity,
+6. The core includes an Open Source Game Boy BIOS. For more authenticity,
    go to https://gbdev.gg8.se/files/roms/bootroms/ and and download
    `dmg_boot.bin` and `cgb_bios.bin` and place both in the `/gbc` folder.
 
