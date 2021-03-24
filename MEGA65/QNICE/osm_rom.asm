@@ -89,6 +89,17 @@ START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 MOVE    FB_ITEMS_SHOWN, R8      ; no dir. items shown so far
                 MOVE    0, @R8
 
+                ; initialize options menu
+                MOVE    OPT_MENU_DATA, R8       ; ptr to menu init. record
+                MOVE    GBC$OSM_COLS, R9        ; calculate x-pos
+                SUB     GBC$OPT_DX, R9
+                XOR     R10, R10                ; y-pos: top                
+                MOVE    GBC$OPT_DX, R11
+                MOVE    GBC$OPT_DY, R12
+                RSUB    OPTM_INIT, 1
+                MOVE    OPTM_SELECTED, R8       ; default selection
+                MOVE    OPT_MENU_START, @R8
+
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
                 MOVE    1, R8                   ; show welcome message
@@ -526,45 +537,21 @@ GAME_RUNS       MOVE    GAME_RUNNING, R8        ; set game running flag
                 RBRA    GR_HELP, Z
                 RBRA    GAME_RUNS, 1
 
+                ; Run/Stop while game is running
 GR_RUNSTOP      XOR     R8, R8                  ; reset Game Boy and show OSD
                 MOVE    GBC$CSR_PAUSE, R9       ; pause Game Boy
                 RSUB    RESETGB_WELCOME, 1
                 RBRA    BROWSE_START, 1         ; file browser
 
-GR_HELP         MOVE    OPTM_CLEAR, R8          ; setup screen access func.
-                MOVE    CLRSCR, @R8
-                MOVE    OPTM_FRAME, R8
-                MOVE    PRINTFRAME, @R8
-                MOVE    OPTM_PRINT, R8
-                MOVE    PRINTSTRSCR, @R8
-                MOVE    OPTM_PRINTXY, R8
-                MOVE    PRINTSTRSCRXY, @R8
-                MOVE    OPTM_LINE, R8
-                MOVE    PRINTLINE, @R8
+                ; Help (Options Menu) while game is running
+GR_HELP         RSUB    OPTM_SHOW, 1            ; display options menu
+                MOVE    GBC$CSR, R8
+                OR      GBC$CSR_OSM, @R8  
 
-                MOVE    OPTM_X, R8              ; setup screen coordinates 
-                MOVE    GBC$OSM_COLS, R9
-                SUB     GBC$OPT_DX, R9
-                MOVE    R9, @R8
-                MOVE    OPTM_Y, R8
-                MOVE    0, @R8
-                MOVE    OPTM_DX, R8
-                MOVE    GBC$OPT_DX, @R8
-                MOVE    OPTM_DY, R8
-                MOVE    GBC$OPT_DY, @R8
+                MOVE    OPTM_SELECTED, R8       ; run options menu
+                MOVE    @R8, R8
+                RSUB    OPTM_RUN, 1
 
-                MOVE    OPTM_SEL, R8            ; setup selection char
-                MOVE    CHR_OPT_SEL, @R8++
-                MOVE    0, @R8
-
-                MOVE    GBC$CSR, R8             ; show OSM
-                OR      GBC$CSR_OSM, @R8
-                MOVE    STR_OPT_MENU, R8
-                MOVE    STR_OPT_ISMENU, R9
-                MOVE    STR_OPT_DEF_ACT, R10
-                MOVE    STR_OPT_LINES, R11
-                MOVE    STR_OPT_DEF_CUR, R12
-                RSUB    OPTM_SHOW, 1
 
                 SYSCALL(exit, 1)
 
@@ -619,25 +606,6 @@ STR_HELP        .ASCII_P "\n"
                 .ASCII_P " Left/Right cursor    One page forward/backward\n"
                 .ASCII_P " Enter                Start game/change folder\n"
                 .ASCII_W "\n\n Press any of these keys to continue."
-
-STR_OPT_MENU    .ASCII_P " Game Boy Mode\n"
-                .ASCII_P "\n"
-                .ASCII_P " Classic\n"
-                .ASCII_P " Color\n"
-                .ASCII_P "\n"
-                .ASCII_P " Joystick Mode\n"
-                .ASCII_P "\n"
-                .ASCII_P " Standard, Fire=A\n"
-                .ASCII_P " Standard, Fire=B\n"
-                .ASCII_P " Up=A, Fire=B\n"
-                .ASCII_P " Up=B, Fire=A\n"
-                .ASCII_P "\n"
-                .ASCII_W " Close Menu\n"                
-
-STR_OPT_ISMENU  .DW 0, 0, 1, 1, 0, 0, 0, 2, 2, 2, 2, 0, 0xEEEE, 0xFFFF
-STR_OPT_DEF_ACT .DW 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0xFFFF
-STR_OPT_LINES   .DW 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 0xFFFF
-STR_OPT_DEF_CUR .EQU 2
 
 WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files than\n"
                 .ASCII_P "this core is able to load into memory.\n\n"
@@ -1073,37 +1041,6 @@ _SHOWDIR_RET    MOVE    R0, R10                 ; return # of entries shown
                 DECRB
                 RET
 
-; Function for menu.asm (hardcoded to work with the options menu):
-; Draws a horizontal line/menu separator at the y-pos given in R8, dx in R9
-PRINTLINE       INCRB
-
-                MOVE    SP, R0                  ; R0: use to restore stack
-                MOVE    R8, R1                  ; R1: y-pos
-                MOVE    R9, R2                  ; R2: width minus left/right..
-                SUB     2, R2                   ; ..boundary
-
-                SUB     R2, SP                  ; memory for string
-                SUB     3, SP                   ; 3: l/r boundary + zero term.
-                MOVE    SP, R3
-                MOVE    R3, R4                  ; remember for printing
-
-                MOVE    CHR_NC_VE_LEFT, @R3++                
-_PRINTLN_L      MOVE    CHR_NC_SH, @R3++
-                SUB     1, R2
-                RBRA    _PRINTLN_L, !Z
-                MOVE    CHR_NC_VE_RIGHT, @R3++
-                MOVE    0, @R3
-
-                MOVE    R4, R8
-                MOVE    OPTM_X, R9
-                MOVE    @R9, R9
-                MOVE    R1, R10
-                RSUB    PRINTSTRSCRXY, 1                
-
-                MOVE    R0, SP
-                DECRB
-                RET
-
 ; Print the string in R8 on the current cursor position on the screen
 ; and in parallel to the UART
 PRINTSTR        SYSCALL(puts, 1)                ; output on serial console
@@ -1409,6 +1346,138 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
                 RSUB    KEYB_GETKEY, 1
                 CMP     KEY_SPACE, R8           ; SPACE pressed?
                 RBRA    WAITFORSPACE, !Z        ; no: wait
+                RET           
+
+; ----------------------------------------------------------------------------
+; Options Menu
+; ----------------------------------------------------------------------------
+
+; menu.asm contains the menu routines as well as the explanation of how to
+; use them, i.e. what the structures given here are actually meaning
+#include "menu.asm"
+
+OPT_MENU_SIZE   .EQU 13                         ; amount of items
+OPT_MENU_START  .EQU 2                          ; initial default selection
+OPT_MENU_ITEMS  .ASCII_P " Game Boy Mode\n"
+                .ASCII_P "\n"
+                .ASCII_P " Classic\n"
+                .ASCII_P " Color\n"
+                .ASCII_P "\n"
+                .ASCII_P " Joystick Mode\n"
+                .ASCII_P "\n"
+                .ASCII_P " Standard, Fire=A\n"
+                .ASCII_P " Standard, Fire=B\n"
+                .ASCII_P " Up=A, Fire=B\n"
+                .ASCII_P " Up=B, Fire=A\n"
+                .ASCII_P "\n"
+                .ASCII_W " Close Menu\n"     
+
+OPT_MENU_GROUPS .DW 0, 0, 1, 1, 0, 0, 0, 2, 2, 2, 2, 0, 0xEEEE
+OPT_MENU_LINES  .DW 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0
+
+OPT_MENU_DATA   .DW     CLRSCR, PRINTFRAME, PRINTSTRSCR, PRINTSTRSCRXY
+                .DW     OPT_PRINTLINE, OPTM_SELECT, OPT_MENU_GETKEY
+                .DW     CHR_OPT_SEL, 0
+                .DW     OPT_MENU_SIZE, OPT_MENU_ITEMS
+                .DW     OPT_MENU_GROUPS, OPT_MENU_INOUT, OPT_MENU_LINES
+
+; Draws a horizontal line/menu separator at the y-pos given in R8, dx in R9
+OPT_PRINTLINE   INCRB
+
+                MOVE    SP, R0                  ; R0: use to restore stack
+                MOVE    R8, R1                  ; R1: y-pos
+                MOVE    OPTM_DX, R2             ; R2: width minus left/right..
+                MOVE    @R2, R2                 ; ..boundary
+                SUB     2, R2                   
+
+                SUB     R2, SP                  ; memory for string
+                SUB     3, SP                   ; 3: l/r boundary + zero term.
+                MOVE    SP, R3
+                MOVE    R3, R4                  ; remember for printing
+
+                MOVE    CHR_NC_VE_LEFT, @R3++                
+_PRINTLN_L      MOVE    CHR_NC_SH, @R3++
+                SUB     1, R2
+                RBRA    _PRINTLN_L, !Z
+                MOVE    CHR_NC_VE_RIGHT, @R3++
+                MOVE    0, @R3
+
+                MOVE    R4, R8
+                MOVE    OPTM_X, R9
+                MOVE    @R9, R9
+                MOVE    R1, R10
+                RSUB    PRINTSTRSCRXY, 1                
+
+                MOVE    R0, SP
+                DECRB
+                RET
+
+; Selects/unselects menu item in R8 (counting from 0 and counting also
+; non-selectable menu entries such as lines)
+; R9=0: unselect   R9=1: select
+OPTM_SELECT     INCRB
+
+                MOVE    OPTM_X, R0              ; R0: x start coordinate
+                MOVE    @R0, R0
+                ADD     1, R0
+                MOVE    OPTM_Y, R1              ; R1: y start coordinate
+                MOVE    @R1, R1
+                ADD     1, R1
+                ADD     R8, R1
+                MOVE    OPTM_DX, R2             ; R2: width of selection
+                MOVE    @R2, R2
+                SUB     2, R2
+
+                CMP     R9, 0                   ; R3: attribute to apply
+                RBRA    _OPTM_FPS_1, Z
+                MOVE    SA_COL_STD_INV, R3
+                RBRA    _OPTM_FPS_2, 1
+_OPTM_FPS_1     MOVE    SA_COL_STD, R3
+
+_OPTM_FPS_2     MOVE    GBC$OSM_COLS, R8        ; R10: start address in ..
+                MOVE    R1, R9                  ; attribute VRAM
+                SYSCALL(mulu, 1)
+                ADD     R0, R10
+                ADD     MEM_VRAM_ATTR, R10
+
+                XOR     R4, R4
+_OPTM_FPS_L     CMP     R2, R4
+                RBRA    _OPTM_FPS_RET, Z
+                MOVE    R3, @R10++
+                ADD     1, R4
+                RBRA    _OPTM_FPS_L, 1
+
+_OPTM_FPS_RET   DECRB
+                RET                
+
+; Waits until one of the four Option Menu keys is pressed
+; and returns the OPTM_KEY_* code in R8
+OPT_MENU_GETKEY INCRB
+_OPTMGK_LOOP    RSUB    KEYB_SCAN, 1            ; wait until key is pressed
+                RSUB    KEYB_GETKEY, 1
+                CMP     0, R8
+                RBRA    _OPTMGK_LOOP, Z
+
+                CMP     KEY_CUR_UP, R8          ; up
+                RBRA    _OPTM_GK_1, !Z
+                MOVE    OPTM_KEY_UP, R8
+                RBRA    _OPTMGK_RET, 1
+
+_OPTM_GK_1      CMP     KEY_CUR_DOWN, R8        ; down
+                RBRA    _OPTM_GK_2, !Z
+                MOVE    OPTM_KEY_DOWN, R8
+                RBRA    _OPTMGK_RET, 1
+
+_OPTM_GK_2      CMP     KEY_RETURN, R8          ; return (select)
+                RBRA    _OPTM_GK_3, !Z
+                MOVE    OPTM_KEY_SELECT, R8
+                RBRA    _OPTMGK_RET, 1
+
+_OPTM_GK_3      CMP     KEY_HELP, R8            ; help (close menu)
+                RBRA    _OPTMGK_LOOP, !Z        ; other key: ignore
+                MOVE    OPTM_KEY_CLOSE, R8
+
+_OPTMGK_RET     DECRB
                 RET
 
 ; ----------------------------------------------------------------------------
@@ -1417,7 +1486,6 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
 
 #include "dirbrowse.asm"
 #include "keyboard.asm"
-#include "menu.asm"
 #include "tools.asm"
 
 ; ----------------------------------------------------------------------------
@@ -1435,14 +1503,25 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
 ; variables of dirbrowse.asm and keyboard.asm
 #include "dirbrowse_vars.asm"
 #include "keyboard_vars.asm"
-#include "menu_vars.asm"
 
+; variables for Options menu
+#include "menu_vars.asm"
+OPT_MENU_INOUT  .DW 0, 0, 0, 1, 0,              ; selected menu items
+                .DW 0, 0, 1, 0, 0,
+                .DW 0, 0, 0
+
+; device- and file handling
 SD_DEVHANDLE   .BLOCK FAT32$DEV_STRUCT_SIZE     ; SD card device handle
 FILEHANDLE     .BLOCK FAT32$FDH_STRUCT_SIZE     ; File handle
+
+; screen coordinates
 CUR_X          .BLOCK 1                         ; OSD cursor x coordinate
 CUR_Y          .BLOCK 1                         ; ditto y
 INNER_X        .BLOCK 1                         ; first x-coord within frame
+
+; general status
 GAME_RUNNING   .BLOCK 1                         ; 1 = game loaded and running
+OPTM_SELECTED  .BLOCK 1                         ; options menu selection
 
 ; file browser persistent status: currently displayed head of linked list
 FB_HEAD        .BLOCK 1
