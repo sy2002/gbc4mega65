@@ -26,6 +26,15 @@ The core uses [QNICE-FPGA](https://github.com/sy2002/QNICE-FPGA) for
 loading the Game Boy's BIOS as well as for the on-screen-menu and for
 loading game roms.
 
+Features
+--------
+
+* Game Boy and Game Boy Color support
+* Super Gameboy Support - Borders, Palettes and Multiplayer (Work-in-Progress)
+* Joystick support including special mappings so that you can for example play Super Mario Land via joystock (Work-in-Progress)
+* Custom Palette Loading (Work-in-Progress)
+* Convenient game cartridge browser which supports long filenames
+
 Installation
 ------------
 
@@ -63,43 +72,3 @@ Some demo pictures
 
 Clarification: These screenshots are just for illustration purposes. This repository does not
 contain any copyrighted ROMs such as BIOS ROMs or game ROMs.
-
-MEGA65 demo video
------------------
-
-[![MEGA65 Update Video on YouTube](doc/demovideo-youtube.jpg)](https://www.youtube.com/watch?v=AsWDnoU2T_Q&t=897s)
-
-# ORIGINAL MiSTer README.md text
-
-**TODO: Take what is needed for MEGA65 and delete the rest**
-
-This is port of [Gameboy for MiST](https://github.com/mist-devel/mist-board/tree/master/cores/gameboy)
-
-* Place RBF file into root of SD card.
-* Place *.gb files into Gameboy folder.
-
-## Features
-* Original Gameboy & Gameboy Color Support
-* Super Gameboy Support - Borders, Palettes and Multiplayer
-* SaveStates
-* Fastforward 
-* Rewind - Allows you to rewind up to 40 seconds of gameplay
-* Frameblending - Prevents flicker in some games (e.g. "Chikyuu Kaihou Gun Zas") 
-* Custom Palette Loading
-* Gameboy Link Port Support - Requires USERIO adapter
-* Cheats
-
-## Open Source Bootstrap roms
-This now includes the open source boot ROMs from [https://github.com/LIJI32/SameBoy/](https://github.com/LIJI32/SameBoy/) (for maximum GBC compatibility/authenticity you can still place the Gameboy color bios/bootrom into the Gameboy folder and rename it to boot1.rom)
-
-## Palettes
-Core supports custom palettes (*.gbp) which should be placed into Gameboy folder. Some examples are available in palettes folder.
-
-## Autoload
-To autoload custom palette at startup rename it to boot0.rom
-To autoload favorite game at startup rename it to boot2.rom
-
-## Video output
-The Gameboy can disable video output at any time which causes problems with vsync_adjust=2 or analog video during screen transitions. Enable the Stabilize video option to fix this at the cost of some latency.
-
-
