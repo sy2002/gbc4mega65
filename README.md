@@ -40,10 +40,13 @@ Installation
 
 1. [Download](https://github.com/sy2002/gbc4mega65/releases/download/V0.6/bitstream-and-core.zip)
    the ZIP file that contains the bitstream and the core file and unpack it.
-2. Choose the right subfolder depending on the type of your MEGA65: `R2` or `R3`
-3. Either use MEGA65's bitstream utility (`m65 -q yourbitstream.bit`) or install
-   the core file so that you can use MEGA65's <kbd>No Scroll</kbd> boot menu to
-   load the core. (Please have a look at the MEGA65 Starter Guide to learn more.)
+2. Choose the right subfolder depending on the type of your MEGA65:
+   `R2` or `R3`
+3. Either use MEGA65's bitstream utility (`m65 -q yourbitstream.bit`) or
+   install the core file so that you can use MEGA65's <kbd>No Scroll</kbd>
+   boot menu to load the core. Please have a look at the
+   [MEGA65 Starter Guide](https://files.mega65.org/news/MEGA65-Starter-Guide.pdf)
+   to learn more.
 4. The core needs a FAT32 formatted SD card to load game cartridges (ROMs).
 5. If you put your ROMs into a folder called `/gbc`, then the core will
    display this folder on startup.
@@ -56,7 +59,8 @@ Constraints of the current Alpha version 0.6
 
 * MEGA65 R2 machines: Maximum cartridge size: 256kB
 * MEGA65 R3 machines: Maximum cartridge size: 1MB
-* Only plays cartridges that do not need extra RAM in the cartridge ("Cartridge RAM")
+* Only plays cartridges that do not need extra RAM
+  in the cartridge ("Cartridge RAM")
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
 * No joystick support
 * No options menu, yet (no configuration possibilities such as
@@ -72,5 +76,6 @@ Some demo pictures
 | ![gbc04](doc/gbc04.jpg)      | ![gbc05](doc/gbc05.jpg)     | ![gbc06](doc/gbc06.jpg)       | 
 | *Game Boy Color Boot Screen* | *Super Mario Start Screen*  | *Super Mario Gameplay Screen* |
 
-Clarification: These screenshots are just for illustration purposes. This repository does not
-contain any copyrighted ROMs such as BIOS ROMs or game ROMs.
+Clarification: These screenshots are just for illustration purposes.
+This repository does not contain any copyrighted ROMs
+such as BIOS ROMs or game ROMs.
