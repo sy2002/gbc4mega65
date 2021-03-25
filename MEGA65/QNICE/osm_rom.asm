@@ -103,7 +103,11 @@ START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
                 MOVE    1, R8                   ; show welcome message
-                MOVE    GBC$CSR_RESET, R9       ; put machine in reset state
+                XOR     R9, R9
+                OR      GBC$CSR_RESET, R9       ; put machine in reset state
+                OR      GBC$CSR_KEYBOARD, R9    ; activate keyboard
+                OR      GBC$CSR_JOYSTICK, R9    ; activate joystick
+                OR      GBC$CSR_GBC, R9         ; default: Game Boy Color mode
                 RSUB    RESETGB_WELCOME, 1
 
                 ; Mount SD card and load original ROMs, if available.
@@ -539,21 +543,34 @@ GAME_RUNS       MOVE    GAME_RUNNING, R8        ; set game running flag
 
                 ; Run/Stop while game is running
 GR_RUNSTOP      XOR     R8, R8                  ; reset Game Boy and show OSD
-                MOVE    GBC$CSR_PAUSE, R9       ; pause Game Boy
+                MOVE    GBC$CSR, R9             ; get current status
+                MOVE    @R9, R9
+                OR      GBC$CSR_PAUSE, R9       ; pause Game Boy
                 RSUB    RESETGB_WELCOME, 1
                 RBRA    BROWSE_START, 1         ; file browser
 
                 ; Help (Options Menu) while game is running
-GR_HELP         RSUB    OPTM_SHOW, 1            ; display options menu
+GR_HELP         RSUB    OPTM_SHOW, 1            ; render options menu
                 MOVE    GBC$CSR, R8
-                OR      GBC$CSR_OSM, @R8  
+                OR      GBC$CSR_OSM, @R8        ; display options menu
+                AND     GBC$CSR_UN_KEYB, @R8    ; ignore keyboard input at gb
+                AND     GBC$CSR_UN_JOY, @R8     ; ignore joystick input at gb
 
-                MOVE    OPTM_SELECTED, R8       ; run options menu
-                MOVE    @R8, R8
+                MOVE    OPTM_SELECTED, R7       ; run options menu
+                MOVE    @R7, R8                 ; set last selection
                 RSUB    OPTM_RUN, 1
 
+                CMP     OPT_MENU_CLPOS, R8      ; Closed via "Close" item?
+                RBRA    _GR_HELP_1, Z           ; yes: reset sel. to default
+                MOVE    R8, @R7                 ; no: remember selection
+                RBRA    _GR_HELP_2, 1
+_GR_HELP_1      MOVE    OPT_MENU_START, @R7
+_GR_HELP_2      MOVE    GBC$CSR, R8
+                AND     GBC$CSR_UN_OSM, @R8     ; remove options menu
+                OR      GBC$CSR_KEYBOARD, @R8   ; activate keyboard input
+                OR      GBC$CSR_JOYSTICK, @R8   ; activate joystick input
 
-                SYSCALL(exit, 1)
+                RBRA    GAME_RUNS, 1
 
 ; ----------------------------------------------------------------------------
 ; Strings
@@ -1358,6 +1375,10 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
 
 OPT_MENU_SIZE   .EQU 13                         ; amount of items
 OPT_MENU_START  .EQU 2                          ; initial default selection
+OPT_MENU_CLPOS  .EQU 12                         ; position of "Close"
+OPT_MENU_MODE   .EQU 1                          ; group # for mode selection
+OPT_MENU_JOY    .EQU 2                          ; group # for joystock mapping
+
 OPT_MENU_ITEMS  .ASCII_P " Game Boy Mode\n"
                 .ASCII_P "\n"
                 .ASCII_P " Classic\n"
@@ -1370,16 +1391,25 @@ OPT_MENU_ITEMS  .ASCII_P " Game Boy Mode\n"
                 .ASCII_P " Up=A, Fire=B\n"
                 .ASCII_P " Up=B, Fire=A\n"
                 .ASCII_P "\n"
-                .ASCII_W " Close Menu\n"     
+                .ASCII_W " Close Menu\n"
 
-OPT_MENU_GROUPS .DW 0, 0, 1, 1, 0, 0, 0, 2, 2, 2, 2, 0, 0xEEEE
+OPT_MENU_GROUPS .DW 0, 0
+                .DW OPT_MENU_MODE, OPT_MENU_MODE
+                .DW 0, 0, 0
+                .DW OPT_MENU_JOY, OPT_MENU_JOY, OPT_MENU_JOY, OPT_MENU_JOY
+                .DW 0
+                .DW OPTM_CLOSE
+
 OPT_MENU_LINES  .DW 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0
 
 OPT_MENU_DATA   .DW     CLRSCR, PRINTFRAME, PRINTSTRSCR, PRINTSTRSCRXY
                 .DW     OPT_PRINTLINE, OPTM_SELECT, OPT_MENU_GETKEY
+                .DW     OPTM_CALLBACK,
                 .DW     CHR_OPT_SEL, 0
                 .DW     OPT_MENU_SIZE, OPT_MENU_ITEMS
-                .DW     OPT_MENU_GROUPS, OPT_MENU_INOUT, OPT_MENU_LINES
+                .DW     OPT_MENU_GROUPS
+                .DW     OPT_MENU_STDSEL ; is in RAM to remember last settins
+                .DW     OPT_MENU_LINES
 
 ; Draws a horizontal line/menu separator at the y-pos given in R8, dx in R9
 OPT_PRINTLINE   INCRB
@@ -1480,6 +1510,25 @@ _OPTM_GK_3      CMP     KEY_HELP, R8            ; help (close menu)
 _OPTMGK_RET     DECRB
                 RET
 
+
+; Callback function that is called during the execution of the menu (OPTM_RUN)
+; R8: selected menu group (as defined in OPTM_IR_GROUPS)
+; R9: selected item within menu group
+;     in case of single selected items: 0=not selected, 1=selected
+OPTM_CALLBACK   INCRB
+
+                CMP     OPT_MENU_MODE, R8       ; Game Boy mode selection?
+                RBRA    _OPTM_CB_1, !Z          ; no
+                MOVE    GBC$CSR, R0
+                XOR     GBC$CSR_GBC, @R0        ; flip mode
+                RBRA    _OPTMGK_RET, 1
+
+_OPTM_CB_1      CMP     OPT_MENU_JOY, R8        ; Joystick mapping?
+                RBRA    _OPTM_CB_RET, !Z        ; no                
+
+_OPTM_CB_RET    DECRB
+                RET              
+
 ; ----------------------------------------------------------------------------
 ; Directory browser, keyboard controller, On-Screen-Menu (OSM) and misc. tools
 ; ----------------------------------------------------------------------------
@@ -1500,43 +1549,41 @@ _OPTMGK_RET     DECRB
                 .ORG    0x8000                  ; RAM starts at 0x8000
 #endif
 
-; variables of dirbrowse.asm and keyboard.asm
+; variables for directory browser and keyboard controller
 #include "dirbrowse_vars.asm"
 #include "keyboard_vars.asm"
 
 ; variables for Options menu
 #include "menu_vars.asm"
-OPT_MENU_INOUT  .DW 0, 0, 0, 1, 0,              ; selected menu items
-                .DW 0, 0, 1, 0, 0,
-                .DW 0, 0, 0
+OPTM_SELECTED   .BLOCK 1                        ; last options menu selection
+OPT_MENU_STDSEL .DW 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0
 
 ; device- and file handling
-SD_DEVHANDLE   .BLOCK FAT32$DEV_STRUCT_SIZE     ; SD card device handle
-FILEHANDLE     .BLOCK FAT32$FDH_STRUCT_SIZE     ; File handle
+SD_DEVHANDLE    .BLOCK FAT32$DEV_STRUCT_SIZE    ; SD card device handle
+FILEHANDLE      .BLOCK FAT32$FDH_STRUCT_SIZE    ; File handle
 
 ; screen coordinates
-CUR_X          .BLOCK 1                         ; OSD cursor x coordinate
-CUR_Y          .BLOCK 1                         ; ditto y
-INNER_X        .BLOCK 1                         ; first x-coord within frame
+CUR_X           .BLOCK 1                        ; OSD cursor x coordinate
+CUR_Y           .BLOCK 1                        ; ditto y
+INNER_X         .BLOCK 1                        ; first x-coord within frame
 
 ; general status
-GAME_RUNNING   .BLOCK 1                         ; 1 = game loaded and running
-OPTM_SELECTED  .BLOCK 1                         ; options menu selection
+GAME_RUNNING    .BLOCK 1                        ; 1 = game loaded and running
 
 ; file browser persistent status: currently displayed head of linked list
-FB_HEAD        .BLOCK 1
-FB_ITEMS_COUNT .BLOCK 1
-FB_ITEMS_SHOWN .BLOCK 1
+FB_HEAD         .BLOCK 1
+FB_ITEMS_COUNT  .BLOCK 1
+FB_ITEMS_SHOWN  .BLOCK 1
 
 ; variables needed by sub-routines
-LCBLKLN_STATUS .BLOCK 1
+LCBLKLN_STATUS  .BLOCK 1
 
 ; heap for storing the sorted structure of the current directory entries
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE      .EQU 4096                        ; 4k words of the 5k words RAM
-HEAP           .BLOCK 1
+HEAP_SIZE       .EQU 4096                       ; 4k words of the 5k words RAM
+HEAP            .BLOCK 1
 
 #ifdef RELEASE
 

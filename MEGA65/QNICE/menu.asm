@@ -8,6 +8,13 @@
 ; ****************************************************************************
 
 ; ----------------------------------------------------------------------------
+; Special values for OPTM_IR_GROUPS
+; ----------------------------------------------------------------------------
+
+OPTM_CLOSE      .EQU 0xEEEE                     ; menu item that closes menu
+OPTM_SINGLESEL  .EQU 0x8000                     ; AND mask: single select itm?
+
+; ----------------------------------------------------------------------------
 ; Option Menu key codes (to be returned by the function in OPTM_FP_GETKEY)
 ; ----------------------------------------------------------------------------
 
@@ -46,29 +53,37 @@ OPTM_FP_SELECT  .EQU 5
 ; and returns the OPTM_KEY_* code in R8
 OPTM_FP_GETKEY  .EQU 6
 
+; Callback function: OPTM_RUN will call it back each time the user selects
+; anything in the menu
+; R8: selected menu group (as defined in OPTM_IR_GROUPS)
+; R9: selected item within menu group
+;     in case of single selected items: 0=not selected, 1=selected
+OPTM_FP_CLLBCK  .EQU 7
+
 ; selection character + zero terminator: 2 words in length!
-OPTM_IR_SEL     .EQU 7
+OPTM_IR_SEL     .EQU 8
 
 ; amount of menu items: the length of the arrays to which OPTM_IR_GROUPS,
 ; OPTM_IR_DEFAULT and OPTM_IR_LINES point needs to be equal to this amount
-OPTM_IR_SIZE    .EQU 9
+OPTM_IR_SIZE    .EQU 10
 
 ; pointer to string containing the menu items and separating them with \n
-OPTM_IR_ITEMS   .EQU 10
+OPTM_IR_ITEMS   .EQU 11
 
 ; array of digits that define and group menu items,
 ; 0xEEEE automatically closes the menu when selected by the user
 ; 0x8xxx denotes single-select menu items
-OPTM_IR_GROUPS  .EQU 11
+OPTM_IR_GROUPS  .EQU 12
 
-; CAUTION: This array needs to be located in RAM
-;
-; Input: array of 0s and 1s to define menu items that are activated by default
-; Output: selected items after menu has been closed
-OPTM_IR_INOUT   .EQU 12
+; array of 0s and 1s to define menu items that are activated by default
+; in case this array is located in RAM, these are the advantages (but it
+; can without problems also be located in ROM): the menu remembers the
+; various multi- and single selections, if any and the menu prevents calling
+; the callback function for already selected items
+OPTM_IR_STDSEL  .EQU 13
 
 ; array of 0s and 1s to define horizontal separator lines
-OPTM_IR_LINES   .EQU 13
+OPTM_IR_LINES   .EQU 14
 
 ; ----------------------------------------------------------------------------
 ; Options Menu functions
@@ -107,7 +122,7 @@ OPTM_SHOW       RSUB    ENTER, 1
                 MOVE    @R1, R1                
                 MOVE    OPTM_DATA, R2           ; R2: default activated elms.
                 MOVE    @R2, R2
-                ADD     OPTM_IR_INOUT, R2
+                ADD     OPTM_IR_STDSEL, R2
                 MOVE    @R2, R2
                 MOVE    OPTM_DATA, R3           ; R3: pos of horiz. lines
                 MOVE    @R3, R3
@@ -167,9 +182,8 @@ _OPTM_SHOW_RET  RSUB    LEAVE, 1
 ;   R8: Default cursor position/selection
 ; Output
 ;   R8: Selected cursor position
-;   R9: 0: no single-select menu point chosen
-;       0x8xxx: single-select menu point chosen 
-;   plus: the array where OPTM_IR_INOUT points to contains selected items
+;   plus: Will callback to OPTM_FP_CLLBCK (see above) on each press
+;         of the selection key
 OPTM_RUN        INCRB
 
                 MOVE    OPTM_DATA, R0           ; R0: size of data structure
@@ -222,10 +236,123 @@ _OPTM_KD_NWA    ADD     1, R2                   ; one element down
                 RBRA    _OPTM_RUN_2, !Z         ; yes: unselect cur. and go on
                 RBRA    _OPTM_RUN_4, 1          ; no: continue searching
 
-_OPTM_RUN_5
+_OPTM_RUN_5     CMP     OPTM_KEY_CLOSE, R8      ; key: close?
+                RBRA    _OTM_RUN_6, !Z          ; no: check other key
+                MOVE    R2, R8                  ; return selected item
+                RBRA    _OPTM_RUN_RET, 1
 
-                DECRB
+_OTM_RUN_6      CMP     OPTM_KEY_SELECT, R8     ; key: select?
+                RBRA    _OPTM_RUN_SEL, !Z       ; no: ignore key
+
+                ; avoid "double-firing" of already selected items by
+                ; ignoring the selection key in this case
+                ; 
+                ; this "double-firing prevention" only works in those cases,
+                ; where OPTM_IR_STDSE resides in RAM; otherwise the menu
+                ; actually does "double-fire" and the application program
+                ; needs to be robust enough to not fail in this case
+                MOVE    OPTM_DATA, R6           ; already selected?
+                MOVE    @R6, R6
+                ADD     OPTM_IR_STDSEL, R6
+                MOVE    @R6, R6
+                ADD     R2, R6
+                CMP     0, @R6
+                RBRA    _OPTM_RUN_SEL, !Z
+
+                MOVE    OPTM_DATA, R6           ; R6: selected group
+                MOVE    @R6, R6
+                ADD     OPTM_IR_GROUPS, R6
+                MOVE    @R6, R6
+                MOVE    R6, R5                  ; R5: remember group start
+                ADD     R2, R6                  ; use current selection to ..
+                MOVE    @R6, R6                 ; .. find the selected group
+
+                ; single select items are not marked
+                ; TODO:
+                ; enhance behavior to support marked ("checked" / "unchecked")
+                ; and unmarked single select menu items
+                MOVE    R6, R4
+                AND     OPTM_SINGLESEL, R4
+                RBRA    _OPTM_RUN_10, !Z
+
+                ; deselect all other group members on screen (and inside the
+                ; OPTM_IR_STDSEL array in case that it resides in RAM)
+                MOVE    OPTM_DATA, R12          ; R12: OPTM_IR_STDSEL ptr
+                MOVE    @R12, R12
+                ADD     OPTM_IR_STDSEL, R12
+                MOVE    @R12, R12
+                XOR     R4, R4                  ; R4: loop var
+                MOVE    _OPTM_RUN_SPCE, R8      ; R8: use space to delete
+                MOVE    OPTM_X, R9              ; R9: x-coord
+                MOVE    @R9, R9
+                ADD     1, R9
+                MOVE    OPTM_Y, R10             ; R10: y-coord
+                MOVE    @R10, R10
+                ADD     1, R10
+_OPTM_RUN_7     CMP     R4, R0                  ; R4 < R0 (size of structure)
+                RBRA    _OPTM_RUN_9, Z          ; no
+                CMP     @R5++, R6               ; current entry group member?
+                RBRA    _OPTM_RUN_8, !Z         ; no
+                MOVE    OPTM_FP_PRINTXY, R7     ; delete marker at current pos
+                MOVE    0, @R12
+                RSUB    _OPTM_CALL, 1
+_OPTM_RUN_8     ADD     1, R10                  ; y-pos + 1
+                ADD     1, R4                   ; loop-var + 1
+                ADD     1, R12                  ; stdsel-ptr + 1
+                RBRA    _OPTM_RUN_7, 1
+
+                ; select active group member on screen (and inside the
+                ; OPTM_IR_STDSEL array in case that it resides in RAM)
+_OPTM_RUN_9     MOVE    OPTM_Y, R10
+                MOVE    @R10, R10
+                ADD     1, R10
+                ADD     R2, R10
+                MOVE    OPTM_DATA, R8
+                MOVE    @R8, R8
+                ADD     OPTM_IR_SEL, R8
+                MOVE    OPTM_FP_PRINTXY, R7
+                RSUB    _OPTM_CALL, 1
+                MOVE    OPTM_DATA, R12          ; R12: OPTM_IR_STDSEL ptr
+                MOVE    @R12, R12
+                ADD     OPTM_IR_STDSEL, R12
+                MOVE    @R12, R12
+                ADD     R2, R12
+                MOVE    1, @R12
+
+                ; call the callback function, but first find out which element
+                ; within the group has been selected
+_OPTM_RUN_10    MOVE    OPTM_DATA, R8
+                MOVE    @R8, R8
+                ADD     OPTM_IR_GROUPS, R8
+                MOVE    @R8, R8
+                XOR     R9, R9                  ; R9: selection within group
+                XOR     R10, R10                ; R10: selection counter
+_OPTM_RUN_11    CMP     @R8, R6                 ; find first occurance
+                RBRA    _OPTM_RUN_12, Z         ; found!
+                ADD     1, R8
+                ADD     1, R10
+                RBRA    _OPTM_RUN_11, 1
+_OPTM_RUN_12    CMP     R10, R2                 ; selection found?
+                RBRA    _OPTM_RUN_14, Z         ; yes
+                CMP     @R8++, R6               ; are we within the group?
+                RBRA    _OPTM_RUN_13, !Z        ; no
+                ADD     1, R9                   ; yes: increase relative pos
+_OPTM_RUN_13    ADD     1, R10                  ; increase absolute pos
+                RBRA    _OPTM_RUN_12, 1
+
+_OPTM_RUN_14    MOVE    R6, R8                  ; R8: return selected group
+                                                ; R9: return sel. item in grp
+                MOVE    OPTM_FP_CLLBCK, R7      ; call callback
+                RSUB    _OPTM_CALL, 1
+
+                CMP     OPTM_CLOSE, R6          ; Close?
+                RBRA    _OPTM_RUN_SEL, !Z       ; no: continue menu loop
+                MOVE    R2, R8                  ; yes: return selected item
+
+_OPTM_RUN_RET   DECRB
                 RET
+
+_OPTM_RUN_SPCE  .ASCII_W " "
 
 ; ----------------------------------------------------------------------------
 ; Internal helper functions

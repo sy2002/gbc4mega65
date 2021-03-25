@@ -15,6 +15,9 @@ GBC$CSR             .EQU 0xFFE0
     ; Bit      0: Reset
     ; Bit      1: Pause
     ; Bit      2: Show On-Screen-Menu (OSM)
+    ; Bit      3: Keyboard connection between M65 keyb. and GB is ON
+    ; Bit      4: Joystick connection between M65 joy. ports and GB is ON
+    ; Bit      5: 1=Game Boy Color, 0=Game Boy Classic
 
 GBC$CSR_RESET       .EQU 0x0001
 GBC$CSR_UN_RESET    .EQU 0xFFFE
@@ -22,6 +25,12 @@ GBC$CSR_PAUSE       .EQU 0x0002
 GBC$CSR_UN_PAUSE    .EQU 0xFFFD
 GBC$CSR_OSM         .EQU 0x0004
 GBC$CSR_UN_OSM      .EQU 0xFFFB
+GBC$CSR_KEYBOARD    .EQU 0x0008
+GBC$CSR_UN_KEYB     .EQU 0xFFF7
+GBC$CSR_JOYSTICK    .EQU 0x0010
+GBC$CSR_UN_JOY      .EQU 0xFFEF
+GBC$CSR_GBC         .EQU 0x0020
+GBC$CSR_UN_GBC      .EQU 0xFFDF
 
 ; ----------------------------------------------------------------------------
 ; Window selector for MEM_CARTRIDGE_WIN

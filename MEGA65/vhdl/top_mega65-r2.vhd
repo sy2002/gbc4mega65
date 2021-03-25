@@ -173,7 +173,6 @@ signal dbnce_joy1_right_n  : std_logic;
 signal dbnce_joy1_fire_n   : std_logic;
 
 -- Game Boy
-signal is_CGB              : std_logic;
 signal gbc_bios_addr       : std_logic_vector(11 downto 0);
 signal gbc_bios_data       : std_logic_vector(7 downto 0);
 
@@ -223,10 +222,15 @@ signal cartrom_data        : std_logic_vector(7 downto 0);
 -- the direction keys or the other buttons
 signal joypad_p54          : std_logic_vector(1 downto 0);
 signal joypad_data         : std_logic_vector(3 downto 0);
+signal joypad_data_i       : std_logic_vector(3 downto 0);
 
--- QNICE control signals
+-- QNICE control signals (see also gbc.asm for more details)
 signal qngbc_reset         : std_logic;
 signal qngbc_pause         : std_logic;
+signal qngbc_keyboard      : std_logic;
+signal qngbc_joystick      : std_logic;
+signal qngbc_color         : std_logic;
+
 signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
 signal qngbc_bios_we       : std_logic;
 signal qngbc_bios_data_in  : std_logic_vector(7 downto 0);
@@ -283,12 +287,14 @@ begin
    --i_reset           <= not dbnce_reset_n;   
    i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
 
-   is_CGB <= '1';
-
    -- Cartridge header flags
    -- Infos taken from: https://gbdev.io/pandocs/#the-cartridge-header and from MiSTer's mbc.sv
    isGBC_Game <= true when cart_cgb_flag = x"80" or cart_cgb_flag = x"C0" else false;
    isSGB_Game <= true when cart_sgb_flag = x"03" and cart_old_licensee = x"33" else false;
+   
+   -- Switch keyboard and joystick on/off according to the QNICE control and status register (see gbc.asm)
+   -- joypad_data is active low
+   joypad_data <= joypad_data_i when qngbc_keyboard = '1' else (others => '1');
          
    -- The actual machine (GB/GBC core)
    gameboy : entity work.gb
@@ -302,7 +308,7 @@ begin
                   
          fast_boot               => i_fast_boot,
          joystick                => i_joystick,
-         isGBC                   => is_CGB,
+         isGBC                   => qngbc_color,
          isGBC_game              => isGBC_Game,
       
          -- Cartridge interface: Connects with the Memory Bank Controller (MBC) 
@@ -567,7 +573,7 @@ begin
             end if;
          end if;
          
-         if (is_CGB = '0') then
+         if (qngbc_color = '0') then
             case (lcd_data(1 downto 0)) is
                when "00"   => pixel_out_data <= "11111" & "11111" & "11111";
                when "01"   => pixel_out_data <= "10000" & "10000" & "10000";
@@ -594,7 +600,7 @@ begin
          kio9              => kb_io1,
          kio10             => kb_io2,
          p54               => joypad_p54,
-         joypad            => joypad_data,
+         joypad            => joypad_data_i,
          full_matrix       => qngbc_keyb_matrix
       );
    
@@ -736,6 +742,10 @@ begin
          -- Game Boy control
          gbc_reset         => qngbc_reset,
          gbc_pause         => qngbc_pause,
+         gbc_keyboard      => qngbc_keyboard,
+         gbc_joystick      => qngbc_joystick,
+         gbc_color         => qngbc_color,
+         
          
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr     => qngbc_bios_addr,

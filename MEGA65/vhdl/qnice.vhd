@@ -51,6 +51,9 @@ port (
    gbc_reset         : buffer std_logic;     -- reset Game Boy
    gbc_pause         : buffer std_logic;     -- pause Game Boy
    gbc_osm           : buffer std_logic;     -- show QNICE's On-Screen-Menu (OSM) over the Game Boy's Screen
+   gbc_keyboard      : buffer std_logic;     -- connect the M65 keyboard with the Game Boy
+   gbc_joystick      : buffer std_logic;     -- connect the M65 joystick ports with the Game Boy
+   gbc_color         : buffer std_logic;     -- 1=Game Boy Color; 0=Game Boy Classic
 
    -- Interfaces to Game Boy's RAMs (MMIO):
    gbc_bios_addr     : out std_logic_vector(11 downto 0);
@@ -414,7 +417,7 @@ begin
    ram_en                     <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                     <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                     <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out               <= x"000" & "0" & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
+   csr_data_out               <= x"00" & "00" & gbc_color & gbc_joystick & gbc_keyboard & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
    vram_en                    <= '1' when cpu_addr(15 downto 11) = x"D" & "0" else '0'; -- $D000 .. $D7FF
    vram_we                    <= vram_en and cpu_data_dir and cpu_data_valid;
    vram_data_out_16bit        <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
@@ -463,8 +466,8 @@ begin
    reg_maxramrom_en           <= '1' when cpu_addr = x"FFEB" else '0';
    reg_maxramrom_data_out     <= std_logic_vector(to_unsigned(MAX_RAM, 8)) & std_logic_vector(to_unsigned(MAX_ROM, 8)) when reg_maxramrom_en ='1' else (others => '0');  
                         
-   -- Registers
-   --   CSR: Control and status register: Reset & Pause
+   -- Registers (see also gbc.asm)
+   --   CSR: Control and status register (reset, pause, osm, keyboard, joystick, gbc/gb mode selection)
    --   cart_sel: Cartridge "ROM RAM" 4096-byte window selector
    --   osm_xy: X and Y coordinate (in chars, hi/lo) where the OSM window will start
    --   osm_dxdy: DX and DY size (in chars, hi/lo) of the OSM window
@@ -473,17 +476,23 @@ begin
    begin
       if falling_edge(clk50) then
          if reset_ctl = '1' then
-            gbc_reset <= '1';
-            gbc_pause <= '0';
-            gbc_osm   <= '1';
+            gbc_reset      <= '1';
+            gbc_pause      <= '0';
+            gbc_osm        <= '1';
+            gbc_keyboard   <= '1';
+            gbc_joystick   <= '1';
+            gbc_color      <= '1';
             osm_xy    <= x"0000";
             osm_dxdy  <= std_logic_vector(to_unsigned(CHARS_DX * 256 + CHARS_DY, 16));
          else
             -- CSR register
             if csr_we = '1' then
-               gbc_reset <= cpu_data_out(0);
-               gbc_pause <= cpu_data_out(1);
-               gbc_osm   <= cpu_data_out(2);
+               gbc_reset      <= cpu_data_out(0);
+               gbc_pause      <= cpu_data_out(1);
+               gbc_osm        <= cpu_data_out(2);
+               gbc_keyboard   <= cpu_data_out(3);
+               gbc_joystick   <= cpu_data_out(4);
+               gbc_color      <= cpu_data_out(5);
             end if;
             
             -- cartridge window selector
