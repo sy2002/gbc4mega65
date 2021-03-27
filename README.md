@@ -80,9 +80,10 @@ the core. Here are the most important hints:
   and <kbd>Mega 65</kbd> is Game Boy's "B". The cursor keys of the MEGA65
   are the Game Boy's joypad.
   
-* Press <kbd>Help</kbd> to open and to close the Options Menu, where you
-  can switch between Game Boy Classic and Game Boy Color and also
-  configure the [joystick mapping](#joystick-usage-and-mapping).
+* Only works while a game is running: Press <kbd>Help</kbd> to open and to
+  close the Options Menu, where you can switch between Game Boy Classic and
+  Game Boy Color and also configure the
+  [joystick mapping](#joystick-usage-and-mapping).
 
 Some demo pictures
 ------------------
