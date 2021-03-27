@@ -22,6 +22,7 @@ GBC$CSR             .EQU 0xFFE0
     ;                               01 = Standard, Fire=B
     ;                               10 = Up=A, Fire=B
     ;                               11 = Up=B, Fire=A
+    ; Bit      8: Color mode: 0=Original, 1=Alternative
 
 GBC$CSR_RESET       .EQU 0x0001
 GBC$CSR_UN_RESET    .EQU 0xFFFE
@@ -35,9 +36,13 @@ GBC$CSR_JOYSTICK    .EQU 0x0010
 GBC$CSR_UN_JOY      .EQU 0xFFEF
 GBC$CSR_GBC         .EQU 0x0020
 GBC$CSR_UN_GBC      .EQU 0xFFDF
+
+; constants used to directly transfer the menu selection to the right spot
+; inside the CSR bitpattern
 GBC$CSR_JOYMAP_CLR  .EQU 0xFF3F                 ; AND mask to clear joy map
 GBC$CSR_JOYMAP_SHL  .EQU 0x0006                 ; SHL amount to joy map
-
+GBC$CSR_COLM_CLR    .EQU 0xFEFF                 ; AND mask to clear color mode
+GBC$CSR_COLM_SHL    .EQU 0x0008                 ; SHL amount to color mode
 
 ; ----------------------------------------------------------------------------
 ; Window selector for MEM_CARTRIDGE_WIN
@@ -60,7 +65,7 @@ GBC$OSM_COLS        .EQU 50     ; columns (max chars per line)
 GBC$OSM_ROWS        .EQU 37     ; rows (max lines per screen)
 
 GBC$OPT_DX          .EQU 20     ; width of option menu
-GBC$OPT_DY          .EQU 15     ; height of option menu
+GBC$OPT_DY          .EQU 20     ; height of option menu
 
 ; ----------------------------------------------------------------------------
 ; Keyboard matrix (read-only)

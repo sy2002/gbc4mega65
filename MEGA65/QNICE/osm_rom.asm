@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#define RELEASE
+#undef RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -583,7 +583,7 @@ _GR_HELP_2      MOVE    GBC$CSR, R8
 ; Strings
 ; ----------------------------------------------------------------------------
 
-STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version <not-released>\nMiSTer port done by sy2002 in 2021\n\n"
+STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.7\nMiSTer port done by sy2002 in 2021\n\n"
 
 STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
@@ -1380,11 +1380,12 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
 ; use them, i.e. what the structures given here are actually meaning
 #include "menu.asm"
 
-OPT_MENU_SIZE   .EQU 13                         ; amount of items
+OPT_MENU_SIZE   .EQU 18                         ; amount of items
 OPT_MENU_START  .EQU 2                          ; initial default selection
-OPT_MENU_CLPOS  .EQU 12                         ; position of "Close"
+OPT_MENU_CLPOS  .EQU 17                         ; position of "Close"
 OPT_MENU_MODE   .EQU 1                          ; group # for mode selection
 OPT_MENU_JOY    .EQU 2                          ; group # for joystock mapping
+OPT_MENU_COL    .EQU 3
 
 OPT_MENU_ITEMS  .ASCII_P " Game Boy Mode\n"
                 .ASCII_P "\n"
@@ -1398,17 +1399,24 @@ OPT_MENU_ITEMS  .ASCII_P " Game Boy Mode\n"
                 .ASCII_P " Up=A, Fire=B\n"
                 .ASCII_P " Up=B, Fire=A\n"
                 .ASCII_P "\n"
+                .ASCII_P " Color Mode\n"
+                .ASCII_P "\n"
+                .ASCII_P " Original\n"
+                .ASCII_P " Alternative\n"
+                .ASCII_P "\n"
                 .ASCII_W " Close Menu\n"
 
 OPT_MENU_GROUPS .DW 0, 0
                 .DW OPT_MENU_MODE, OPT_MENU_MODE
                 .DW 0, 0, 0
                 .DW OPT_MENU_JOY, OPT_MENU_JOY, OPT_MENU_JOY, OPT_MENU_JOY
+                .DW 0, 0, 0
+                .DW OPT_MENU_COL, OPT_MENU_COL
                 .DW 0
                 .DW OPTM_CLOSE
 
-OPT_MENU_STDSEL .DW 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0
-OPT_MENU_LINES  .DW 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0
+OPT_MENU_STDSEL .DW 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0
+OPT_MENU_LINES  .DW 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 1, 0
 
 OPT_MENU_DATA   .DW     CLRSCR, PRINTFRAME, PRINTSTRSCR, PRINTSTRSCRXY
                 .DW     OPT_PRINTLINE, OPTM_SELECT, OPT_MENU_GETKEY
@@ -1534,12 +1542,22 @@ OPTM_CALLBACK   INCRB
 
                 ; Joystick mapping
 _OPTM_CB_1      CMP     OPT_MENU_JOY, R8        ; Joystick mapping?
-                RBRA    _OPTM_CB_RET, !Z        ; no
+                RBRA    _OPTM_CB_2, !Z          ; no
                 AND     0xFFFD, SR              ; clear X register for SHL
                 SHL     GBC$CSR_JOYMAP_SHL, R9  ; shift sel. map to corr. pos.
                 MOVE    GBC$CSR, R0             ; clear old mapping setting
                 AND     GBC$CSR_JOYMAP_CLR, @R0
                 OR      R9, @R0                 ; set new mapping
+                RBRA    _OPTMGK_RET, 1
+
+                ; Color mode: Original vs. Alternative
+_OPTM_CB_2      CMP     OPT_MENU_COL, R8        ; Color mode?
+                RBRA    _OPTM_CB_RET, !Z        ; no
+                AND     0xFFFD, SR              ; clear X register for SHL
+                SHL     GBC$CSR_COLM_SHL, R9    ; shift col. m. to corr. pos.
+                MOVE    GBC$CSR, R0             ; clear old setting
+                AND     GBC$CSR_COLM_CLR, @R0
+                OR      R9, @R0                 ; set new color mode
 
 _OPTM_CB_RET    DECRB
                 RET              
@@ -1604,10 +1622,11 @@ LCBLKLN_STATUS  .BLOCK 1
 HEAP_SIZE       .EQU 4096
 HEAP            .BLOCK 1
 
-; in RELEASE mode: 
+; in RELEASE mode: 11k of heap which leads to a better user experience when
+; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 11264
+HEAP_SIZE       .EQU 10240
 HEAP            .BLOCK 1
 
 ; The monitor variables use 20 words, round to 32 for being safe and subtract

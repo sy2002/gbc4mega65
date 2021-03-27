@@ -15,10 +15,10 @@ use IEEE.STD_LOGIC_1164.all;
 package env1_globals is
 
 -- Development and Debug mode: use the standard Monitor as ROM
---constant ROM_FILE             : string    := "../../QNICE/monitor/monitor.rom";
+constant ROM_FILE             : string    := "../../QNICE/monitor/monitor.rom";
 
 -- Release mode: use the self-contained self-starting firmware
-constant ROM_FILE             : string    := "../QNICE/osm_rom.rom";
+--constant ROM_FILE             : string    := "../QNICE/osm_rom.rom";
 
 -- size of lower register bank: needs to be 256 for standard QNICE
 -- depending on the ROM/firmware we ca reduce it to safe FPGA resources
@@ -28,8 +28,8 @@ constant SHADOW_REGFILE_SIZE  : natural   := 32;
 -- size of the block RAM in 16bit words:
 --   standard QNICE (development mode): 32768
 --   embedded mode (osm_rom.rom):       12288
---constant BLOCK_RAM_SIZE       : natural   := 32768;
-constant BLOCK_RAM_SIZE       : natural   := 12288;
+constant BLOCK_RAM_SIZE       : natural   := 32768;
+--constant BLOCK_RAM_SIZE       : natural   := 12288;
 
 -- UART is in 8-N-1 mode
 -- assuming a 100 MHz system clock, set the baud rate by selecting the following divisors according to this formula:

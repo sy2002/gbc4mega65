@@ -194,9 +194,9 @@ signal lcd_vsync           : std_logic;
 signal lcd_vsync_1         : std_logic := '0';
 signal pixel_out_x         : integer range 0 to GB_DX - 1;
 signal pixel_out_y         : integer range 0 to GB_DY - 1;
-signal pixel_out_data      : std_logic_vector(14 downto 0);  
+signal pixel_out_data      : std_logic_vector(23 downto 0);  
 signal pixel_out_we        : std_logic := '0';
-signal frame_buffer_data   : std_logic_vector(14 downto 0);
+signal frame_buffer_data   : std_logic_vector(23 downto 0);
  
  -- speed control
 signal sc_ce               : std_logic;
@@ -239,6 +239,7 @@ signal qngbc_keyboard      : std_logic;
 signal qngbc_joystick      : std_logic;
 signal qngbc_color         : std_logic;
 signal qngbc_joy_map       : std_logic_vector(1 downto 0);
+signal qngbc_color_mode    : std_logic;
 
 signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
 signal qngbc_bios_we       : std_logic;
@@ -507,7 +508,7 @@ begin
       generic map
       ( 
          ADDR_WIDTH  => 15,
-         DATA_WIDTH  => 15
+         DATA_WIDTH  => 24
       )
       port map
       (
@@ -560,6 +561,11 @@ begin
 
    -- Generate the signals necessary to store the LCD output into the frame buffer
    lcd_to_pixels : process(main_clk)
+      variable r5, g5, b5           : unsigned(4 downto 0);
+      variable r5_32, g5_32, b5_32  : unsigned(31 downto 0);
+      variable r8, g8, b8           : std_logic_vector(7 downto 0);
+      variable r10, g10, b10        : unsigned(31 downto 0);
+      variable gray                 : unsigned(7 downto 0);
    begin
       if rising_edge(main_clk) then
          pixel_out_we <= '0';
@@ -581,17 +587,44 @@ begin
                pixel_out_we <= '1';
             end if;
          end if;
-         
+                           
+         -- color handling algorithm and grayscale values taken from MiSTer's lcd.v
          if (qngbc_color = '0') then
-            case (lcd_data(1 downto 0)) is
-               when "00"   => pixel_out_data <= "11111" & "11111" & "11111";
-               when "01"   => pixel_out_data <= "10000" & "10000" & "10000";
-               when "10"   => pixel_out_data <= "01000" & "01000" & "01000";
-               when "11"   => pixel_out_data <= "00000" & "00000" & "00000";
-               when others => pixel_out_data <= "00000" & "00000" & "11111";
+            case (lcd_data(1 downto 0)) is            
+               when "00"   => gray := to_unsigned(252, 8);
+               when "01"   => gray := to_unsigned(168, 8);
+               when "10"   => gray := to_unsigned(96, 8);
+               when "11"   => gray := x"00";
+               when others => gray := x"00";
             end case;
+            pixel_out_data <= std_logic_vector(gray) & std_logic_vector(gray) & std_logic_vector(gray);
          else
-            pixel_out_data <= lcd_data(4 downto 0) & lcd_data(9 downto 5) & lcd_data(14 downto 10);
+            r5 := unsigned(lcd_data(4 downto 0));
+            g5 := unsigned(lcd_data(9 downto 5));
+            b5 := unsigned(lcd_data(14 downto 10));
+
+            r5_32 := x"000000" & "000" & r5;
+            g5_32 := x"000000" & "000" & g5;
+            b5_32 := x"000000" & "000" & b5;
+
+            r10 := to_unsigned(to_integer((r5_32 * 13) + (g5_32 * 2) + b5_32), 32);
+            g10 := to_unsigned(to_integer((g5_32 * 3) + b5_32), 32);
+            b10 := to_unsigned(to_integer((r5_32 * 3) + (g5_32 * 2) + (b5_32 * 11)), 32);
+                        
+            -- original/raw color mode
+            if qngbc_color_mode = '0' then
+               r8 := std_logic_vector(r5 & r5(4 downto 2));
+               g8 := std_logic_vector(g5 & g5(4 downto 2));
+               b8 := std_logic_vector(b5 & b5(4 downto 2));
+            
+            -- alternative colors
+            else
+               r8 := std_logic_vector(r10(8 downto 1));
+               g8 := std_logic_vector(g10(6 downto 0) & "0");
+               b8 := std_logic_vector(b10(8 downto 1));
+            end if;
+
+            pixel_out_data <= r8 & g8 & b8;      
          end if;         
       end if;
    end process; 
@@ -703,9 +736,9 @@ begin
          if vga_disp_en then
             -- Game Boy output
             if vga_col < GB_DX * GB_TO_VGA_SCALE and vga_row < GB_DY * GB_TO_VGA_SCALE then
-               VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
-               VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
-               VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
+               VGA_RED   <= frame_buffer_data(23 downto 16);
+               VGA_GREEN <= frame_buffer_data(15 downto 8);
+               VGA_BLUE  <= frame_buffer_data(7 downto 0);
             end if;       
          
             -- On-Screen-Menu (OSM) output
@@ -777,7 +810,8 @@ begin
          gbc_joystick      => qngbc_joystick,
          gbc_color         => qngbc_color,
          gbc_joy_map       => qngbc_joy_map,
-         
+         gbc_color_mode    => qngbc_color_mode, 
+       
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr     => qngbc_bios_addr,
          gbc_bios_we       => qngbc_bios_we,
