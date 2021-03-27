@@ -164,13 +164,16 @@ signal vga_vs_int          : std_logic;
 signal pcm_audio_left      : std_logic_vector(15 downto 0);
 signal pcm_audio_right     : std_logic_vector(15 downto 0);
 
--- debounced signals for the reset button and the joysticks; joystick signals are also inverted
+-- debounced signals for the reset button and the joysticks
 signal dbnce_reset_n       : std_logic;
 signal dbnce_joy1_up_n     : std_logic;
 signal dbnce_joy1_down_n   : std_logic;
 signal dbnce_joy1_left_n   : std_logic;
 signal dbnce_joy1_right_n  : std_logic;
 signal dbnce_joy1_fire_n   : std_logic;
+
+-- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+signal m65_joystick        : std_logic_vector(4 downto 0);
 
 -- Game Boy
 signal gbc_bios_addr       : std_logic_vector(11 downto 0);
@@ -230,6 +233,7 @@ signal qngbc_pause         : std_logic;
 signal qngbc_keyboard      : std_logic;
 signal qngbc_joystick      : std_logic;
 signal qngbc_color         : std_logic;
+signal qngbc_joy_map       : std_logic_vector(1 downto 0);
 
 signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
 signal qngbc_bios_we       : std_logic;
@@ -587,7 +591,7 @@ begin
       end if;
    end process; 
                           
-   -- MEGA65 keyboard
+   -- MEGA65 keyboard and joystick controller
    kbd : entity work.keyboard
       generic map
       (
@@ -599,6 +603,9 @@ begin
          kio8              => kb_io0,
          kio9              => kb_io1,
          kio10             => kb_io2,
+         joystick          => m65_joystick,
+         joy_map           => qngbc_joy_map,
+         
          p54               => joypad_p54,
          joypad            => joypad_data_i,
          full_matrix       => qngbc_keyb_matrix
@@ -633,6 +640,9 @@ begin
          dbnce_joy1_right_n   => dbnce_joy1_right_n,
          dbnce_joy1_fire_n    => dbnce_joy1_fire_n
       );
+      
+   -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+   m65_joystick <= dbnce_joy1_fire_n & dbnce_joy1_up_n & dbnce_joy1_down_n & dbnce_joy1_left_n & dbnce_joy1_right_n;
 
    -- SVGA mode 800 x 600 @ 60 Hz  
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)      
@@ -745,7 +755,7 @@ begin
          gbc_keyboard      => qngbc_keyboard,
          gbc_joystick      => qngbc_joystick,
          gbc_color         => qngbc_color,
-         
+         gbc_joy_map       => qngbc_joy_map,
          
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr     => qngbc_bios_addr,

@@ -17,7 +17,11 @@ GBC$CSR             .EQU 0xFFE0
     ; Bit      2: Show On-Screen-Menu (OSM)
     ; Bit      3: Keyboard connection between M65 keyb. and GB is ON
     ; Bit      4: Joystick connection between M65 joy. ports and GB is ON
-    ; Bit      5: 1=Game Boy Color, 0=Game Boy Classic
+    ; Bit      5: 1 = Game Boy Color, 0 = Game Boy Classic
+    ; Bit    6-7: Joystick mapping: 00 = Standard, Fire=A
+    ;                               01 = Standard, Fire=B
+    ;                               10 = Up=A, Fire=B
+    ;                               11 = Up=B, Fire=A
 
 GBC$CSR_RESET       .EQU 0x0001
 GBC$CSR_UN_RESET    .EQU 0xFFFE
@@ -31,6 +35,9 @@ GBC$CSR_JOYSTICK    .EQU 0x0010
 GBC$CSR_UN_JOY      .EQU 0xFFEF
 GBC$CSR_GBC         .EQU 0x0020
 GBC$CSR_UN_GBC      .EQU 0xFFDF
+GBC$CSR_JOYMAP_CLR  .EQU 0xFF3F                 ; AND mask to clear joy map
+GBC$CSR_JOYMAP_SHL  .EQU 0x0006                 ; SHL amount to joy map
+
 
 ; ----------------------------------------------------------------------------
 ; Window selector for MEM_CARTRIDGE_WIN

@@ -1517,14 +1517,26 @@ _OPTMGK_RET     DECRB
 ;     in case of single selected items: 0=not selected, 1=selected
 OPTM_CALLBACK   INCRB
 
+                ; Game Boy Mode selection: Color vs. Classic
                 CMP     OPT_MENU_MODE, R8       ; Game Boy mode selection?
                 RBRA    _OPTM_CB_1, !Z          ; no
                 MOVE    GBC$CSR, R0
                 XOR     GBC$CSR_GBC, @R0        ; flip mode
                 RBRA    _OPTMGK_RET, 1
 
+                ; Joystick mapping
 _OPTM_CB_1      CMP     OPT_MENU_JOY, R8        ; Joystick mapping?
-                RBRA    _OPTM_CB_RET, !Z        ; no                
+                RBRA    _OPTM_CB_RET, !Z        ; no
+                AND     0xFFFD, SR              ; clear X register for SHL
+                SHL     GBC$CSR_JOYMAP_SHL, R9  ; shift sel. map to corr. pos.
+                MOVE    GBC$CSR, R0             ; clear old mapping setting
+                AND     GBC$CSR_JOYMAP_CLR, @R0
+                OR      R9, @R0                 ; set new mapping
+
+                ; DEBUG
+                MOVE    R9, R8
+                SYSCALL(puthex, 1)
+                SYSCALL(crlf, 1)
 
 _OPTM_CB_RET    DECRB
                 RET              
