@@ -99,4 +99,9 @@ screenshot.
 
 The setting `Up=A, Fire=B` works perfectly for Super Mario Land and
 Castlevania and all other games that are having this "A to jump, B to fire"
-kind of logic.
+kind of logic: When you move the joystick up, the "A" button is
+transmitted. In parallel also the press of the GameBoy joypad's
+"up" direction is transmitted in this case, so that in a game like
+Castlevania you can jump when you move the joystick upwards as
+well as climb upwards. The joystick movements are feeling as natural as
+you would expect it.
