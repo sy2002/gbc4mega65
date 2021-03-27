@@ -65,6 +65,25 @@ Constraints of the current Beta version 0.7
 * In some games, there is a flickering rightmost column and/or bottom scanline
 * Only shows ~200 files per folder
 
+Getting started
+---------------
+
+After you start the core, you see the help menu that explains you how to use
+the core. Here are the most important hints:
+
+* Choose a Game Boy ROM (normally having the file extension `.gb`) or a
+  Game Boy Color ROM (`.gbc`) from any folder of your SD card using
+  the cursor keys and <kbd>Return</kbd> to navigate.
+  
+* Use <kbd>Space</kbd> as the Game Boy's "Start" key and <kbd>Return</kbd>
+  as the Game Boy's "Select" key. <kbd>Left Shift</kbd> is Game Boy's "A"
+  and <kbd>Mega 65</kbd> is Game Boy's "B". The cursor keys of the MEGA65
+  are the Game Boy's joypad.
+  
+* Press <kbd>Help</kbd> to open and to close the Options Menu, where you
+  can switch between Game Boy Classic and Game Boy Color and also
+  configure the [joystick mapping](#joystick-usage-and-mapping).
+
 Some demo pictures
 ------------------
 
