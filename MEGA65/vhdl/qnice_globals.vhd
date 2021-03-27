@@ -25,11 +25,11 @@ constant ROM_FILE             : string    := "../QNICE/osm_rom.rom";
 -- for osm_rom.rom we assume that 32 is enough
 constant SHADOW_REGFILE_SIZE  : natural   := 32;
 
--- size of the block RAM in 16bit words: should be 32768 for standard QNICE
--- for osm_rom.rom, 5k words is enough
--- set to 256 during development for tracability during simulation
-constant BLOCK_RAM_SIZE       : natural   := 5120;
+-- size of the block RAM in 16bit words:
+--   standard QNICE (development mode): 32768
+--   embedded mode (osm_rom.rom):       12288
 --constant BLOCK_RAM_SIZE       : natural   := 32768;
+constant BLOCK_RAM_SIZE       : natural   := 12288;
 
 -- UART is in 8-N-1 mode
 -- assuming a 100 MHz system clock, set the baud rate by selecting the following divisors according to this formula:

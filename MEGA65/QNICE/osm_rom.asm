@@ -1555,7 +1555,7 @@ _OPTM_CB_RET    DECRB
 ; ----------------------------------------------------------------------------
 ; Variables and Stack: Need to be located in RAM
 ;
-; 5k words of RAM are needed: The amount of RAM needed by this firmware needs
+; 12k words of RAM are needed: The amount of RAM needed by this firmware needs
 ; to be consistent with the amount of RAM provided in the hardware as
 ; specified in qnice_globals.vhd
 ; ----------------------------------------------------------------------------
@@ -1593,21 +1593,33 @@ FB_ITEMS_SHOWN  .BLOCK 1
 ; variables needed by sub-routines
 LCBLKLN_STATUS  .BLOCK 1
 
+; in DEVELOPMENT mode: 4k of heap, so that we are not colliding with
+; MEM_CARTRIDGE_WIN at 0xB000
+#ifndef RELEASE
+
 ; heap for storing the sorted structure of the current directory entries
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 4096                       ; 4k words of the 5k words RAM
+HEAP_SIZE       .EQU 4096
 HEAP            .BLOCK 1
 
-#ifdef RELEASE
+; in RELEASE mode: 
+#else
 
-; the monitor variables use 20 words, round to 32 for being safe and subtract
-; it from 1024 so that the overall 5k-word RAM size is sufficient to
-; accomodate HEAP_SIZE plus the bunch of internal variables plus something
-; around 662 words of remaining stack (use osm_rom.lis to calculate the exact
-; value by subtracting the address of HEAP from the addr. of VAR$STACK_START)
-                .ORG    0x93E0                  ; TODO: automate calculation
+HEAP_SIZE       .EQU 11264
+HEAP            .BLOCK 1
+
+; The monitor variables use 20 words, round to 32 for being safe and subtract
+; it from B000 because this is at the moment the highest address that we
+; can use as RAM: 0xAFE0
+; The stack starts at 0xAFE0 (search var VAR$STACK_START in osm_rom.lis to
+; calculate the address). To see, if there is enough room for the stack
+; given the HEAP_SIZE do this calculation: Add 11.264 words to HEAP which
+; is currently 0x8152 and subtract the result from 0xAFCE. This yields
+; currently a stack size of 654 words, which is sufficient for this program.
+
+                .ORG    0xAFE0                  ; TODO: automate calculation
 #include "monitor_vars.asm"
 
 #endif
