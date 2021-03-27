@@ -97,8 +97,15 @@ START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 MOVE    GBC$OPT_DX, R11
                 MOVE    GBC$OPT_DY, R12
                 RSUB    OPTM_INIT, 1
-                MOVE    OPTM_SELECTED, R8       ; default selection
+                MOVE    OPTM_SELECTED, R8       ; default selector bar
                 MOVE    OPT_MENU_START, @R8
+                MOVE    OPT_MENU_STDSEL, R8     ; default selections/state
+                MOVE    OPT_MENU_CURSEL, R9
+                XOR     R10, R10
+OPTM_INITLOOP   MOVE    @R8++, @R9++
+                ADD     1, R10
+                CMP     OPT_MENU_SIZE, R10
+                RBRA    OPTM_INITLOOP, !Z
 
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
@@ -1400,6 +1407,7 @@ OPT_MENU_GROUPS .DW 0, 0
                 .DW 0
                 .DW OPTM_CLOSE
 
+OPT_MENU_STDSEL .DW 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0
 OPT_MENU_LINES  .DW 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0
 
 OPT_MENU_DATA   .DW     CLRSCR, PRINTFRAME, PRINTSTRSCR, PRINTSTRSCRXY
@@ -1408,7 +1416,7 @@ OPT_MENU_DATA   .DW     CLRSCR, PRINTFRAME, PRINTSTRSCR, PRINTSTRSCRXY
                 .DW     CHR_OPT_SEL, 0
                 .DW     OPT_MENU_SIZE, OPT_MENU_ITEMS
                 .DW     OPT_MENU_GROUPS
-                .DW     OPT_MENU_STDSEL ; is in RAM to remember last settins
+                .DW     OPT_MENU_CURSEL ; is in RAM to remember last settings
                 .DW     OPT_MENU_LINES
 
 ; Draws a horizontal line/menu separator at the y-pos given in R8, dx in R9
@@ -1563,7 +1571,7 @@ _OPTM_CB_RET    DECRB
 ; variables for Options menu
 #include "menu_vars.asm"
 OPTM_SELECTED   .BLOCK 1                        ; last options menu selection
-OPT_MENU_STDSEL .DW 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0
+OPT_MENU_CURSEL .BLOCK OPT_MENU_SIZE            ; current options menu state
 
 ; device- and file handling
 SD_DEVHANDLE    .BLOCK FAT32$DEV_STRUCT_SIZE    ; SD card device handle
