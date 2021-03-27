@@ -7,7 +7,7 @@ Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
 
 Learn more about where to [download and how to get started](#Installation).
 
-**WARNING: Alpha version 0.6 - See constraints below**
+**WARNING: Beta version 0.7 - See constraints below**
 
 ![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg)
 
@@ -30,10 +30,10 @@ Features
 
 * Game Boy and Game Boy Color support
 * Super Gameboy Support - Borders, Palettes and Multiplayer (Work-in-Progress)
-* Joystick support including special mappings so that you can for example play
-  Super Mario Land via joystick (Work-in-Progress)
-* Custom Palette Loading (Work-in-Progress)
 * Convenient game cartridge browser which supports long filenames
+* Joystick support including special mappings so that you can for example play
+  Super Mario Land via joystick
+* Custom Palette Loading (Work-in-Progress)
 
 Installation
 ------------
@@ -54,7 +54,7 @@ Installation
    go to https://gbdev.gg8.se/files/roms/bootroms/ and and download
    `dmg_boot.bin` and `cgb_bios.bin` and place both in the `/gbc` folder.
 
-Constraints of the current Alpha version 0.6
+Constraints of the current Beta version 0.7
 --------------------------------------------
 
 * MEGA65 R2 machines: Maximum cartridge size: 256kB
@@ -80,3 +80,9 @@ Some demo pictures
 Clarification: These screenshots are just for illustration purposes.
 This repository does not contain any copyrighted ROMs
 such as BIOS ROMs or game ROMs.
+
+Joystick mapping
+----------------
+
+![gbc07](doc/gbc07.jpg)
+
