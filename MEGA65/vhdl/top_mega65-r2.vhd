@@ -58,13 +58,13 @@ port (
    joy_1_down_n   : in std_logic;
    joy_1_left_n   : in std_logic;
    joy_1_right_n  : in std_logic;
-   joy_1_fire_n   : in std_logic
-   
---   joy_2_up_n     : in std_logic;
---   joy_2_down_n   : in std_logic;
---   joy_2_left_n   : in std_logic;
---   joy_2_right_n  : in std_logic;
---   joy_2_fire_n   : in std_logic;
+   joy_1_fire_n   : in std_logic;
+      
+   joy_2_up_n     : in std_logic;
+   joy_2_down_n   : in std_logic;
+   joy_2_left_n   : in std_logic;
+   joy_2_right_n  : in std_logic;
+   joy_2_fire_n   : in std_logic
             
    -- HDMI via ADV7511
 --   hdmi_vsync     : out std_logic;
@@ -171,6 +171,11 @@ signal dbnce_joy1_down_n   : std_logic;
 signal dbnce_joy1_left_n   : std_logic;
 signal dbnce_joy1_right_n  : std_logic;
 signal dbnce_joy1_fire_n   : std_logic;
+signal dbnce_joy2_up_n     : std_logic;
+signal dbnce_joy2_down_n   : std_logic;
+signal dbnce_joy2_left_n   : std_logic;
+signal dbnce_joy2_right_n  : std_logic;
+signal dbnce_joy2_fire_n   : std_logic;
 
 -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
 signal m65_joystick        : std_logic_vector(4 downto 0);
@@ -638,11 +643,27 @@ begin
          dbnce_joy1_down_n    => dbnce_joy1_down_n,
          dbnce_joy1_left_n    => dbnce_joy1_left_n,
          dbnce_joy1_right_n   => dbnce_joy1_right_n,
-         dbnce_joy1_fire_n    => dbnce_joy1_fire_n
+         dbnce_joy1_fire_n    => dbnce_joy1_fire_n,
+         
+         joy_2_up_n           => joy_2_up_n,
+         joy_2_down_n         => joy_2_down_n, 
+         joy_2_left_n         => joy_2_left_n, 
+         joy_2_right_n        => joy_2_right_n, 
+         joy_2_fire_n         => joy_2_fire_n, 
+           
+         dbnce_joy2_up_n      => dbnce_joy2_up_n,
+         dbnce_joy2_down_n    => dbnce_joy2_down_n,
+         dbnce_joy2_left_n    => dbnce_joy2_left_n,
+         dbnce_joy2_right_n   => dbnce_joy2_right_n,
+         dbnce_joy2_fire_n    => dbnce_joy2_fire_n         
       );
       
    -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
-   m65_joystick <= dbnce_joy1_fire_n & dbnce_joy1_up_n & dbnce_joy1_down_n & dbnce_joy1_left_n & dbnce_joy1_right_n;
+   m65_joystick <= (dbnce_joy1_fire_n  and dbnce_joy2_fire_n) & 
+                   (dbnce_joy1_up_n    and dbnce_joy2_up_n)   &
+                   (dbnce_joy1_down_n  and dbnce_joy2_down_n) &
+                   (dbnce_joy1_left_n  and dbnce_joy2_left_n) &
+                   (dbnce_joy1_right_n and dbnce_joy2_right_n);
 
    -- SVGA mode 800 x 600 @ 60 Hz  
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)      

@@ -178,31 +178,28 @@ begin
       -- joystick input vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
       joystick_m(JM_LEFT)  <= joystick(1);
       joystick_m(JM_RIGHT) <= joystick(0);
+      joystick_m(JM_UP)    <= joystick(3);      
       joystick_m(JM_DOWN)  <= joystick(2);
       
       -- low active; make sure this mapping is consistent to gbc.asm      
       case joy_map is
          -- 00 = Standard, Fire=A      
          when "00" =>
-            joystick_m(JM_UP) <= joystick(3);
             joystick_m(JM_A)  <= joystick(4);
             joystick_m(JM_B)  <= '1';
             
          -- 01 = Standard, Fire=B
          when "01" =>
-            joystick_m(JM_UP) <= joystick(3);
             joystick_m(JM_A)  <= '1';
             joystick_m(JM_B)  <= joystick(4);
             
          -- 10 = Up=A, Fire=B
          when "10" =>   
-            joystick_m(JM_UP) <= '1';
             joystick_m(JM_A)  <= joystick(3);
             joystick_m(JM_B)  <= joystick(4);
             
          -- 11 = Up=B, Fire=A
          when "11" =>
-            joystick_m(JM_UP) <= '1';
             joystick_m(JM_A)  <= joystick(4);
             joystick_m(JM_B)  <= joystick(3);            
       end case;

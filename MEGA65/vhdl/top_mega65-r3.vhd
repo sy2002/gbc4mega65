@@ -58,13 +58,13 @@ port (
    joy_1_down_n   : in std_logic;
    joy_1_left_n   : in std_logic;
    joy_1_right_n  : in std_logic;
-   joy_1_fire_n   : in std_logic
+   joy_1_fire_n   : in std_logic;
    
---   joy_2_up_n     : in std_logic;
---   joy_2_down_n   : in std_logic;
---   joy_2_left_n   : in std_logic;
---   joy_2_right_n  : in std_logic;
---   joy_2_fire_n   : in std_logic;
+   joy_2_up_n     : in std_logic;
+   joy_2_down_n   : in std_logic;
+   joy_2_left_n   : in std_logic;
+   joy_2_right_n  : in std_logic;
+   joy_2_fire_n   : in std_logic
                
    -- Built-in HyperRAM
 --   hr_d           : inout unsigned(7 downto 0);    -- Data/Address
@@ -144,16 +144,23 @@ signal vga_vs_int          : std_logic;
 signal pcm_audio_left      : std_logic_vector(15 downto 0);
 signal pcm_audio_right     : std_logic_vector(15 downto 0);
 
--- debounced signals for the reset button and the joysticks; joystick signals are also inverted
+-- debounced signals for the reset button and the joysticks
 signal dbnce_reset_n       : std_logic;
 signal dbnce_joy1_up_n     : std_logic;
 signal dbnce_joy1_down_n   : std_logic;
 signal dbnce_joy1_left_n   : std_logic;
 signal dbnce_joy1_right_n  : std_logic;
 signal dbnce_joy1_fire_n   : std_logic;
+signal dbnce_joy2_up_n     : std_logic;
+signal dbnce_joy2_down_n   : std_logic;
+signal dbnce_joy2_left_n   : std_logic;
+signal dbnce_joy2_right_n  : std_logic;
+signal dbnce_joy2_fire_n   : std_logic;
+
+-- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+signal m65_joystick        : std_logic_vector(4 downto 0);
 
 -- Game Boy
-signal is_CGB              : std_logic;
 signal gbc_bios_addr       : std_logic_vector(11 downto 0);
 signal gbc_bios_data       : std_logic_vector(7 downto 0);
 
@@ -203,10 +210,16 @@ signal cartrom_data        : std_logic_vector(7 downto 0);
 -- the direction keys or the other buttons
 signal joypad_p54          : std_logic_vector(1 downto 0);
 signal joypad_data         : std_logic_vector(3 downto 0);
+signal joypad_data_i       : std_logic_vector(3 downto 0);
 
--- QNICE control signals
+-- QNICE control signals (see also gbc.asm for more details)
 signal qngbc_reset         : std_logic;
 signal qngbc_pause         : std_logic;
+signal qngbc_keyboard      : std_logic;
+signal qngbc_joystick      : std_logic;
+signal qngbc_color         : std_logic;
+signal qngbc_joy_map       : std_logic_vector(1 downto 0);
+
 signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
 signal qngbc_bios_we       : std_logic;
 signal qngbc_bios_data_in  : std_logic_vector(7 downto 0);
@@ -263,12 +276,14 @@ begin
    --i_reset           <= not dbnce_reset_n;   
    i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
 
-   is_CGB <= '1';
-
    -- Cartridge header flags
    -- Infos taken from: https://gbdev.io/pandocs/#the-cartridge-header and from MiSTer's mbc.sv
    isGBC_Game <= true when cart_cgb_flag = x"80" or cart_cgb_flag = x"C0" else false;
    isSGB_Game <= true when cart_sgb_flag = x"03" and cart_old_licensee = x"33" else false;
+         
+   -- Switch keyboard and joystick on/off according to the QNICE control and status register (see gbc.asm)
+   -- joypad_data is active low
+   joypad_data <= joypad_data_i when qngbc_keyboard = '1' else (others => '1');
          
    -- The actual machine (GB/GBC core)
    gameboy : entity work.gb
@@ -282,7 +297,7 @@ begin
                   
          fast_boot               => i_fast_boot,
          joystick                => i_joystick,
-         isGBC                   => is_CGB,
+         isGBC                   => qngbc_color,
          isGBC_game              => isGBC_Game,
       
          -- Cartridge interface: Connects with the Memory Bank Controller (MBC) 
@@ -547,7 +562,7 @@ begin
             end if;
          end if;
          
-         if (is_CGB = '0') then
+         if (qngbc_color = '0') then
             case (lcd_data(1 downto 0)) is
                when "00"   => pixel_out_data <= "11111" & "11111" & "11111";
                when "01"   => pixel_out_data <= "10000" & "10000" & "10000";
@@ -561,7 +576,7 @@ begin
       end if;
    end process; 
                           
-   -- MEGA65 keyboard
+   -- MEGA65 keyboard and joystick controller
    kbd : entity work.keyboard
       generic map
       (
@@ -573,8 +588,11 @@ begin
          kio8              => kb_io0,
          kio9              => kb_io1,
          kio10             => kb_io2,
+         joystick          => m65_joystick,
+         joy_map           => qngbc_joy_map,
+         
          p54               => joypad_p54,
-         joypad            => joypad_data,
+         joypad            => joypad_data_i,
          full_matrix       => qngbc_keyb_matrix
       );
    
@@ -605,8 +623,27 @@ begin
          dbnce_joy1_down_n    => dbnce_joy1_down_n,
          dbnce_joy1_left_n    => dbnce_joy1_left_n,
          dbnce_joy1_right_n   => dbnce_joy1_right_n,
-         dbnce_joy1_fire_n    => dbnce_joy1_fire_n
+         dbnce_joy1_fire_n    => dbnce_joy1_fire_n,
+         
+         joy_2_up_n           => joy_2_up_n,
+         joy_2_down_n         => joy_2_down_n, 
+         joy_2_left_n         => joy_2_left_n, 
+         joy_2_right_n        => joy_2_right_n, 
+         joy_2_fire_n         => joy_2_fire_n, 
+           
+         dbnce_joy2_up_n      => dbnce_joy2_up_n,
+         dbnce_joy2_down_n    => dbnce_joy2_down_n,
+         dbnce_joy2_left_n    => dbnce_joy2_left_n,
+         dbnce_joy2_right_n   => dbnce_joy2_right_n,
+         dbnce_joy2_fire_n    => dbnce_joy2_fire_n         
       );
+
+   -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+   m65_joystick <= (dbnce_joy1_fire_n  and dbnce_joy2_fire_n) & 
+                   (dbnce_joy1_up_n    and dbnce_joy2_up_n)   &
+                   (dbnce_joy1_down_n  and dbnce_joy2_down_n) &
+                   (dbnce_joy1_left_n  and dbnce_joy2_left_n) &
+                   (dbnce_joy1_right_n and dbnce_joy2_right_n);
 
    -- SVGA mode 800 x 600 @ 60 Hz  
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)      
@@ -716,6 +753,10 @@ begin
          -- Game Boy control
          gbc_reset         => qngbc_reset,
          gbc_pause         => qngbc_pause,
+         gbc_keyboard      => qngbc_keyboard,
+         gbc_joystick      => qngbc_joystick,
+         gbc_color         => qngbc_color,
+         gbc_joy_map       => qngbc_joy_map,
          
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr     => qngbc_bios_addr,

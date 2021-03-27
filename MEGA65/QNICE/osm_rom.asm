@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#undef RELEASE
+#define RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -576,7 +576,7 @@ _GR_HELP_2      MOVE    GBC$CSR, R8
 ; Strings
 ; ----------------------------------------------------------------------------
 
-STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.7\nMiSTer port done by sy2002 in 2021\n\n"
+STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version <not-released>\nMiSTer port done by sy2002 in 2021\n\n"
 
 STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
@@ -1532,11 +1532,6 @@ _OPTM_CB_1      CMP     OPT_MENU_JOY, R8        ; Joystick mapping?
                 MOVE    GBC$CSR, R0             ; clear old mapping setting
                 AND     GBC$CSR_JOYMAP_CLR, @R0
                 OR      R9, @R0                 ; set new mapping
-
-                ; DEBUG
-                MOVE    R9, R8
-                SYSCALL(puthex, 1)
-                SYSCALL(crlf, 1)
 
 _OPTM_CB_RET    DECRB
                 RET              
