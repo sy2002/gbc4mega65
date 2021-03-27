@@ -62,9 +62,6 @@ Constraints of the current Beta version 0.7
 * Only plays cartridges that do not need extra RAM
   in the cartridge ("Cartridge RAM")
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
-* No joystick support
-* No options menu, yet (no configuration possibilities such as
-  "switch to Game Boy classic without color", palette switching, ...)
 * In some games, there is a flickering rightmost column and/or bottom scanline
 * Only shows ~200 files per folder
 
