@@ -84,5 +84,6 @@ such as BIOS ROMs or game ROMs.
 Joystick mapping
 ----------------
 
-![gbc07](doc/gbc07.jpg)
+| Games like Castlevania and Super Mario | ![gbc07](doc/gbc07.jpg)) |
+
 
