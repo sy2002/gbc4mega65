@@ -81,12 +81,22 @@ Clarification: These screenshots are just for illustration purposes.
 This repository does not contain any copyrighted ROMs
 such as BIOS ROMs or game ROMs.
 
-Joystick mapping
-----------------
+Joystick usage and mapping
+--------------------------
 
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed 
+Basic usage: Just plug-in your joystick in port #1 or #2 of the MEGA65. Both
+ports are working. By default the fire button of the joystick is mapped to the
+Game Boy's A button, which should be fine for many games.
+
+Certain games such as Castlevania and Super Mario Land are using the A button
+to jump. When using a joystick, you would expect that moving the joystick up
+would mean jumping. For this kind of games, this core supports a feature to
+change the joystick's mapping. Press the <kbd>Help</kbd> key while the game
+is running and choose `Up=A, Fire=B` as shown on the following example
+screenshot.
 
 ![gbc07](doc/gbc07.jpg)
 
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet. Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed 
-
+The setting `Up=A, Fire=B` works perfectly for Super Mario Land and
+Castlevania and all other games that are having this "A to jump, B to fire"
+kind of logic.
