@@ -29,11 +29,9 @@ Features
 --------
 
 * Game Boy and Game Boy Color support
-* Super Gameboy Support - Borders, Palettes and Multiplayer (Work-in-Progress)
 * Convenient game cartridge browser which supports long filenames
 * Joystick support including special mappings so that you can for example play
   Super Mario Land via joystick
-* Custom Palette Loading (Work-in-Progress)
 
 Installation
 ------------
@@ -63,7 +61,6 @@ Constraints of the current Beta version 0.7
   in the cartridge ("Cartridge RAM")
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
 * In some games, there is a flickering rightmost column and/or bottom scanline
-* Only shows ~200 files per folder
 
 Getting started
 ---------------
