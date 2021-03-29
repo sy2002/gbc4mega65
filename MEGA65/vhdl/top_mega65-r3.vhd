@@ -174,9 +174,9 @@ signal lcd_vsync           : std_logic;
 signal lcd_vsync_1         : std_logic := '0';
 signal pixel_out_x         : integer range 0 to GB_DX - 1;
 signal pixel_out_y         : integer range 0 to GB_DY - 1;
-signal pixel_out_data      : std_logic_vector(14 downto 0);  
+signal pixel_out_data      : std_logic_vector(23 downto 0);  
 signal pixel_out_we        : std_logic := '0';
-signal frame_buffer_data   : std_logic_vector(14 downto 0);
+signal frame_buffer_data   : std_logic_vector(23 downto 0);
  
  -- speed control
 signal sc_ce               : std_logic;
@@ -219,6 +219,7 @@ signal qngbc_keyboard      : std_logic;
 signal qngbc_joystick      : std_logic;
 signal qngbc_color         : std_logic;
 signal qngbc_joy_map       : std_logic_vector(1 downto 0);
+signal qngbc_color_mode    : std_logic;
 
 signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
 signal qngbc_bios_we       : std_logic;
@@ -487,7 +488,7 @@ begin
       generic map
       ( 
          ADDR_WIDTH  => 15,
-         DATA_WIDTH  => 15
+         DATA_WIDTH  => 24
       )
       port map
       (
@@ -540,6 +541,11 @@ begin
 
    -- Generate the signals necessary to store the LCD output into the frame buffer
    lcd_to_pixels : process(main_clk)
+      variable r5, g5, b5                : unsigned(4 downto 0);
+      variable r8, g8, b8                : std_logic_vector(7 downto 0);
+      variable r10, g10, b10             : unsigned(9 downto 0);
+      variable r10_min, g10_min, b10_min : unsigned(9 downto 0);
+      variable gray                      : unsigned(7 downto 0);
    begin
       if rising_edge(main_clk) then
          pixel_out_we <= '0';
@@ -562,16 +568,54 @@ begin
             end if;
          end if;
          
+         -- grayscale values taken from MiSTer's lcd.v
          if (qngbc_color = '0') then
             case (lcd_data(1 downto 0)) is
-               when "00"   => pixel_out_data <= "11111" & "11111" & "11111";
-               when "01"   => pixel_out_data <= "10000" & "10000" & "10000";
-               when "10"   => pixel_out_data <= "01000" & "01000" & "01000";
-               when "11"   => pixel_out_data <= "00000" & "00000" & "00000";
-               when others => pixel_out_data <= "00000" & "00000" & "11111";
+               when "00"   => gray := to_unsigned(252, 8);
+               when "01"   => gray := to_unsigned(168, 8);
+               when "10"   => gray := to_unsigned(96, 8);
+               when "11"   => gray := x"00";
+               when others => gray := x"00";
             end case;
+            pixel_out_data <= std_logic_vector(gray) & std_logic_vector(gray) & std_logic_vector(gray);
          else
-            pixel_out_data <= lcd_data(4 downto 0) & lcd_data(9 downto 5) & lcd_data(14 downto 10);
+            -- Game Boy's color output is only 5-bit
+            r5 := unsigned(lcd_data(4 downto 0));
+            g5 := unsigned(lcd_data(9 downto 5));
+            b5 := unsigned(lcd_data(14 downto 10));
+
+            -- color grading / lcd emulation, taken from:
+            -- https://web.archive.org/web/20210223205311/https://byuu.net/video/color-emulation/
+            --
+            -- R = (r * 26 + g *  4 + b *  2);
+            -- G = (         g * 24 + b *  8);
+            -- B = (r *  6 + g *  4 + b * 22);
+            -- R = min(960, R) >> 2;
+            -- G = min(960, G) >> 2;
+            -- B = min(960, B) >> 2;               
+
+            r10 := (r5 * 26) + (g5 *  4) + (b5 *  2);
+            g10 :=             (g5 * 24) + (b5 *  8);
+            b10 := (r5 *  6) + (g5 *  4) + (b5 * 22);
+            
+            r10_min := MINIMUM(960, r10); -- just for being on the safe side, we are using separate vars. for the MINIMUM
+            g10_min := MINIMUM(960, g10);
+            b10_min := MINIMUM(960, b10);
+                        
+            -- fully saturated color mode (raw rgb): repeat bit pattern to convert 5-bit color to 8-bit color according to byuu.net
+            if qngbc_color_mode = '0' then
+               r8 := std_logic_vector(r5 & r5(4 downto 2));
+               g8 := std_logic_vector(g5 & g5(4 downto 2));
+               b8 := std_logic_vector(b5 & b5(4 downto 2)); 
+               
+            -- LCD Emulation mode according to byuu.net                      
+            else
+               r8 := std_logic_vector(r10_min(9 downto 2)); -- taking 9 downto 2 equals >> 2
+               g8 := std_logic_vector(g10_min(9 downto 2));
+               b8 := std_logic_vector(b10_min(9 downto 2));
+            end if;
+
+            pixel_out_data <= r8 & g8 & b8;      
          end if;         
       end if;
    end process; 
@@ -683,9 +727,9 @@ begin
          if vga_disp_en then
             -- Game Boy output
             if vga_col < GB_DX * GB_TO_VGA_SCALE and vga_row < GB_DY * GB_TO_VGA_SCALE then
-               VGA_RED   <= frame_buffer_data(14 downto 10) & "000";
-               VGA_GREEN <= frame_buffer_data(9 downto 5) & "000";
-               VGA_BLUE  <= frame_buffer_data(4 downto 0) & "000";
+               VGA_RED   <= frame_buffer_data(23 downto 16);
+               VGA_GREEN <= frame_buffer_data(15 downto 8);
+               VGA_BLUE  <= frame_buffer_data(7 downto 0);
             end if;       
          
             -- On-Screen-Menu (OSM) output
@@ -757,6 +801,7 @@ begin
          gbc_joystick      => qngbc_joystick,
          gbc_color         => qngbc_color,
          gbc_joy_map       => qngbc_joy_map,
+         gbc_color_mode    => qngbc_color_mode, 
          
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr     => qngbc_bios_addr,
