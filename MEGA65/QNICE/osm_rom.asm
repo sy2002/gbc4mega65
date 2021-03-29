@@ -220,7 +220,7 @@ BROWSE_SETUP2   MOVE    FB_ITEMS_SHOWN, R8      ; exist. pers. # shown items?
 DRAW_DIRLIST    RSUB    CLRINNER, 1
                 MOVE    R3, R8                  ; R8: pos in LL to show list
                 MOVE    R2, R9                  ; R9: amount if lines to show
-                RSUB    SHOW_DIR, 1             ; print directory listing
+                RSUB    SHOW_DIR, 1             ; print directory listing         
 
                 MOVE    FB_ITEMS_SHOWN, R8      ; do not add SHOW_DIR result..
                 CMP     0, @R8                  ; ..if R5 was restored using..
@@ -1120,7 +1120,7 @@ _PS_L6          MOVE    R4, @R8++               ; no: print char
 _PS_L2          MOVE    @R0++, R5               ; next char
                 CMP     0x000A, R5              ; is it a LF?
                 RBRA    _PS_L3, Z               ; yes: process
-                MOVE    0x000D, @R8++           ; no: print original chard
+                MOVE    0x000D, @R8++           ; no: print original char
                 MOVE    R5, @R8++
                 RBRA    _PS_L1, 1
 
@@ -1401,8 +1401,8 @@ OPT_MENU_ITEMS  .ASCII_P " Game Boy Mode\n"
                 .ASCII_P "\n"
                 .ASCII_P " Color Mode\n"
                 .ASCII_P "\n"
-                .ASCII_P " Original\n"
-                .ASCII_P " Alternative\n"
+                .ASCII_P " Fully Saturated\n"
+                .ASCII_P " LCD Emulation\n"
                 .ASCII_P "\n"
                 .ASCII_W " Close Menu\n"
 
@@ -1550,7 +1550,7 @@ _OPTM_CB_1      CMP     OPT_MENU_JOY, R8        ; Joystick mapping?
                 OR      R9, @R0                 ; set new mapping
                 RBRA    _OPTMGK_RET, 1
 
-                ; Color mode: Original vs. Alternative
+                ; Color mode: Fully Saturated (Raw RGB) vs. LCD Emulation
 _OPTM_CB_2      CMP     OPT_MENU_COL, R8        ; Color mode?
                 RBRA    _OPTM_CB_RET, !Z        ; no
                 AND     0xFFFD, SR              ; clear X register for SHL
@@ -1619,14 +1619,14 @@ LCBLKLN_STATUS  .BLOCK 1
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 4096
+HEAP_SIZE       .EQU 6144
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 11k of heap which leads to a better user experience when
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 10240
+HEAP_SIZE       .EQU 11264
 HEAP            .BLOCK 1
 
 ; The monitor variables use 20 words, round to 32 for being safe and subtract

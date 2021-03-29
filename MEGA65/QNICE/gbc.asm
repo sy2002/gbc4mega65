@@ -22,7 +22,7 @@ GBC$CSR             .EQU 0xFFE0
     ;                               01 = Standard, Fire=B
     ;                               10 = Up=A, Fire=B
     ;                               11 = Up=B, Fire=A
-    ; Bit      8: Color mode: 0=Original, 1=Alternative
+    ; Bit      8: Color mode: 0=Fuly Saturated (Raw RGB), 1=LCD Emulation
 
 GBC$CSR_RESET       .EQU 0x0001
 GBC$CSR_UN_RESET    .EQU 0xFFFE

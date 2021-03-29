@@ -55,7 +55,7 @@ port (
    gbc_joystick      : buffer std_logic;     -- connect the M65 joystick ports with the Game Boy
    gbc_color         : buffer std_logic;     -- 1=Game Boy Color; 0=Game Boy Classic
    gbc_joy_map       : buffer std_logic_vector(1 downto 0); -- see gbc.asm for the mapping
-   gbc_color_mode    : buffer std_logic;     -- 0=Original; 1=Corrected 
+   gbc_color_mode    : buffer std_logic;     -- 0=Fully Saturated; 1=LCD Emulation 
 
    -- Interfaces to Game Boy's RAMs (MMIO):
    gbc_bios_addr     : out std_logic_vector(11 downto 0);
@@ -478,14 +478,14 @@ begin
    begin
       if falling_edge(clk50) then
          if reset_ctl = '1' then
-            gbc_reset      <= '1';
-            gbc_pause      <= '0';
-            gbc_osm        <= '1';
-            gbc_keyboard   <= '1';
-            gbc_joystick   <= '1';
-            gbc_color      <= '1';
-            gbc_joy_map    <= "00";
-            gbc_color_mode <= '0';
+            gbc_reset      <= '1';  -- Default: System is in reset state and therefore halted
+            gbc_pause      <= '0';  -- Default: The clock is not paused
+            gbc_osm        <= '1';  -- Default: The On-Screen-Menu is ON
+            gbc_keyboard   <= '1';  -- Default: The keyboard of the Game Boy is ON
+            gbc_joystick   <= '1';  -- Default: The joystick of the Game Boy is ON
+            gbc_color      <= '1';  -- Default: Game Boy Color, even for Game Boy Classic games
+            gbc_joy_map    <= "00"; -- Default: Standard Joystick, Fire Button=A
+            gbc_color_mode <= '0';  -- Default: Fully saturated colors (raw RGB output)
             osm_xy    <= x"0000";
             osm_dxdy  <= std_logic_vector(to_unsigned(CHARS_DX * 256 + CHARS_DY, 16));
          else

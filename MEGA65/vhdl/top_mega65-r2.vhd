@@ -561,11 +561,11 @@ begin
 
    -- Generate the signals necessary to store the LCD output into the frame buffer
    lcd_to_pixels : process(main_clk)
-      variable r5, g5, b5           : unsigned(4 downto 0);
-      variable r5_32, g5_32, b5_32  : unsigned(31 downto 0);
-      variable r8, g8, b8           : std_logic_vector(7 downto 0);
-      variable r10, g10, b10        : unsigned(31 downto 0);
-      variable gray                 : unsigned(7 downto 0);
+      variable r5, g5, b5                : unsigned(4 downto 0);
+      variable r8, g8, b8                : std_logic_vector(7 downto 0);
+      variable r10, g10, b10             : unsigned(9 downto 0);
+      variable r10_min, g10_min, b10_min : unsigned(9 downto 0);
+      variable gray                      : unsigned(7 downto 0);
    begin
       if rising_edge(main_clk) then
          pixel_out_we <= '0';
@@ -588,7 +588,7 @@ begin
             end if;
          end if;
                            
-         -- color handling algorithm and grayscale values taken from MiSTer's lcd.v
+         -- grayscale values taken from MiSTer's lcd.v
          if (qngbc_color = '0') then
             case (lcd_data(1 downto 0)) is            
                when "00"   => gray := to_unsigned(252, 8);
@@ -599,29 +599,40 @@ begin
             end case;
             pixel_out_data <= std_logic_vector(gray) & std_logic_vector(gray) & std_logic_vector(gray);
          else
+            -- Game Boy's color output is only 5-bit
             r5 := unsigned(lcd_data(4 downto 0));
             g5 := unsigned(lcd_data(9 downto 5));
             b5 := unsigned(lcd_data(14 downto 10));
 
-            r5_32 := x"000000" & "000" & r5;
-            g5_32 := x"000000" & "000" & g5;
-            b5_32 := x"000000" & "000" & b5;
+            -- color grading / lcd emulation, taken from:
+            -- https://web.archive.org/web/20210223205311/https://byuu.net/video/color-emulation/
+            --
+            -- R = (r * 26 + g *  4 + b *  2);
+            -- G = (         g * 24 + b *  8);
+            -- B = (r *  6 + g *  4 + b * 22);
+            -- R = min(960, R) >> 2;
+            -- G = min(960, G) >> 2;
+            -- B = min(960, B) >> 2;               
 
-            r10 := to_unsigned(to_integer((r5_32 * 13) + (g5_32 * 2) + b5_32), 32);
-            g10 := to_unsigned(to_integer((g5_32 * 3) + b5_32), 32);
-            b10 := to_unsigned(to_integer((r5_32 * 3) + (g5_32 * 2) + (b5_32 * 11)), 32);
+            r10 := (r5 * 26) + (g5 *  4) + (b5 *  2);
+            g10 :=             (g5 * 24) + (b5 *  8);
+            b10 := (r5 *  6) + (g5 *  4) + (b5 * 22);
+            
+            r10_min := MINIMUM(960, r10); -- just for being on the safe side, we are using separate vars. for the MINIMUM
+            g10_min := MINIMUM(960, g10);
+            b10_min := MINIMUM(960, b10);
                         
-            -- original/raw color mode
+            -- fully saturated color mode (raw rgb): repeat bit pattern to convert 5-bit color to 8-bit color according to byuu.net
             if qngbc_color_mode = '0' then
                r8 := std_logic_vector(r5 & r5(4 downto 2));
                g8 := std_logic_vector(g5 & g5(4 downto 2));
-               b8 := std_logic_vector(b5 & b5(4 downto 2));
-            
-            -- alternative colors
+               b8 := std_logic_vector(b5 & b5(4 downto 2)); 
+               
+            -- LCD Emulation mode according to byuu.net                      
             else
-               r8 := std_logic_vector(r10(8 downto 1));
-               g8 := std_logic_vector(g10(6 downto 0) & "0");
-               b8 := std_logic_vector(b10(8 downto 1));
+               r8 := std_logic_vector(r10_min(9 downto 2)); -- taking 9 downto 2 equals >> 2
+               g8 := std_logic_vector(g10_min(9 downto 2));
+               b8 := std_logic_vector(b10_min(9 downto 2));
             end if;
 
             pixel_out_data <= r8 & g8 & b8;      
