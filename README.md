@@ -32,6 +32,8 @@ Features
 * Convenient game cartridge browser which supports long filenames
 * Joystick support including special mappings so that you can for example play
   Super Mario Land via joystick
+* Optional color grading to desaturate the colors, similarly to how they
+  looked on the LCD display of the original Game Boy Color hardware.
 
 Installation
 ------------
@@ -79,8 +81,10 @@ the core. Here are the most important hints:
   
 * Only works while a game is running: Press <kbd>Help</kbd> to open and to
   close the Options Menu, where you can switch between Game Boy Classic and
-  Game Boy Color and also configure the
-  [joystick mapping](#joystick-usage-and-mapping).
+  Game Boy Color, configure the
+  [joystick mapping](#joystick-usage-and-mapping) and choose if you prefer
+  fully saturated colors or colors that are closer to the original
+  Game Boy Color's hardware ([color modes](#color-modes)).
 
 Some demo pictures
 ------------------
@@ -119,3 +123,18 @@ transmitted. In parallel also the press of the GameBoy joypad's
 Castlevania you can jump when you move the joystick upwards as
 well as climb upwards. The joystick movements are feeling as natural as
 you would expect it.
+
+Color modes
+-----------
+
+**TODO: Document and also show an example.**
+
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy
+eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam
+voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet
+clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+
+Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy
+eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam
+voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet
+clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
