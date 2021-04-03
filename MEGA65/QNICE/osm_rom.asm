@@ -206,6 +206,11 @@ BROWSE_SETUP    MOVE    R0, R8
                 XOR     R5, R5                  ; R5: counts the amount of ..
                                                 ; ..files that have been shown
 
+                MOVE    STR_ITEM_AMT, R8        ; log amount of items in ..
+                SYSCALL(puts, 1)                ; .. current directory to UART
+                MOVE    R1, R8
+                SYSCALL(puthex, 1)
+
                 MOVE    FB_ITEMS_COUNT, R8      ; existing persistent # items?
                 CMP     0, @R8
                 RBRA    BROWSE_SETUP2, Z        ; no
@@ -412,8 +417,6 @@ ELEMENT_FOUND   MOVE    R11, R8                 ; R11: selected SLL element
                 MOVE    0, @R8
                 MOVE    R11, R8                 ; R8: clean directory name
                 SYSCALL(puts, 1)                ; log it to UART
-                SYSCALL(crlf, 1)
-                SYSCALL(crlf, 1)
 
                 MOVE    FB_HEAD, R9             ; reset head for browsing
                 MOVE    0, @R9
@@ -589,6 +592,7 @@ STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
 
 STR_CD          .ASCII_W "\nChanging directory to: "
+STR_ITEM_AMT    .ASCII_W "\nItems in current directory (in hex): "
 STR_LOAD_CART   .ASCII_W "\nLoading cartridge: "
 STR_FLAG_CGB    .ASCII_W "\n  CGB flag     : "
 STR_FLAG_SGB    .ASCII_W "\n  SGB flag     : "
@@ -1635,8 +1639,8 @@ HEAP            .BLOCK 1
 ; The stack starts at 0xAFE0 (search var VAR$STACK_START in osm_rom.lis to
 ; calculate the address). To see, if there is enough room for the stack
 ; given the HEAP_SIZE do this calculation: Add 11.264 words to HEAP which
-; is currently 0x8152 and subtract the result from 0xAFCE. This yields
-; currently a stack size of 654 words, which is sufficient for this program.
+; is currently 0x8157 and subtract the result from 0xAFE0. This yields
+; currently a stack size of 649 words, which is sufficient for this program.
 
                 .ORG    0xAFE0                  ; TODO: automate calculation
 #include "monitor_vars.asm"
