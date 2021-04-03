@@ -416,7 +416,7 @@ begin
    -- 0xFFE9        : Cartridge flag: RAM size
    -- 0xFFEA        : Cartridge flag: Old Licensee
    -- 0xFFEB        : Codes of the highest supported RAM and ROM amounts
-   ram_en                     <= ram_en_maybe and not vram_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
+   ram_en                     <= ram_en_maybe and not vram_en and not vram_attr_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                     <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                     <= csr_en and cpu_data_dir and cpu_data_valid;
    csr_data_out               <= x"0" & "000" & gbc_color_mode & gbc_joy_map & gbc_color & gbc_joystick & gbc_keyboard & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
