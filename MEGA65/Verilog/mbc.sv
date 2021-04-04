@@ -12,25 +12,36 @@
 
 module mbc
 (
+   // Game Boy's clock and reset
    input         clk_sys,
    input         ce_cpu2x,   
-   input         clkram,
    input         reset,
 
-   // interface to Game Boy
+   // Game Boy's cartridge interface
    input [15:0]  cart_addr,
 	input         cart_rd,
 	input         cart_wr,
 	input [7:0]   cart_di,
+	output [7:0]  cart_do,
    
-   // interface to cartridge ROM
+   // Cartridge ROM interface
    output [22:0] rom_addr,
+   output        rom_rd,
+   input  [7:0]  rom_data,
    
+   // Cartridge RAM interface
+   output [16:0] ram_addr,
+   output        ram_rd,
+   output        ram_wr,
+   input [7:0]   ram_do,
+   output [7:0]  ram_di,
+      
    // Cartridge flags
    input [7:0]   cart_mbc_type,
    input [7:0]   cart_rom_size,
    input [7:0]   cart_ram_size      
 );
+
 
 ///////////////////////////////////////////////////
 
@@ -255,10 +266,12 @@ wire [16:0] cram_addr = mbc1? {2'b00,mbc1_ram_bank, cart_addr[12:0]}:
 								mbc3? {2'b00,mbc3_ram_bank, cart_addr[12:0]}:
 								mbc5?	{mbc5_ram_bank, cart_addr[12:0]}:
 								{4'd0, cart_addr[12:0]};
+								
+assign ram_addr = cram_addr;								
 
 wire [7:0] cram_q_h;
 wire [7:0] cram_q_l;
-wire [7:0] cram_q = cram_addr[0] ? cram_q_h : cram_q_l;
+wire [7:0] cram_q = ram_do;
 
 assign cram_do =
 	mbc_ram_enable ? 
@@ -279,7 +292,14 @@ wire is_cram_addr = (cart_addr[15:13] == 3'b101);
 assign cram_rd = cart_rd & is_cram_addr;
 wire cram_wr = cart_wr & is_cram_addr;
 
-wire [7:0] cram_di = cart_di;
+assign cart_do = cram_rd ? cram_do : rom_data;
+assign ram_di = cart_di;
+assign ram_rd = cram_rd;
+assign ram_wr = cram_wr;
+assign rom_rd = cart_rd & ~cram_rd;
+
+
+//wire [7:0] cram_di = cart_di;
 
 //// Up to 8kb * 16banks of Cart Ram (128kb)
 
@@ -353,12 +373,12 @@ wire [7:0] cram_di = cart_di;
 //reg  bk_state   = 0;
 
 // RAM size
-wire [7:0] ram_mask_file =  											// 0 - no ram
-		(mbc2)?8'h01:														// mbc2 512x4bits
-	   (cart_ram_size == 1)?8'h03:   								// 1 - 2k, 1 bank		 sd_lba[1:0]
-	   (cart_ram_size == 2)?8'h0F:   								// 2 - 8k, 1 bank		 sd_lba[3:0]
-	   (cart_ram_size == 3)?8'h3F:									// 3 - 32k, 4 banks	 sd_lba[5:0]
-		8'hFF;   						   								// 4 - 128k 16 banks  sd_lba[7:0] 1111
+//wire [7:0] ram_mask_file =  											// 0 - no ram
+//		(mbc2)?8'h01:														// mbc2 512x4bits
+//	   (cart_ram_size == 1)?8'h03:   								// 1 - 2k, 1 bank		 sd_lba[1:0]
+//	   (cart_ram_size == 2)?8'h0F:   								// 2 - 8k, 1 bank		 sd_lba[3:0]
+//	   (cart_ram_size == 3)?8'h3F:									// 3 - 32k, 4 banks	 sd_lba[5:0]
+//		8'hFF;   						   								// 4 - 128k 16 banks  sd_lba[7:0] 1111
 
 //always @(posedge clk_sys) begin
 //	reg old_load = 0, old_save = 0, old_ack;

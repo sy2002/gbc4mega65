@@ -15,6 +15,7 @@ entity dualport_2clk_ram is
 	generic (
 		 ADDR_WIDTH     : integer := 8;            -- The size of the RAM will be 2**ADDR_WIDTH
 		 DATA_WIDTH     : integer := 8;
+		 MAXIMUM_SIZE   : integer := integer'high; -- Maximum size of RAM, independent from ADDR_WIDTH 
 		 ROM_PRELOAD    : boolean := false;        -- Preload a ROM
 		 ROM_FILE       : string  := "";           
 		 LATCH_ADDR_A   : boolean := false;        -- latch address a when "do_latch_addr_a" = '1'
@@ -42,7 +43,8 @@ end dualport_2clk_ram;
 
 architecture beh of dualport_2clk_ram is
 
-type        memory_t is array(0 to 2**ADDR_WIDTH - 1) of std_logic_vector((DATA_WIDTH - 1) downto 0);
+constant    MEMORY_SIZE : integer := MINIMUM(2**ADDR_WIDTH, MAXIMUM_SIZE);
+type        memory_t is array(0 to MEMORY_SIZE - 1) of std_logic_vector((DATA_WIDTH - 1) downto 0);
 
 impure function InitRAMFromFile(ramfilename: string) return memory_t is
    file     ramfile	   : text is in ramfilename;

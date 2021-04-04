@@ -186,7 +186,7 @@
         </FileInfo>
       </File>
       <File Path="$PPRDIR/vhdl/2port2clk_ram.vhd">
-        <FileInfo>
+        <FileInfo SFType="VHDL2008">
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
@@ -353,12 +353,6 @@
         </FileInfo>
       </File>
       <File Path="$PPRDIR/VHDL/drivers/pcm_to_pdm.vhdl">
-        <FileInfo>
-          <Attr Name="UsedIn" Val="synthesis"/>
-          <Attr Name="UsedIn" Val="simulation"/>
-        </FileInfo>
-      </File>
-      <File Path="$PPRDIR/VHDL/mbc.vhd">
         <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
