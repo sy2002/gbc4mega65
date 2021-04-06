@@ -13,6 +13,7 @@ WIP / TODO 0.7
 --------------
 
 * Support Cartridge RAM
+* Fix flickering/content of rightmost and bottom scanline
 * HDMI support
 
 TODO until V1.0
