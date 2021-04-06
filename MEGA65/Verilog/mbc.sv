@@ -273,7 +273,7 @@ wire [7:0] cram_q_h;
 wire [7:0] cram_q_l;
 wire [7:0] cram_q = ram_do;
 
-assign cram_do =
+wire [7:0] cram_do =
 	mbc_ram_enable ? 
 		((cart_addr[15:9] == 7'b1010000) && mbc2) ? 
 			{4'hF,cram_q[3:0]} : // 4 bit MBC2 Ram needs top half masked.
@@ -289,7 +289,7 @@ always @(posedge clk_sys) begin
 end
 
 wire is_cram_addr = (cart_addr[15:13] == 3'b101);
-assign cram_rd = cart_rd & is_cram_addr;
+wire cram_rd = cart_rd & is_cram_addr;
 wire cram_wr = cart_wr & is_cram_addr;
 
 assign cart_do = cram_rd ? cram_do : rom_data;
