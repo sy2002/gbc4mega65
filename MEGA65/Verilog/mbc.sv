@@ -163,7 +163,7 @@ always @(posedge clk_sys) begin
 		
 		//write to ROM bank register
 		if(cart_wr && (cart_addr[15:13] == 3'b001)) begin
-			if(~mbc5 && cart_di[6:0]==0) //special case mbc1-3 rombank 0=1
+			if(~mbc5 && (cart_di[6:0]==0 || (mbc1 && cart_di[4:0]==0) || (mbc2 && cart_di[3:0]==0))) //special case mbc1-3 rombank 0=1
 				mbc_rom_bank_reg <= 5'd1;
 			else if (mbc5) begin
 				if (cart_addr[13:12] == 2'b11) //3000-3FFF High bit
