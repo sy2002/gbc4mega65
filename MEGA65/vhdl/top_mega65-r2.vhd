@@ -512,14 +512,12 @@ begin
       generic map
       (
          ADDR_WIDTH        => CART_RAM_WIDTH,
-         DATA_WIDTH        => 8,
-         LATCH_ADDR_A      => true
+         DATA_WIDTH        => 8
       )
       port map
       (
          clock_a           => main_clk,
          address_a         => cartram_addr(CART_RAM_WIDTH - 1 downto 0),
-         do_latch_addr_a   => cartram_rd,
          data_a            => cartram_data_in,
          wren_a            => cartram_wr,
          q_a               => cartram_data_out
