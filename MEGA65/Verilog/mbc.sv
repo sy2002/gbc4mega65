@@ -290,7 +290,7 @@ end
 
 wire is_cram_addr = (cart_addr[15:13] == 3'b101);
 wire cram_rd = cart_rd & is_cram_addr;
-wire cram_wr = cart_wr & is_cram_addr;
+wire cram_wr = cart_wr & is_cram_addr & mbc_ram_enable;
 
 assign cart_do = cram_rd ? cram_do : rom_data;
 assign ram_di = cart_di;
