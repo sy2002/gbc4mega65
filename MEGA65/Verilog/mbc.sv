@@ -74,7 +74,7 @@ wire [8:0] mbc_rom_bank = (cart_addr[15:14] == 2'b00) ? 9'd0 : mbc_rom_bank_reg;
 
 // mask address lines to enable proper mirroring
 wire [6:0] mbc1_rom_bank = mbc1_rom_bank_mode & rom_mask[6:0];	 //128
-wire [6:0] mbc2_rom_bank = mbc_rom_bank[6:0] & rom_mask[6:0];  //16
+wire [6:0] mbc2_rom_bank = {3'b000, mbc_rom_bank[3:0] & rom_mask[3:0]};  //16
 wire [6:0] mbc3_rom_bank = mbc_rom_bank[6:0] & rom_mask[6:0];  //128
 wire [8:0] mbc5_rom_bank = mbc_rom_bank & rom_mask;  //480
 
@@ -162,7 +162,7 @@ always @(posedge clk_sys) begin
 	end else if(ce_cpu2x) begin
 		
 		//write to ROM bank register
-		if(cart_wr && (cart_addr[15:13] == 3'b001)) begin
+		if(cart_wr && ((cart_addr[15:13] == 3'b001) || (mbc2 && cart_addr[15:13] == 3'b000 && cart_addr[8] == 1'b1))) begin
 			if(~mbc5 && (cart_di[6:0]==0 || (mbc1 && cart_di[4:0]==0) || (mbc2 && cart_di[3:0]==0))) //special case mbc1-3 rombank 0=1
 				mbc_rom_bank_reg <= 5'd1;
 			else if (mbc5) begin
@@ -171,7 +171,10 @@ always @(posedge clk_sys) begin
 				else //2000-2FFF low 8 bits
 					mbc_rom_bank_reg[7:0] <= cart_di[7:0];
 			end else
-				mbc_rom_bank_reg <= {2'b00,cart_di[6:0]}; //mbc1-3
+				if (mbc2)
+				  mbc_rom_bank_reg <= {5'b00000,cart_di[3:0]}; //mbc2
+				else
+				  mbc_rom_bank_reg <= {2'b00,cart_di[6:0]}; //mbc1, mbc3
 		end	
 		
 		//write to RAM bank register
@@ -195,7 +198,7 @@ always @(posedge clk_sys) begin
 				mbc1_mode <= cart_di[0];
 		
 		//RAM enable/disable
-		if(ce_cpu2x && cart_wr && (cart_addr[15:13] == 3'b000))
+		if(ce_cpu2x && cart_wr && ((cart_addr[15:13] == 3'b000) || (mbc2 && cart_addr[15:13] == 3'b001 && cart_addr[8] == 1'b0)))
 			mbc_ram_enable <= (cart_di[3:0] == 4'ha);
 	end
 end
@@ -263,6 +266,7 @@ assign rom_addr = {mbc_bank, cart_addr[12:0]};
 //assign sd_buff_din = bk_q;
 
 wire [16:0] cram_addr = mbc1? {2'b00,mbc1_ram_bank, cart_addr[12:0]}:
+                        mbc2? {8'd0, cart_addr[8:0]}:
 								mbc3? {2'b00,mbc3_ram_bank, cart_addr[12:0]}:
 								mbc5?	{mbc5_ram_bank, cart_addr[12:0]}:
 								{4'd0, cart_addr[12:0]};
