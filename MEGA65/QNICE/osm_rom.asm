@@ -1615,7 +1615,7 @@ FB_ITEMS_SHOWN  .BLOCK 1
 ; variables needed by sub-routines
 LCBLKLN_STATUS  .BLOCK 1
 
-; in DEVELOPMENT mode: 4k of heap, so that we are not colliding with
+; in DEVELOPMENT mode: 6k of heap, so that we are not colliding with
 ; MEM_CARTRIDGE_WIN at 0xB000
 #ifndef RELEASE
 
