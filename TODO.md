@@ -15,6 +15,7 @@ WIP / TODO 0.7
 * Cartridge RAM support added
 * Better compatibility (games and demos) due to support for more MBCs
 
+* Refactor R2/R3 top file, so that the common parts are in a generic MEGA65 (using generics)
 * Fix flickering/content of rightmost and bottom scanline
 * HDMI support
 
