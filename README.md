@@ -63,6 +63,7 @@ Constraints of the current Beta version 0.7
   in the cartridge ("Cartridge RAM")
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
 * In some games, there is a flickering rightmost column and/or bottom scanline
+* No savegames
 
 Getting started
 ---------------
