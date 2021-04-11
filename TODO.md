@@ -25,6 +25,7 @@ TODO until V1.0
 * HyperRAM support
 * Improve SD card robustness: Check new SD card implementation
   and if better: Use it
+* Migrate to MiSTer2MEGA65
 
 Post V1.0
 ---------
