@@ -90,13 +90,13 @@ architecture beh of MEGA65_R3 is
 constant CART_ROM_MAX_R2   : integer := 256 * 1024;
 constant CART_RAM_MAX_R2   : integer := 32 * 1024;
 constant CART_ROM_MAX_R3   : integer := 1024 * 1024;
-constant CART_RAM_MAX_R3   : integer := 32 * 1024;
+constant CART_RAM_MAX_R3   : integer :=  128 * 1024;
 
 -- modes according to https://gbdev.io/pandocs/#_0148-rom-size and https://gbdev.io/pandocs/#_0149-ram-size
-constant SYS_ROM_MAX_R2    : integer := 3;
-constant SYS_RAM_MAX_R2    : integer := 3;
-constant SYS_ROM_MAX_R3    : integer := 5;
-constant SYS_RAM_MAX_R3    : integer := 3; 
+constant SYS_ROM_MAX_R2    : integer := 3; -- 256 kB
+constant SYS_RAM_MAX_R2    : integer := 3; -- 32 kB 
+constant SYS_ROM_MAX_R3    : integer := 5; -- 1 MB
+constant SYS_RAM_MAX_R3    : integer := 5; -- 128 kB (5 = 64 kB, 4 = 128 kB: since we use "<" in the ROM to check, 5 includes 128 kB)
 
 -- the current system is running with these parameters
 constant CART_ROM_MAX      : integer := CART_ROM_MAX_R3; 
@@ -105,6 +105,7 @@ constant SYS_ROM_MAX       : integer := SYS_ROM_MAX_R3;
 constant SYS_RAM_MAX       : integer := SYS_RAM_MAX_R3;
 
 constant CART_ROM_WIDTH    : integer := f_log2(CART_ROM_MAX);
+constant CART_RAM_WIDTH    : integer := f_log2(CART_RAM_MAX);
 
 -- ROM options
 constant GBC_ORG_ROM       : string := "../../rom/cgb_bios.rom";        -- Copyrighted original GBC ROM, not checked-in into official repo
@@ -202,9 +203,14 @@ signal isGBC_Game          : boolean;     -- current cartridge is dedicated GBC 
 signal isSGB_Game          : boolean;     -- current cartridge is dedicated SBC game
 
 -- MBC signals
-signal cartrom_addr        : std_logic_vector(CART_ROM_WIDTH - 1 downto 0); 
+signal cartrom_addr        : std_logic_vector(22 downto 0); 
 signal cartrom_rd          : std_logic;
 signal cartrom_data        : std_logic_vector(7 downto 0);
+signal cartram_addr        : std_logic_vector(16 downto 0);
+signal cartram_rd          : std_logic;
+signal cartram_wr          : std_logic;
+signal cartram_data_in     : std_logic_vector(7 downto 0);
+signal cartram_data_out    : std_logic_vector(7 downto 0);
 
 -- joypad: p54 selects matrix entry and data contains either
 -- the direction keys or the other buttons
@@ -384,17 +390,13 @@ begin
       );
       
    -- Memory Bank Controller (MBC)
-   gb_mbc : entity work.mbc_wrapper
-      generic map
-      (
-         ROM_WIDTH      => CART_ROM_WIDTH
-      )
+   gb_mbc : entity work.mbc
       port map
       (
          -- Game Boy's clock and reset
-         gb_clk                  => main_clk,
-         gb_ce_2x                => sc_ce_2x,
-         gb_reset                => qngbc_reset,
+         clk_sys                 => main_clk,
+         ce_cpu2x                => sc_ce_2x,
+         reset                   => qngbc_reset,
                
          -- Game Boy's cartridge interface
          cart_addr               => cart_addr,
@@ -408,6 +410,13 @@ begin
          rom_rd                  => cartrom_rd,
          rom_data                => cartrom_data,
          
+         -- Cartridge RAM interface
+         ram_addr                => cartram_addr, 
+         ram_rd                  => cartram_rd, 
+         ram_wr                  => cartram_wr, 
+         ram_do                  => cartram_data_out,
+         ram_di                  => cartram_data_in,
+                     
          -- Cartridge flags
          cart_mbc_type           => cart_mbc_type,
          cart_rom_size           => cart_rom_size,
@@ -453,24 +462,21 @@ begin
          q_b            => qngbc_bios_data_out         
       );
      
-   -- Cartridge ROM
-   game_cart : entity work.dualport_2clk_ram
+   -- Cartridge ROM: modelled as a dual port dual clock RAM so that QNICE can fill it and Game Boy can read it
+   game_cart_rom : entity work.dualport_2clk_ram
       generic map
       (
-         ADDR_WIDTH        => CART_ROM_WIDTH,   -- TODO: depends on R2 vs. R3 and TODO adjust address_b
+         ADDR_WIDTH        => CART_ROM_WIDTH,
          DATA_WIDTH        => 8,
-         ROM_PRELOAD       => false,
          LATCH_ADDR_A      => true,       -- the gbc core expects that the RAM latches the address on cart_rd
          FALLING_B         => true        -- QNICE reads/writes on the falling clock edge
       )
       port map
       (
-         -- GBC Game Cartridge Interface
+         -- GBC Game Cartridge ROM Interface
          clock_a           => main_clk,
-         address_a         => cartrom_addr,
+         address_a         => cartrom_addr(CART_ROM_WIDTH - 1 downto 0),
          do_latch_addr_a   => cartrom_rd,
---         data_a            => cart_di,
---         wren_a            => cart_wr,
          q_a               => cartrom_data,
          
          -- QNICE RAM interface
@@ -481,6 +487,22 @@ begin
          q_b               => qngbc_cart_data_out  
       );
 
+   -- Cartridge RAM
+   game_cart_ram : entity work.dualport_2clk_ram
+      generic map
+      (
+         ADDR_WIDTH        => CART_RAM_WIDTH,
+         DATA_WIDTH        => 8
+      )
+      port map
+      (
+         clock_a           => main_clk,
+         address_a         => cartram_addr(CART_RAM_WIDTH - 1 downto 0),
+         data_a            => cartram_data_in,
+         wren_a            => cartram_wr,
+         q_a               => cartram_data_out
+      );
+
    -- Dual clock & dual port RAM that acts as framebuffer: the LCD display of the gameboy is
    -- written here by the GB core (using its local clock) and the VGA/HDMI display is being fed
    -- using the pixel clock 
@@ -488,6 +510,7 @@ begin
       generic map
       ( 
          ADDR_WIDTH  => 15,
+         MAXIMUM_SIZE => GB_DX * GB_DY, -- we do not need 2^15 x 24bit, but just (GB_DX * GB_DY) x 24bit
          DATA_WIDTH  => 24
       )
       port map
