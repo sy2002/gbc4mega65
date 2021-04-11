@@ -14,40 +14,25 @@
 ; Returns set C flag for supported MBCs
 CHECK_MBC       AND     0xFFFB, SR              ; clear carry flag
 
-                ; list of supported
-                CMP     0x0000, R8              ; ROM only
-                RBRA    _CHECK_MBC_SC, Z
-                CMP     0x0001, R8              ; MBC 1
-                RBRA    _CHECK_MBC_SC, Z
-
-                ; TODO: NO RAM RIGHT NOW AVAILALE
-                CMP     0x0002, R8              ; MBC 1 + RAM
-                RBRA    _CHECK_MBC_SC, Z                
-                CMP     0x0003, R8              ; MBC 1 + RAM + Battery
-                RBRA    _CHECK_MBC_SC, Z
-
-                CMP     0x0005, R8              ; MBC 2
-                RBRA    _CHECK_MBC_SC, Z
-
-                ; TODO: NO RAM BATTERY/PERSISTENCE RIGHT NOW AVAILABLE
-                CMP     0x0006, R8              ; MBC 2 + Battery
-                RBRA    _CHECK_MBC_SC, Z
-                
-                CMP     0x0011, R8              ; MBC 3
-                RBRA    _CHECK_MBC_SC, Z
-                CMP     0x0019, R8              ; MBC 5
-                RBRA    _CHECK_MBC_SC, Z
-
-                ; TODO: NO RAM BATTERY/PERSISTENCE RIGHT NOW AVAILABLE
-                CMP     0x001A, R8              ; MBC 5 + RAM
-                RBRA    _CHECK_MBC_SC, Z
-                CMP     0x001B, R8              ; MBC 5 + RAM + Battery
-                RBRA    _CHECK_MBC_SC, Z
-                
-                CMP     0x0020, R8              ; MBC 6
-                RBRA    _CHECK_MBC_SC, Z
-
-                RBRA    _CHECK_MBC_RET, 1       ; no supported MBC found
+                ; list of unsupported MBC configurations
+                CMP     0x000B, R8              ; MMM01
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x000C, R8              ; MMM01+RAM
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x000D, R8              ; MMM01+RAM+BATTERY
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x0020, R8              ; MBC6
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x0022, R8              ; MBC7
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x00FC, R8              ; POCKET CAMERA
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x00FD, R8              ; BANDAI TAMA5
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x00FE, R8              ; HuC3
+                RBRA    _CHECK_MBC_RET, Z
+                CMP     0x00FF, R8              ; HuC1+RAM+BATTERY
+                RBRA    _CHECK_MBC_RET, Z
 
 _CHECK_MBC_SC   OR      4, SR                   ; set carry flag
 _CHECK_MBC_RET  RET

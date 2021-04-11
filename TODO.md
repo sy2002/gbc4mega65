@@ -12,7 +12,9 @@ Done in V0.7 (reminder for release notes)
 WIP / TODO 0.7
 --------------
 
-* Support Cartridge RAM
+* Cartridge RAM support added
+* Better compatibility (games and demos) due to support for more MBCs
+
 * Fix flickering/content of rightmost and bottom scanline
 * HDMI support
 
