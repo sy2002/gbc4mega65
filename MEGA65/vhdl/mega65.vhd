@@ -527,15 +527,15 @@ begin
       -- to always address one pixel ahead of were we currently stand      
       if dst_x_i < GB_DX - 1 then
          vga_col_next <= dst_x_i + 1;
+         vga_row_next <= dst_y_i;
       else
          vga_col_next <= 0;
-      end if;
-      
-      if dst_y_i < GB_DY - 1 then
-         vga_row_next <= dst_y_i + 1;
-      else
-         vga_row_next <= 0;
-      end if;
+         if dst_y_i < GB_DY - 1 then
+            vga_row_next <= dst_y_i + 1;
+         else
+            vga_row_next <= 0;
+         end if;
+      end if;      
    end process;               
 
    -- Generate the signals necessary to store the LCD output into the frame buffer
