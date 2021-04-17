@@ -198,7 +198,7 @@ always @(posedge clk_sys) begin
 				mbc1_mode <= cart_di[0];
 		
 		//RAM enable/disable
-		if(ce_cpu2x && cart_wr && ((cart_addr[15:13] == 3'b000) || (mbc2 && cart_addr[15:13] == 3'b001 && cart_addr[8] == 1'b0)))
+		if(ce_cpu2x && cart_wr && (cart_addr[15:13] == 3'b000))
 			mbc_ram_enable <= (cart_di[3:0] == 4'ha);
 	end
 end

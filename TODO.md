@@ -4,6 +4,8 @@ Roadmap / TODOs until V1.0
 Done in V0.7 (reminder for release notes)
 -----------------------------------------
 
+* Much better compatibility (games and demos) due to support for more MBCs
+* Cartridge RAM support added
 * Option menu works
 * Joystick incl. mapping options
 * LCD Emulation / color grading
@@ -12,9 +14,6 @@ Done in V0.7 (reminder for release notes)
 WIP / TODO 0.7
 --------------
 
-* Cartridge RAM support added
-* Better compatibility (games and demos) due to support for more MBCs
-
 * Refactor R2/R3 top file, so that the common parts are in a generic MEGA65 (using generics)
 * Fix flickering/content of rightmost and bottom scanline
 * HDMI support
@@ -22,8 +21,8 @@ WIP / TODO 0.7
 TODO until V1.0
 ---------------
 
-* MBC robustness: upgrade to newest MiST version and refactor MBC
 * HyperRAM support
+* MBC robustness: upgrade to newest MiST version and refactor MBC
 * Improve SD card robustness: Check new SD card implementation
   and if better: Use it
 * Migrate to MiSTer2MEGA65
