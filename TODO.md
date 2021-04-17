@@ -14,7 +14,6 @@ Done in V0.7 (reminder for release notes)
 WIP / TODO 0.7
 --------------
 
-* Refactor R2/R3 top file, so that the common parts are in a generic MEGA65 (using generics)
 * Fix flickering/content of rightmost and bottom scanline
 * HDMI support
 
