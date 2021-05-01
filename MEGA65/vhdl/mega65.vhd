@@ -110,6 +110,8 @@ signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 M
 
 -- VGA signals
 signal vga_disp_en         : std_logic;
+signal vga_col_raw         : integer range 0 to VGA_DX - 1;
+signal vga_row_raw         : integer range 0 to VGA_DY - 1;
 signal vga_col             : integer range 0 to VGA_DX - 1;
 signal vga_row             : integer range 0 to VGA_DY - 1;
 signal vga_col_next        : integer range 0 to VGA_DX - 1;
@@ -555,8 +557,10 @@ begin
       variable data                      : std_logic_vector(14 downto 0);
       variable pixel_we                  : std_logic;
    begin
-      pixel_we := sc_ce and (lcd_clkena or lcd_r_blank_de);   
-      if rising_edge(main_clk) then      
+      pixel_we := sc_ce and (lcd_clkena or lcd_r_blank_de);  
+      if rising_edge(main_clk) then
+         pixel_out_we <= pixel_we;
+
          if lcd_on = '0' or lcd_mode = "01" then
             lcd_r_off <= '1';
          else
@@ -610,7 +614,7 @@ begin
          else
             data := lcd_data;
          end if;
-                                                      
+                                                                        
          -- grayscale values taken from MiSTer's lcd.v
          if (qngbc_color = '0') then
             case (data(1 downto 0)) is            
@@ -659,7 +663,6 @@ begin
             end if;
 
             pixel_out_data <= r8 & g8 & b8;
-            pixel_out_we <= pixel_we;                  
          end if;         
       end if;
    end process; 
@@ -759,11 +762,29 @@ begin
          h_sync      => vga_hs_int,       -- horiztonal sync pulse
          v_sync      => vga_vs_int,       -- vertical sync pulse
          disp_ena    => vga_disp_en,      -- display enable ('1' = display time, '0' = blanking time)
-         column      => vga_col,          -- horizontal pixel coordinate
-         row         => vga_row,          -- vertical pixel coordinate
+         column      => vga_col_raw,      -- horizontal pixel coordinate
+         row         => vga_row_raw,      -- vertical pixel coordinate
          n_blank     => open,             -- direct blacking output to DAC
          n_sync      => open              -- sync-on-green output to DAC      
       );
+      
+   -- due to the latching of the VGA signals, we are one pixel off: compensate for that
+   adjust_pixel_skew : process(vga_col_raw, vga_row_raw)
+      variable nextrow  : integer range 0 to VGA_DY - 1;
+   begin
+      nextrow := vga_row_raw + 1;
+      if vga_col_raw < VGA_DX - 1 then
+         vga_col <= vga_col_raw + 1;
+         vga_row <= vga_row_raw;
+      else
+         vga_col <= 0;
+         if nextrow < VGA_DY then
+            vga_row <= nextrow;
+         else
+            vga_row <= 0;
+         end if;          
+      end if;
+   end process;      
    
    video_signal_latches : process(vga_pixelclk)
    begin
@@ -774,7 +795,7 @@ begin
    
          if vga_disp_en then
             -- Game Boy output
-            if vga_col < GB_DX * GB_TO_VGA_SCALE and vga_row < GB_DY * GB_TO_VGA_SCALE then
+            if vga_col_raw < GB_DX * GB_TO_VGA_SCALE and vga_row_raw < GB_DY * GB_TO_VGA_SCALE then
                VGA_RED   <= frame_buffer_data(23 downto 16);
                VGA_GREEN <= frame_buffer_data(15 downto 8);
                VGA_BLUE  <= frame_buffer_data(7 downto 0);
