@@ -128,14 +128,23 @@ you would expect it.
 Color modes
 -----------
 
-**TODO: Document and also show an example.**
+The Game Boy Color’s screen was surprisingly good for its time. Yet, it was
+not able to reproduce the colors as accurately as any modern screen and
+the result was a slight bit of washing out of the colors. The game developers
+were aware of this [phenomenon](https://web.archive.org/web/20210223205311/https://byuu.net/video/color-emulation/)
+of course and chose their color palettes accordingly.
 
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy
-eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam
-voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet
-clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+This is why some games might look too colorful, too saturated or simply
+strange when running on this core today. There is no specific pattern and no
+rule when this happens. And it also has something todo with personal taste
+and preferences.
 
-Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy
-eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam
-voluptua. At vero eos et accusam et justo duo dolores et ea rebum. Stet
-clita kasd gubergren, no sea takimata sanctus est Lorem ipsum dolor sit amet.
+You can choose between two color modes using the <kbd>Help</kbd> menu while
+the game is running: "Fully Saturated" shows the raw colors and "LCD Emulation"
+performs a color grading to approximate the historical color LCD screen. Have
+a look at the following example screenshots from the game "Adventures of Elmo
+in Grouchland" to see the difference:
+
+| ![gbc01](doc/gbc01.jpg)      | ![gbc02](doc/gbc02.jpg)     |
+|:----------------------------:|:---------------------------:|
+| *Fully Saturated*            | *LCD Emulation*             |
