@@ -488,7 +488,6 @@ begin
    -- Dual clock & dual port RAM that acts as framebuffer: the LCD display of the gameboy is
    -- written here by the GB core (using its local clock) and the VGA/HDMI display is being fed
    -- using the pixel clock
-   pixel_out_we <= sc_ce and (lcd_clkena or lcd_r_blank_de);    
    frame_buffer : entity work.dualport_2clk_ram
       generic map
       ( 
@@ -547,15 +546,18 @@ begin
       
    -- Generate the signals necessary to store the LCD output into the frame buffer
    -- This process is heavily inspired and in part a 1-to-1 translation of portions of MiSTer's lcd.v
-   lcd_to_pixels : process(main_clk)
+   lcd_to_pixels : process(main_clk, sc_ce, lcd_clkena, lcd_r_blank_de)
       variable r5, g5, b5                : unsigned(4 downto 0);
       variable r8, g8, b8                : std_logic_vector(7 downto 0);
       variable r10, g10, b10             : unsigned(9 downto 0);
       variable r10_min, g10_min, b10_min : unsigned(9 downto 0);
       variable gray                      : unsigned(7 downto 0);
       variable data                      : std_logic_vector(14 downto 0);
+      variable pixel_we                  : std_logic;
    begin
+      pixel_we := sc_ce and (lcd_clkena or lcd_r_blank_de);   
       if rising_edge(main_clk) then
+      
          if lcd_on = '0' or lcd_mode = "01" then
             lcd_r_off <= '1';
          else
@@ -568,7 +570,7 @@ begin
             lcd_r_blank_de <= '0';
          end if;
          
-         if pixel_out_we = '1' then
+         if pixel_we = '1' then
             pixel_out_ptr <= pixel_out_ptr + 1;
          end if;
 
@@ -657,7 +659,8 @@ begin
                b8 := std_logic_vector(b10_min(9 downto 2));
             end if;
 
-            pixel_out_data <= r8 & g8 & b8;      
+            pixel_out_data <= r8 & g8 & b8;
+            pixel_out_we <= pixel_we;                  
          end if;         
       end if;
    end process; 
