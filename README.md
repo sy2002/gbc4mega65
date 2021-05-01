@@ -19,7 +19,8 @@ itself is based on the
 [sy2002](http://www.sy2002.de) ported the core to the MEGA65 in 2021.
 
 Special thanks to [Robert Peip](https://github.com/RobertPeip)
-for his invaluable support.
+for his invaluable support and to [Till Harbaum](https://github.com/harbaum)
+for creating the original MiST Game Boy core back in the days.
 
 The core uses [QNICE-FPGA](https://github.com/sy2002/QNICE-FPGA) for
 loading the Game Boy's BIOS as well as for the on-screen-menu and for

@@ -528,7 +528,7 @@ begin
       dst_y    := src_y(9 downto 2);
       dst_x_i  := to_integer(unsigned(dst_x));
       dst_y_i  := to_integer(unsigned(dst_y));
-      
+            
       -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
       -- to always address one pixel ahead of were we currently stand      
       if dst_x_i < GB_DX - 1 then
@@ -536,7 +536,7 @@ begin
          vga_row_next <= dst_y_i;
       else
          vga_col_next <= 0;
-         if dst_y_i < GB_DY - 1 then
+         if dst_y_i < GB_DY then
             vga_row_next <= dst_y_i + 1;
          else
             vga_row_next <= 0;
@@ -556,8 +556,7 @@ begin
       variable pixel_we                  : std_logic;
    begin
       pixel_we := sc_ce and (lcd_clkena or lcd_r_blank_de);   
-      if rising_edge(main_clk) then
-      
+      if rising_edge(main_clk) then      
          if lcd_on = '0' or lcd_mode = "01" then
             lcd_r_off <= '1';
          else
