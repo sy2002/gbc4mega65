@@ -797,7 +797,10 @@ begin
    
          if vga_disp_en then
             -- Game Boy output
-            if vga_col_raw < GB_DX * GB_TO_VGA_SCALE and vga_row_raw < GB_DY * GB_TO_VGA_SCALE then
+            -- TODO: Investigate, why the top/left pixel is always white and solve it;
+            -- workaround in the meantime: the top/left pixel is set to be always black which seems to be less intrusive
+            if (vga_col_raw > 0 or vga_row_raw > 0) and
+               (vga_col_raw < GB_DX * GB_TO_VGA_SCALE and vga_row_raw < GB_DY * GB_TO_VGA_SCALE) then
                VGA_RED   <= frame_buffer_data(23 downto 16);
                VGA_GREEN <= frame_buffer_data(15 downto 8);
                VGA_BLUE  <= frame_buffer_data(7 downto 0);
