@@ -15,6 +15,8 @@ WIP / TODO 0.7
 --------------
 
 * Fix flickering/content of rightmost and bottom scanline
+* Smart support of SD Card slots: Bottom port is default, but if an
+  SD card is found in the back port, then the latter one is used
 * HDMI support
 
 TODO until V1.0
