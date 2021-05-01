@@ -1,16 +1,8 @@
 Roadmap / TODOs until V1.0
 ==========================
 
-Done in V0.7 (reminder for release notes)
+Done in V0.8 (reminder for release notes)
 -----------------------------------------
-
-* Much better compatibility (games and demos) due to support for more MBCs
-* Cartridge RAM support added
-* Option menu works
-* Joystick incl. mapping options
-* LCD Emulation / color grading
-* Ability to browse larger folders
-* Fixed flickering/missing content of rightmost and bottom scanline
 
 TODO until V1.0
 ---------------
