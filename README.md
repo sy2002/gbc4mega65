@@ -62,7 +62,7 @@ Constraints of the current Beta version 0.7
 * MEGA65 R3 machines: Maximum cartridge size: 1MB
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
 * Only supports MEGA65's bottom SD card slot, the rear slot is ignored
-* Flickering in rare situations (no double bufffering, no frame blending)
+* Flickering in rare situations due to no double bufffering, no frame blending
 * No savegames
 
 Getting started
