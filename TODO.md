@@ -21,6 +21,8 @@ WIP / TODO 0.7
 TODO until V1.0
 ---------------
 
+* Support OpenEmu's Classic color schemes "Grayscale" (already supported),
+  "Greenscale" and "Pocket": https://github.com/OpenEmu/Gambatte-Core/blob/master/GBGameCore.mm#L574
 * Double buffering support
 * Frame blend support
 * (Internal) Update documentation to explain double buffering and frame blend
