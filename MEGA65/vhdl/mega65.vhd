@@ -768,7 +768,11 @@ begin
    
    video_signal_latches : process(vga_pixelclk)
    begin
-      if rising_edge(vga_pixelclk) then 
+      if rising_edge(vga_pixelclk) then
+         VGA_RED   <= (others => '0');
+         VGA_BLUE  <= (others => '0');
+         VGA_GREEN <= (others => '0');
+   
          if vga_disp_en then
             -- Game Boy output
             if vga_col < GB_DX * GB_TO_VGA_SCALE and vga_row < GB_DY * GB_TO_VGA_SCALE then
@@ -783,23 +787,18 @@ begin
                VGA_GREEN <= qngbc_osm_rgb(15 downto 8);
                VGA_BLUE  <= qngbc_osm_rgb(7 downto 0);                  
             end if;
-
-         -- for some reason, the VDAC does not like non-zero values outside the visible window
-         -- maybe "vdac_sync_n <= '0';" activates sync-on-green?
-         -- TODO: check that
-         else
-            VGA_RED   <= (others => '0');
-            VGA_BLUE  <= (others => '0');
-            VGA_GREEN <= (others => '0');
          end if;
                         
-         -- VGA horizontal and vertical sync
+         -- VGA horizontal and vertical sync         
          VGA_HS      <= vga_hs_int;
          VGA_VS      <= vga_vs_int;         
       end if;
    end process;
         
-   -- make the VDAC output the image    
+   -- make the VDAC output the image
+   -- for some reason, the VDAC does not like non-zero values outside the visible window
+   -- maybe "vdac_sync_n <= '0';" activates sync-on-green?
+   -- TODO: check that       
    vdac_sync_n <= '0';
    vdac_blank_n <= '1';   
    vdac_clk <= not vga_pixelclk; -- inverting the clock leads to a sharper signal for some reason
