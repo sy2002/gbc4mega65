@@ -521,8 +521,9 @@ begin
       variable src_y: std_logic_vector(9 downto 0);
       variable dst_x: std_logic_vector(7 downto 0);
       variable dst_y: std_logic_vector(7 downto 0);
-      variable dst_x_i: integer range 0 to 199;
-      variable dst_y_i: integer range 0 to 149;  
+      variable dst_x_i: integer range 0 to GB_DX - 1;
+      variable dst_y_i: integer range 0 to GB_DY - 1;
+      variable nextrow: integer range 0 to GB_DY - 1;
    begin    
       src_x    := std_logic_vector(to_unsigned(vga_col, 10));
       src_y    := std_logic_vector(to_unsigned(vga_row, 10));      
@@ -530,6 +531,7 @@ begin
       dst_y    := src_y(9 downto 2);
       dst_x_i  := to_integer(unsigned(dst_x));
       dst_y_i  := to_integer(unsigned(dst_y));
+      nextrow  := dst_y_i + 1; 
             
       -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
       -- to always address one pixel ahead of were we currently stand      
@@ -538,8 +540,8 @@ begin
          vga_row_next <= dst_y_i;
       else
          vga_col_next <= 0;
-         if dst_y_i < GB_DY then
-            vga_row_next <= dst_y_i + 1;
+         if nextrow < GB_DY then
+            vga_row_next <= nextrow;
          else
             vga_row_next <= 0;
          end if;

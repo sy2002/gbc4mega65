@@ -39,7 +39,7 @@ Features
 Installation
 ------------
 
-1. [Download](https://github.com/sy2002/gbc4mega65/releases/download/V0.6/bitstream-and-core.zip)
+1. [Download](https://github.com/sy2002/gbc4mega65/releases/download/V0.7/bitstream-and-core.zip)
    the ZIP file that contains the bitstream and the core file and unpack it.
 2. Choose the right subfolder depending on the type of your MEGA65:
    `R2` or `R3`
@@ -60,10 +60,9 @@ Constraints of the current Beta version 0.7
 
 * MEGA65 R2 machines: Maximum cartridge size: 256kB
 * MEGA65 R3 machines: Maximum cartridge size: 1MB
-* Only plays cartridges that do not need extra RAM
-  in the cartridge ("Cartridge RAM")
 * VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
-* In some games, there is a flickering rightmost column and/or bottom scanline
+* Only supports MEGA65's bottom SD card slot, the rear slot is ignored
+* Flickering in rare situations (no double bufffering, no frame blending)
 * No savegames
 
 Getting started
