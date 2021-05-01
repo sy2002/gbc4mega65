@@ -19,6 +19,7 @@ TODO until V1.0
 * MBC robustness: upgrade to newest MiST version and refactor MBC
 * Improve SD card robustness: Check new SD card implementation
   and if better: Use it
+* More convenient download of ROM: Rename cgb_bios.bin to cgb_boot.bin
 * Migrate to MiSTer2MEGA65
 
 Post V1.0
