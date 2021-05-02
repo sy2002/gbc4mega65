@@ -117,6 +117,16 @@ OPTM_INITLOOP   MOVE    @R8++, @R9++
                 OR      GBC$CSR_GBC, R9         ; default: Game Boy Color mode
                 RSUB    RESETGB_WELCOME, 1
 
+                ; Workaround that stabilizes the SD card handling: After a
+                ; reset or a power-on: Wait a while. This is obviously neither
+                ; a great nor a robust solution, but it increases the amount
+                ; of readable SD cards greatly. It seems like the more used
+                ; an SD card gets, the longer the initial startup sequence
+                ; seems to last.
+                ; TODO: Refactor/tackle the SD card topic on the QNICE level
+                RSUB    WAIT1SEC, 1
+                RSUB    WAIT1SEC, 1
+
                 ; Mount SD card and load original ROMs, if available.
                 RSUB    CHKORMNT, 1             ; mount SD card partition #1
                 CMP     0, R9
@@ -1374,7 +1384,18 @@ WAITFORSPACE    RSUB    KEYB_SCAN, 1
                 RSUB    KEYB_GETKEY, 1
                 CMP     KEY_SPACE, R8           ; SPACE pressed?
                 RBRA    WAITFORSPACE, !Z        ; no: wait
-                RET           
+                RET
+
+; Waits about 1 second
+WAIT1SEC        INCRB
+                MOVE    0x0060, R0
+_W1S_L1         MOVE    0xFFFF, R1
+_W1S_L2         SUB     1, R1
+                RBRA    _W1S_L2, !Z
+                SUB     1, R0
+                RBRA    _W1S_L1, !Z
+                DECRB
+                RET       
 
 ; ----------------------------------------------------------------------------
 ; Options Menu
