@@ -145,6 +145,6 @@ performs a color grading to approximate the historical color LCD screen. Have
 a look at the following example screenshots from the game "Adventures of Elmo
 in Grouchland" to see the difference:
 
-| ![gbc01](doc/gbc01.jpg)      | ![gbc02](doc/gbc02.jpg)     |
+| ![gbc01](doc/gbc08.jpg)      | ![gbc02](doc/gbc09.jpg)     |
 |:----------------------------:|:---------------------------:|
 | *Fully Saturated*            | *LCD Emulation*             |
