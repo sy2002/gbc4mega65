@@ -43,9 +43,10 @@ Installation
    the ZIP file that contains the bitstream and the core file and unpack it.
 2. Choose the right subfolder depending on the type of your MEGA65:
    `R2` or `R3`
-3. Either use MEGA65's bitstream utility (`m65 -q yourbitstream.bit`) or
-   install the core file so that you can use MEGA65's <kbd>No Scroll</kbd>
-   boot menu to load the core. Please have a look at the
+3. Either use [MEGA65's bitstream utility](https://github.com/MEGA65/mega65-tools)
+   (`m65 -q yourbitstream.bit`) or install the core file so that you can use
+   MEGA65's <kbd>No Scroll</kbd> boot menu to load the core.
+   Please have a look at the
    [MEGA65 Starter Guide](https://files.mega65.org/news/MEGA65-Starter-Guide.pdf)
    to learn more.
 4. The core needs a FAT32 formatted SD card to load game cartridges (ROMs).
