@@ -53,7 +53,8 @@ Installation
    display this folder on startup.
 6. The core includes an Open Source Game Boy BIOS. For more authenticity,
    go to https://gbdev.gg8.se/files/roms/bootroms/ and and download
-   `dmg_boot.bin` and `cgb_bios.bin` and place both in the `/gbc` folder.
+   `cgb_boot.bin`. Rename the file to `cgb_bios.bin` and place it in
+   the `/gbc` folder.
 
 Constraints of the current Beta version 0.7
 --------------------------------------------
@@ -151,4 +152,4 @@ in Grouchland" to see the difference:
 
 You can see how the rather bright yellow color of the house and the pavement
 turns into an orange/brown tone and how Elmo himself turns from a clear red
-into a ruby color. Also the sky, the tree and the fence is adjusted.
+into a ruby color. Also the sky, the tree and the fence are adjusted.
