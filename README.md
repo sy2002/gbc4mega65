@@ -148,3 +148,7 @@ in Grouchland" to see the difference:
 | ![gbc01](doc/gbc08.jpg)      | ![gbc02](doc/gbc09.jpg)     |
 |:----------------------------:|:---------------------------:|
 | *Fully Saturated*            | *LCD Emulation*             |
+
+You can see how the rather bright yellow color of the house and the pavement
+turns into an orange/brown tone and how Elmo himself turns from a clear red
+into a ruby color. Also the sky, the tree and the fence is adjusted.
