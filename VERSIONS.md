@@ -1,3 +1,27 @@
+Version 0.7 (beta) - May 3, 2021
+================================
+
+Even though this release is called "beta" it is **super stable and should play 99% (or more) of all Game Boy and Game Boy Color games**, given that the cartridge ROM size of the game is **up to 1 MB** (on a MEGA65 R3 machine, otherwise up to 256 kB).
+
+### What is new?
+
+* Much better compatibility (games and demos) due to support for more MBCs
+* Cartridge RAM support added
+* Option menu works
+* Joystick: Have a look at the [mapping options](https://github.com/sy2002/gbc4mega65/blob/V0.7/README.md#joystick-usage-and-mapping) to learn how to use it in games that use buttons to jump
+* LCD Emulation: Option to perform [color grading](https://github.com/sy2002/gbc4mega65/blob/V0.7/README.md#color-modes) for a more realistic look
+* Ability to browse larger folders
+* Fixed flickering/missing content of rightmost and bottom scanline
+* Improved SD card robustness
+
+### Why is the release still called "beta"?
+
+* No HDMI: Video/audio output is still VGA and 3.5mm audio jack
+* No HyperRAM: Cannot play games that have ROMs larger than 1 MB (MEGA65 R3 machine) or 256 kB (MEGA65 R2 machine)
+* Only supports MEGA65's bottom SD card slot, the rear slot is ignored
+* Flickering in rare situations due to no double bufffering, no frame blending
+* No savegames (i.e. no battery buffered cartrige RAM)
+
 Version 0.6 (alpha) - March 23, 2021
 ====================================
 
