@@ -48,14 +48,14 @@ port (
    vga_rgb           : out std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each 
 
    -- Control and status register
-   gbc_reset         : buffer std_logic;     -- reset Game Boy
-   gbc_pause         : buffer std_logic;     -- pause Game Boy
-   gbc_osm           : buffer std_logic;     -- show QNICE's On-Screen-Menu (OSM) over the Game Boy's Screen
-   gbc_keyboard      : buffer std_logic;     -- connect the M65 keyboard with the Game Boy
-   gbc_joystick      : buffer std_logic;     -- connect the M65 joystick ports with the Game Boy
-   gbc_color         : buffer std_logic;     -- 1=Game Boy Color; 0=Game Boy Classic
-   gbc_joy_map       : buffer std_logic_vector(1 downto 0); -- see gbc.asm for the mapping
-   gbc_color_mode    : buffer std_logic;     -- 0=Fully Saturated; 1=LCD Emulation 
+   gbc_reset         : out std_logic;     -- reset Game Boy
+   gbc_pause         : out std_logic;     -- pause Game Boy
+   gbc_osm           : out std_logic;     -- show QNICE's On-Screen-Menu (OSM) over the Game Boy's Screen
+   gbc_keyboard      : out std_logic;     -- connect the M65 keyboard with the Game Boy
+   gbc_joystick      : out std_logic;     -- connect the M65 joystick ports with the Game Boy
+   gbc_color         : out std_logic;     -- 1=Game Boy Color; 0=Game Boy Classic
+   gbc_joy_map       : out std_logic_vector(1 downto 0); -- see gbc.asm for the mapping
+   gbc_color_mode    : out std_logic;     -- 0=Fully Saturated; 1=LCD Emulation
 
    -- Interfaces to Game Boy's RAMs (MMIO):
    gbc_bios_addr     : out std_logic_vector(11 downto 0);
@@ -68,12 +68,12 @@ port (
    gbc_cart_data_out : in std_logic_vector(7 downto 0);
          
    -- Information about the current game cartridge
-   cart_cgb_flag     : buffer std_logic_vector(7 downto 0);
-   cart_sgb_flag     : buffer std_logic_vector(7 downto 0);
-   cart_mbc_type     : buffer std_logic_vector(7 downto 0);
-   cart_rom_size     : buffer std_logic_vector(7 downto 0);
-   cart_ram_size     : buffer std_logic_vector(7 downto 0);
-   cart_old_licensee : buffer std_logic_vector(7 downto 0)
+   cart_cgb_flag     : out std_logic_vector(7 downto 0);
+   cart_sgb_flag     : out std_logic_vector(7 downto 0);
+   cart_mbc_type     : out std_logic_vector(7 downto 0);
+   cart_rom_size     : out std_logic_vector(7 downto 0);
+   cart_ram_size     : out std_logic_vector(7 downto 0);
+   cart_old_licensee : out std_logic_vector(7 downto 0)
 ); 
 end QNICE;
 
