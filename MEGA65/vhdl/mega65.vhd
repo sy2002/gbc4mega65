@@ -231,19 +231,14 @@ begin
 
    -- MMCME2_ADV clock generators:
    --    Core clock:          33.554432 MHz
-   --    Pixelclock:          34.96 MHz
+   --    Pixelclock:          40 MHz
    --    QNICE co-processor:  50 MHz
-   clk_gen : entity work.clk_m
+   clk_gen : entity work.clk
       port map
       (
          sys_clk_i         => CLK,
          gbmain_o          => main_clk,         -- Game Boy's 33.554432 MHz main clock
-         qnice_o           => qnice_clk         -- QNICE's 50 MHz main clock
-      );
-   clk_pixel : entity work.clk_p
-      port map
-      (
-         sys_clk_i         => CLK,
+         qnice_o           => qnice_clk,        -- QNICE's 50 MHz main clock
          pixelclk_o        => vga_pixelclk      -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
       );
 

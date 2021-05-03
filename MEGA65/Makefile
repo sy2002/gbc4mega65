@@ -42,8 +42,7 @@ VHDL=\
 	$(PPRDIR)/../rtl/T80/T80.vhd \
 	$(PPRDIR)/vhdl/2port2clk_ram.vhd \
 	$(PPRDIR)/vhdl/block_rom.vhd \
-	$(PPRDIR)/vhdl/clk_main.vhd \
-	$(PPRDIR)/vhdl/clk_pixel.vhd \
+	$(PPRDIR)/vhdl/clk.vhd \
 	$(PPRDIR)/vhdl/debounce.vhd \
 	$(PPRDIR)/vhdl/drivers/kb_matrix_ram.vhdl \
 	$(PPRDIR)/vhdl/drivers/matrix_to_keynum.vhdl \

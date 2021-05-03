@@ -13,7 +13,7 @@ create_clock -period 10.000 -name CLK [get_ports CLK]
 ## violations, and hopefully make everything synthesise faster
 set_clock_groups -asynchronous \
      -group { CLK gbmain_mmcm qnice_mmcm} \
-     -group [get_clocks -of_objects [get_pins MEGA65/clk_pixel/pixelclk_o]]
+     -group [get_clocks -of_objects [get_pins MEGA65/clk_gen/pixelclk_o]]
      
 set_clock_groups -asynchronous \
      -group { CLK gbmain_mmcm } \
