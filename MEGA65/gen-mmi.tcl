@@ -57,7 +57,7 @@ proc compare {a b} {
 set memSorted [lsort -command compare $memProps]
 
 # Generate output file
-set fp [open MEGA65_R3.mmi w]
+set fp [open MEGA65-R3.mmi w]
 
 # preamble
 puts $fp "<MemInfo Version=\"1\" Minor=\"1\">"
@@ -70,7 +70,7 @@ foreach memInst $memSorted {
    set bram_slice_begin [lindex $memInst 2]
    set bram_slice_end   [lindex $memInst 3]
    set loc              [lindex $memInst 4]
-   if {$bram_slice_begin == 7} {
+   if {$bram_slice_end == 15} {
       puts $fp "         <BusBlock>"
    }
    puts $fp "            <BitLane MemType=\"RAMB36\" Placement=\"$loc\">"

@@ -1,4 +1,13 @@
-all: MEGA65-R3.bit
+bit: MEGA65-R3.bit
+
+help:
+	@echo "Available make targets are:"
+	@echo "bit    : Generate the .bit and .mmi files."
+	@echo "update : Update the .bit file with a new QNICE ROM."
+	@echo "clean  : Remove all generated files."
+
+ROM=QNICE/osm_rom.rom
+BOARD=MEGA65-R3
 
 # Specify install location of the Xilinx Vivado tool
 XILINX_DIR = /opt/Xilinx/Vivado/2019.2
@@ -65,32 +74,57 @@ VERILOG=\
 
 SOURCES = $(VHDL) $(VHDL2008) $(VERILOG)
 
+BIT=$(BOARD).bit
+MMI=$(BOARD).mmi
+XDC=$(BOARD).xdc
+TCL=$(BOARD).tcl
+DCP=$(BOARD).dcp
+MEM=$(BOARD).mem
+ROM_BIT=$(BOARD)-rom.bit
+
+
 # Generate the build script used by Vivado
-MEGA65-R3.tcl: MEGA65-R3.xdc Makefile
+$(TCL): Makefile
 	echo "# This is a tcl command script for the Vivado tool chain" > $@
 	echo "read_vhdl -vhdl2008 { $(VHDL2008) }" >> $@
 	echo "read_vhdl { $(VHDL) }" >> $@
 	echo "read_verilog { $(VERILOG) }" >> $@
-	echo "read_xdc MEGA65-R3.xdc" >> $@
-	echo "synth_design -top MEGA65_R3 -part xc7a200tfbg484-1 -flatten_hierarchy none" >> $@
+	echo "read_xdc $(XDC)" >> $@
+	echo "synth_design -top $(BOARD) -part xc7a200tfbg484-1 -flatten_hierarchy none" >> $@
 	echo "write_checkpoint -force post_synth.dcp" >> $@
 	echo "opt_design" >> $@
 	echo "place_design" >> $@
 	echo "phys_opt_design" >> $@
 	echo "route_design" >> $@
-	echo "write_checkpoint -force MEGA65-R3.dcp" >> $@
-	echo "write_bitstream -force MEGA65-R3.bit" >> $@
+	echo "write_checkpoint -force $(DCP)" >> $@
+	echo "write_bitstream -force $(BIT)" >> $@
+	echo "source gen-mmi.tcl" >> $@
 	echo "exit" >> $@
 
 # Generate the bit-file used to configure the FPGA
-MEGA65-R3.bit: MEGA65-R3.tcl $(SOURCES) MEGA65-R3.xdc
+$(BIT): $(TCL) $(SOURCES) $(XDC)
 	bash -c "source $(XILINX_DIR)/settings64.sh ; vivado -mode tcl -source $<"
 
+$(MMI):
+	@echo "You need to generate the .bit and .mmi file first"
+
+$(MEM): $(ROM)
+	rom2mem.py $(ROM) $(MEM)
+
+update: $(MMI) $(MEM)
+	bash -c "source $(XILINX_DIR)/settings64.sh ; \
+		updatemem -debug -meminfo $(MMI) -data $(MEM) -proc dummy -bit $(BIT) -out $(ROM_BIT) -force"
+
 clean:
+	rm -f updatemem*
+	rm -f usage_statistics_webtalk.*
 	rm -f vivado*
 	rm -f post_synth.dcp
-	rm -f MEGA65-R3.tcl
-	rm -f MEGA65-R3.dcp
-	rm -f MEGA65-R3.bit
+	rm -f $(BIT)
+	rm -f $(MMI)
+	rm -f $(TCL)
+	rm -f $(DCP)
+	rm -f $(MEM)
+	rm -f $(ROM_BIT)
 	rm -f tight_setup_hold_pins.txt
 
