@@ -1,17 +1,22 @@
-bit: MEGA65-R3.bit
-
 help:
 	@echo "Available make targets are:"
 	@echo "bit    : Generate the .bit and .mmi files."
 	@echo "update : Update the .bit file with a new QNICE ROM."
 	@echo "clean  : Remove all generated files."
 
-ROM=QNICE/osm_rom.rom
-BOARD=MEGA65-R3
-
 # Specify install location of the Xilinx Vivado tool
 XILINX_DIR = /opt/Xilinx/Vivado/2019.2
 
+# Specify location of the QNICE ROM
+ROM=QNICE/osm_rom.rom
+
+# Specify the board revision - used as project name
+BOARD=MEGA65-R3
+
+# Specfy the top-level entity name
+TOP=MEGA65_R3
+
+# Specify source files
 PPRDIR=.
 VHDL2008=\
 	$(PPRDIR)/../QNICE/vhdl/alu.vhd \
@@ -72,25 +77,33 @@ VERILOG=\
 	$(PPRDIR)/../rtl/video.v \
 	$(PPRDIR)/Verilog/mbc.sv
 
+
+###################################################################
+# Anything below here should probably not be changed
+###################################################################
+
 SOURCES = $(VHDL) $(VHDL2008) $(VERILOG)
 
-BIT=$(BOARD).bit
-MMI=$(BOARD).mmi
+BIT=build/$(BOARD).bit
+MMI=build/$(BOARD).mmi
 XDC=$(BOARD).xdc
-TCL=$(BOARD).tcl
-DCP=$(BOARD).dcp
-MEM=$(BOARD).mem
-ROM_BIT=$(BOARD)-rom.bit
+TCL=build/$(BOARD).tcl
+DCP=build/$(BOARD).dcp
+MEM=build/$(BOARD).mem
+ROM_BIT=build/$(BOARD)-rom.bit
 
+
+bit: $(BIT)
 
 # Generate the build script used by Vivado
 $(TCL): Makefile
+	mkdir -p build
 	echo "# This is a tcl command script for the Vivado tool chain" > $@
 	echo "read_vhdl -vhdl2008 { $(VHDL2008) }" >> $@
 	echo "read_vhdl { $(VHDL) }" >> $@
 	echo "read_verilog { $(VERILOG) }" >> $@
 	echo "read_xdc $(XDC)" >> $@
-	echo "synth_design -top $(BOARD) -part xc7a200tfbg484-1 -flatten_hierarchy none" >> $@
+	echo "synth_design -top $(TOP) -part xc7a200tfbg484-1 -flatten_hierarchy none" >> $@
 	echo "write_checkpoint -force post_synth.dcp" >> $@
 	echo "opt_design" >> $@
 	echo "place_design" >> $@
@@ -105,26 +118,31 @@ $(TCL): Makefile
 $(BIT): $(TCL) $(SOURCES) $(XDC)
 	bash -c "source $(XILINX_DIR)/settings64.sh ; vivado -mode tcl -source $<"
 
+# Generate the mmi-file used for updating the bit-file with new QNICE ROM
 $(MMI):
 	@echo "You need to generate the .bit and .mmi file first"
+	@exit -1
 
+# Convert the QNICE ROM into a .mem file needed by the update utility
 $(MEM): $(ROM)
-	rom2mem.py $(ROM) $(MEM)
+	./rom2mem.py $(ROM) $(MEM)
 
+# Update bit-file with new QNICE ROM
 update: $(MMI) $(MEM)
 	bash -c "source $(XILINX_DIR)/settings64.sh ; \
 		updatemem -debug -meminfo $(MMI) -data $(MEM) -proc dummy -bit $(BIT) -out $(ROM_BIT) -force"
 
 clean:
-	rm -f updatemem*
-	rm -f usage_statistics_webtalk.*
+	rm -rf build
+	#rm -f updatemem*
+	#rm -f usage_statistics_webtalk.*
 	rm -f vivado*
-	rm -f post_synth.dcp
-	rm -f $(BIT)
-	rm -f $(MMI)
-	rm -f $(TCL)
-	rm -f $(DCP)
-	rm -f $(MEM)
-	rm -f $(ROM_BIT)
-	rm -f tight_setup_hold_pins.txt
+	#rm -f post_synth.dcp
+	#rm -f $(BIT)
+	#rm -f $(MMI)
+	#rm -f $(TCL)
+	#rm -f $(DCP)
+	#rm -f $(MEM)
+	#rm -f $(ROM_BIT)
+	#rm -f tight_setup_hold_pins.txt
 

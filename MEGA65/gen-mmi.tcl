@@ -57,7 +57,7 @@ proc compare {a b} {
 set memSorted [lsort -command compare $memProps]
 
 # Generate output file
-set fp [open MEGA65-R3.mmi w]
+set fp [open build/MEGA65-R3.mmi w]
 
 # preamble
 puts $fp "<MemInfo Version=\"1\" Minor=\"1\">"
