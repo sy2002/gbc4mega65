@@ -220,15 +220,8 @@ signal vga_qngbc_osm_on      : std_logic;
 signal vga_qngbc_osm_rgb     : std_logic_vector(23 downto 0);
 
 -- VGA signals
-signal vga_disp_en           : std_logic;
-signal vga_col_raw           : integer range 0 to VGA_DX - 1;
-signal vga_row_raw           : integer range 0 to VGA_DY - 1;
 signal vga_col               : integer range 0 to VGA_DX - 1;
 signal vga_row               : integer range 0 to VGA_DY - 1;
-signal vga_col_next          : integer range 0 to VGA_DX - 1;
-signal vga_row_next          : integer range 0 to VGA_DY - 1;
-signal vga_hs_int            : std_logic;
-signal vga_vs_int            : std_logic;
 signal vga_address           : std_logic_vector(14 downto 0);
 
 -- LCD interface
@@ -587,133 +580,32 @@ begin
    -- vga_pixelclk
    ---------------------------------------------------------------------------------------------
 
-   -- SVGA mode 800 x 600 @ 60 Hz
-   -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)
-   -- Timings taken from http://tinyvga.com/vga-timing/800x600@60Hz
-   vga_pixels_and_timing : entity work.vga_controller
-      generic map
-      (
-         h_pixels                => VGA_DX,           -- horiztonal display width in pixels
-         v_pixels                => VGA_DY,           -- vertical display width in rows
-
-         h_pulse                 => 128,              -- horiztonal sync pulse width in pixels
-         h_bp                    => 88,               -- horiztonal back porch width in pixels
-         h_fp                    => 40,               -- horiztonal front porch width in pixels
-         h_pol                   => '1',              -- horizontal sync pulse polarity (1 = positive, 0 = negative)
-
-         v_pulse                 => 4,                -- vertical sync pulse width in rows
-         v_bp                    => 23,               -- vertical back porch width in rows
-         v_fp                    => 1,                -- vertical front porch width in rows
-         v_pol                   => '1'               -- vertical sync pulse polarity (1 = positive, 0 = negative)
+   i_vga : entity work.vga
+      generic map (
+         G_VGA_DX          => VGA_DX,
+         G_VGA_DY          => VGA_DY,
+         G_GB_DX           => GB_DX,
+         G_GB_DY           => GB_DY,
+         G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE
       )
-      port map
-      (
-         pixel_clk               =>	vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
-         reset_n                 => main_dbnce_reset_n,    -- active low asycnchronous reset
-         h_sync                  => vga_hs_int,       -- horiztonal sync pulse
-         v_sync                  => vga_vs_int,       -- vertical sync pulse
-         disp_ena                => vga_disp_en,      -- display enable ('1' = display time, '0' = blanking time)
-         column                  => vga_col_raw,      -- horizontal pixel coordinate
-         row                     => vga_row_raw,      -- vertical pixel coordinate
-         n_blank                 => open,             -- direct blacking output to DAC
-         n_sync                  => open              -- sync-on-green output to DAC
-      );
-
-   -- due to the latching of the VGA signals, we are one pixel off: compensate for that
-   adjust_pixel_skew : process(vga_col_raw, vga_row_raw)
-      variable nextrow  : integer range 0 to VGA_DY - 1;
-   begin
-      nextrow := vga_row_raw + 1;
-      if vga_col_raw < VGA_DX - 1 then
-         vga_col <= vga_col_raw + 1;
-         vga_row <= vga_row_raw;
-      else
-         vga_col <= 0;
-         if nextrow < VGA_DY then
-            vga_row <= nextrow;
-         else
-            vga_row <= 0;
-         end if;
-      end if;
-   end process;
-
-   -- Scaler: 160 x 144 => 4x => 640 x 576
-   -- Scaling by 4 is a convenient special case: We just need to use a SHR operation.
-   -- We are doing this by taking the bits "9 downto 2" from the current column and row.
-   -- This is a hardcoded and very fast operation.
-   scaler : process(vga_col, vga_row)
-      variable src_x: std_logic_vector(9 downto 0);
-      variable src_y: std_logic_vector(9 downto 0);
-      variable dst_x: std_logic_vector(7 downto 0);
-      variable dst_y: std_logic_vector(7 downto 0);
-      variable dst_x_i: integer range 0 to GB_DX - 1;
-      variable dst_y_i: integer range 0 to GB_DY - 1;
-      variable nextrow: integer range 0 to GB_DY - 1;
-   begin
-      src_x    := std_logic_vector(to_unsigned(vga_col, 10));
-      src_y    := std_logic_vector(to_unsigned(vga_row, 10));
-      dst_x    := src_x(9 downto 2);
-      dst_y    := src_y(9 downto 2);
-      dst_x_i  := to_integer(unsigned(dst_x));
-      dst_y_i  := to_integer(unsigned(dst_y));
-      nextrow  := dst_y_i + 1;
-
-      -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
-      -- to always address one pixel ahead of were we currently stand
-      if dst_x_i < GB_DX - 1 then
-         vga_col_next <= dst_x_i + 1;
-         vga_row_next <= dst_y_i;
-      else
-         vga_col_next <= 0;
-         if nextrow < GB_DY then
-            vga_row_next <= nextrow;
-         else
-            vga_row_next <= 0;
-         end if;
-      end if;
-   end process;
-
-   vga_address <= std_logic_vector(to_unsigned(vga_row_next * GB_DX + vga_col_next, 15));
-
-   video_signal_latches : process(vga_pixelclk)
-   begin
-      if rising_edge(vga_pixelclk) then
-         VGA_RED   <= (others => '0');
-         VGA_BLUE  <= (others => '0');
-         VGA_GREEN <= (others => '0');
-
-         if vga_disp_en then
-            -- Game Boy output
-            -- TODO: Investigate, why the top/left pixel is always white and solve it;
-            -- workaround in the meantime: the top/left pixel is set to be always black which seems to be less intrusive
-            if (vga_col_raw > 0 or vga_row_raw > 0) and
-               (vga_col_raw < GB_DX * GB_TO_VGA_SCALE and vga_row_raw < GB_DY * GB_TO_VGA_SCALE) then
-               VGA_RED   <= vga_frame_buffer_data(23 downto 16);
-               VGA_GREEN <= vga_frame_buffer_data(15 downto 8);
-               VGA_BLUE  <= vga_frame_buffer_data(7 downto 0);
-            end if;
-
-            -- On-Screen-Menu (OSM) output
-            if vga_qngbc_osm_on then
-               VGA_RED   <= vga_qngbc_osm_rgb(23 downto 16);
-               VGA_GREEN <= vga_qngbc_osm_rgb(15 downto 8);
-               VGA_BLUE  <= vga_qngbc_osm_rgb(7 downto 0);
-            end if;
-         end if;
-
-         -- VGA horizontal and vertical sync
-         VGA_HS      <= vga_hs_int;
-         VGA_VS      <= vga_vs_int;
-      end if;
-   end process;
-
-   -- make the VDAC output the image
-   -- for some reason, the VDAC does not like non-zero values outside the visible window
-   -- maybe "vdac_sync_n <= '0';" activates sync-on-green?
-   -- TODO: check that
-   vdac_sync_n <= '0';
-   vdac_blank_n <= '1';
-   vdac_clk <= not vga_pixelclk; -- inverting the clock leads to a sharper signal for some reason
+      port map (
+         clk_i          =>	vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
+         rst_i          => main_dbnce_reset_n,    -- active low asycnchronous reset
+         vga_address_o  => vga_address,
+         vga_row_o      => vga_row,
+         vga_col_o      => vga_col,
+         vga_data_i     => vga_frame_buffer_data,
+         vga_osm_on_i   => vga_qngbc_osm_on,
+         vga_osm_rgb_i  => vga_qngbc_osm_rgb,
+         vga_red_o      => vga_red,
+         vga_green_o    => vga_green,
+         vga_blue_o     => vga_blue,
+         vga_hs_o       => vga_hs,
+         vga_vs_o       => vga_vs,
+         vdac_clk_o     => vdac_clk,
+         vdac_sync_n_o  => vdac_sync_n,
+         vdac_blank_n_o => vdac_blank_n
+      ); -- i_vga : entity work.vga
 
 
    ---------------------------------------------------------------------------------------------
