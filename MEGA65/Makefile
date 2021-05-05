@@ -23,6 +23,7 @@ VHDL2008=\
 	$(PPRDIR)/vhdl/debouncer.vhd \
 	$(PPRDIR)/vhdl/lcd_to_pixels.vhd \
 	$(PPRDIR)/vhdl/vga.vhd \
+	$(PPRDIR)/vhdl/main.vhd \
 	$(PPRDIR)/vhdl/mega65.vhd \
 	$(PPRDIR)/vhdl/qnice.vhd \
 	$(PPRDIR)/vhdl/top_mega65-r3.vhd
