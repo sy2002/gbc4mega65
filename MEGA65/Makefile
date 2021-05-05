@@ -104,7 +104,6 @@ $(TCL): Makefile
 	echo "read_verilog { $(VERILOG) }" >> $@
 	echo "read_xdc $(XDC)" >> $@
 	echo "synth_design -top $(TOP) -part xc7a200tfbg484-1 -flatten_hierarchy none" >> $@
-	echo "write_checkpoint -force post_synth.dcp" >> $@
 	echo "opt_design" >> $@
 	echo "place_design" >> $@
 	echo "phys_opt_design" >> $@
@@ -134,15 +133,8 @@ update: $(MMI) $(MEM)
 
 clean:
 	rm -rf build
-	#rm -f updatemem*
-	#rm -f usage_statistics_webtalk.*
+	rm -f updatemem*
+	rm -f usage_statistics_webtalk.*
 	rm -f vivado*
-	#rm -f post_synth.dcp
-	#rm -f $(BIT)
-	#rm -f $(MMI)
-	#rm -f $(TCL)
-	#rm -f $(DCP)
-	#rm -f $(MEM)
-	#rm -f $(ROM_BIT)
-	#rm -f tight_setup_hold_pins.txt
+	rm -f webtalk*
 
