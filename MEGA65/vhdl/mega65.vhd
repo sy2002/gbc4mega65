@@ -108,112 +108,132 @@ signal main_clk            : std_logic;               -- Game Boy core main cloc
 signal vga_pixelclk        : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
 signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 MHz
 
--- VGA signals
-signal vga_disp_en         : std_logic;
-signal vga_col_raw         : integer range 0 to VGA_DX - 1;
-signal vga_row_raw         : integer range 0 to VGA_DY - 1;
-signal vga_col             : integer range 0 to VGA_DX - 1;
-signal vga_row             : integer range 0 to VGA_DY - 1;
-signal vga_col_next        : integer range 0 to VGA_DX - 1;
-signal vga_row_next        : integer range 0 to VGA_DY - 1;
-signal vga_hs_int          : std_logic;
-signal vga_vs_int          : std_logic;
-signal vga_address         : std_logic_vector(14 downto 0);
+
+---------------------------------------------------------------------------------------------
+-- main_clk
+---------------------------------------------------------------------------------------------
 
 -- Audio signals
-signal pcm_audio_left      : std_logic_vector(15 downto 0);
-signal pcm_audio_right     : std_logic_vector(15 downto 0);
+signal main_pcm_audio_left      : std_logic_vector(15 downto 0);
+signal main_pcm_audio_right     : std_logic_vector(15 downto 0);
 
 -- debounced signals for the reset button and the joysticks
-signal dbnce_reset_n       : std_logic;
-signal dbnce_joy1_up_n     : std_logic;
-signal dbnce_joy1_down_n   : std_logic;
-signal dbnce_joy1_left_n   : std_logic;
-signal dbnce_joy1_right_n  : std_logic;
-signal dbnce_joy1_fire_n   : std_logic;
-signal dbnce_joy2_up_n     : std_logic;
-signal dbnce_joy2_down_n   : std_logic;
-signal dbnce_joy2_left_n   : std_logic;
-signal dbnce_joy2_right_n  : std_logic;
-signal dbnce_joy2_fire_n   : std_logic;
+signal main_dbnce_reset_n       : std_logic;
+signal main_dbnce_joy1_up_n     : std_logic;
+signal main_dbnce_joy1_down_n   : std_logic;
+signal main_dbnce_joy1_left_n   : std_logic;
+signal main_dbnce_joy1_right_n  : std_logic;
+signal main_dbnce_joy1_fire_n   : std_logic;
+signal main_dbnce_joy2_up_n     : std_logic;
+signal main_dbnce_joy2_down_n   : std_logic;
+signal main_dbnce_joy2_left_n   : std_logic;
+signal main_dbnce_joy2_right_n  : std_logic;
+signal main_dbnce_joy2_fire_n   : std_logic;
 
 -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
-signal m65_joystick        : std_logic_vector(4 downto 0);
+signal main_m65_joystick        : std_logic_vector(4 downto 0);
 
 -- Game Boy
-signal gbc_bios_addr       : std_logic_vector(11 downto 0);
-signal gbc_bios_data       : std_logic_vector(7 downto 0);
+signal main_gbc_bios_addr       : std_logic_vector(11 downto 0);
+signal main_gbc_bios_data       : std_logic_vector(7 downto 0);
 
 -- LCD interface
-signal lcd_clkena          : std_logic;
-signal lcd_data            : std_logic_vector(14 downto 0);
-signal lcd_mode            : std_logic_vector(1 downto 0);
-signal lcd_on              : std_logic;
-signal lcd_vsync           : std_logic;
-signal pixel_out_we        : std_logic;
-signal pixel_out_ptr       : integer range 0 to (GB_DX * GB_DY) - 1 := 0;
-signal pixel_out_data      : std_logic_vector(23 downto 0) := (others => '0');
-signal frame_buffer_data   : std_logic_vector(23 downto 0);
+signal main_lcd_clkena          : std_logic;
+signal main_lcd_data            : std_logic_vector(14 downto 0);
+signal main_lcd_mode            : std_logic_vector(1 downto 0);
+signal main_lcd_on              : std_logic;
+signal main_lcd_vsync           : std_logic;
+signal main_pixel_out_we        : std_logic;
+signal main_pixel_out_ptr       : integer range 0 to (GB_DX * GB_DY) - 1 := 0;
+signal main_pixel_out_data      : std_logic_vector(23 downto 0) := (others => '0');
 
- -- speed control
-signal sc_ce               : std_logic;
-signal sc_ce_2x            : std_logic;
-signal HDMA_on             : std_logic;
+-- speed control
+signal main_sc_ce               : std_logic;
+signal main_sc_ce_2x            : std_logic;
+signal main_HDMA_on             : std_logic;
 
 -- cartridge signals
-signal cart_addr           : std_logic_vector(15 downto 0);
-signal cart_rd             : std_logic;
-signal cart_wr             : std_logic;
-signal cart_do             : std_logic_vector(7 downto 0);
-signal cart_di             : std_logic_vector(7 downto 0);
+signal main_cart_addr           : std_logic_vector(15 downto 0);
+signal main_cart_rd             : std_logic;
+signal main_cart_wr             : std_logic;
+signal main_cart_do             : std_logic_vector(7 downto 0);
+signal main_cart_di             : std_logic_vector(7 downto 0);
 
 -- cartridge flags
-signal cart_cgb_flag       : std_logic_vector(7 downto 0);
-signal cart_sgb_flag       : std_logic_vector(7 downto 0);
-signal cart_mbc_type       : std_logic_vector(7 downto 0);
-signal cart_rom_size       : std_logic_vector(7 downto 0);
-signal cart_ram_size       : std_logic_vector(7 downto 0);
-signal cart_old_licensee   : std_logic_vector(7 downto 0);
+signal main_cart_cgb_flag       : std_logic_vector(7 downto 0);
+signal main_cart_sgb_flag       : std_logic_vector(7 downto 0);
+signal main_cart_mbc_type       : std_logic_vector(7 downto 0);
+signal main_cart_rom_size       : std_logic_vector(7 downto 0);
+signal main_cart_ram_size       : std_logic_vector(7 downto 0);
+signal main_cart_old_licensee   : std_logic_vector(7 downto 0);
 
-signal isGBC_Game          : boolean;     -- current cartridge is dedicated GBC game
-signal isSGB_Game          : boolean;     -- current cartridge is dedicated SBC game
+signal main_isGBC_Game          : boolean;     -- current cartridge is dedicated GBC game
+signal main_isSGB_Game          : boolean;     -- current cartridge is dedicated SBC game
 
 -- MBC signals
-signal cartrom_addr        : std_logic_vector(22 downto 0);
-signal cartrom_rd          : std_logic;
-signal cartrom_data        : std_logic_vector(7 downto 0);
-signal cartram_addr        : std_logic_vector(16 downto 0);
-signal cartram_rd          : std_logic;
-signal cartram_wr          : std_logic;
-signal cartram_data_in     : std_logic_vector(7 downto 0);
-signal cartram_data_out    : std_logic_vector(7 downto 0);
+signal main_cartrom_addr        : std_logic_vector(22 downto 0);
+signal main_cartrom_rd          : std_logic;
+signal main_cartrom_data        : std_logic_vector(7 downto 0);
+signal main_cartram_addr        : std_logic_vector(16 downto 0);
+signal main_cartram_rd          : std_logic;
+signal main_cartram_wr          : std_logic;
+signal main_cartram_data_in     : std_logic_vector(7 downto 0);
+signal main_cartram_data_out    : std_logic_vector(7 downto 0);
 
 -- joypad: p54 selects matrix entry and data contains either
 -- the direction keys or the other buttons
-signal joypad_p54          : std_logic_vector(1 downto 0);
-signal joypad_data         : std_logic_vector(3 downto 0);
-signal joypad_data_i       : std_logic_vector(3 downto 0);
+signal main_joypad_p54          : std_logic_vector(1 downto 0);
+signal main_joypad_data         : std_logic_vector(3 downto 0);
+signal main_joypad_data_i       : std_logic_vector(3 downto 0);
 
 -- QNICE control signals (see also gbc.asm for more details)
-signal qngbc_reset         : std_logic;
-signal qngbc_pause         : std_logic;
-signal qngbc_keyboard      : std_logic;
-signal qngbc_joystick      : std_logic;
-signal qngbc_color         : std_logic;
-signal qngbc_joy_map       : std_logic_vector(1 downto 0);
-signal qngbc_color_mode    : std_logic;
+signal main_qngbc_reset         : std_logic;
+signal main_qngbc_pause         : std_logic;
+signal main_qngbc_keyboard      : std_logic;
+signal main_qngbc_joystick      : std_logic;
+signal main_qngbc_color         : std_logic;
+signal main_qngbc_joy_map       : std_logic_vector(1 downto 0);
+signal main_qngbc_color_mode    : std_logic;
+signal main_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
 
-signal qngbc_bios_addr     : std_logic_vector(11 downto 0);
-signal qngbc_bios_we       : std_logic;
-signal qngbc_bios_data_in  : std_logic_vector(7 downto 0);
-signal qngbc_bios_data_out : std_logic_vector(7 downto 0);
-signal qngbc_cart_addr     : std_logic_vector(22 downto 0);
-signal qngbc_cart_we       : std_logic;
-signal qngbc_cart_data_in  : std_logic_vector(7 downto 0);
-signal qngbc_cart_data_out : std_logic_vector(7 downto 0);
-signal qngbc_osm_on        : std_logic;
-signal qngbc_osm_rgb       : std_logic_vector(23 downto 0);
-signal qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
+
+---------------------------------------------------------------------------------------------
+-- qnice_clk
+---------------------------------------------------------------------------------------------
+
+-- QNICE control signals (see also gbc.asm for more details)
+signal qnice_qngbc_bios_addr     : std_logic_vector(11 downto 0);
+signal qnice_qngbc_bios_we       : std_logic;
+signal qnice_qngbc_bios_data_in  : std_logic_vector(7 downto 0);
+signal qnice_qngbc_bios_data_out : std_logic_vector(7 downto 0);
+signal qnice_qngbc_cart_addr     : std_logic_vector(22 downto 0);
+signal qnice_qngbc_cart_we       : std_logic;
+signal qnice_qngbc_cart_data_in  : std_logic_vector(7 downto 0);
+signal qnice_qngbc_cart_data_out : std_logic_vector(7 downto 0);
+
+
+---------------------------------------------------------------------------------------------
+-- vga_pixelclk
+---------------------------------------------------------------------------------------------
+
+signal vga_qngbc_osm_on      : std_logic;
+signal vga_qngbc_osm_rgb     : std_logic_vector(23 downto 0);
+
+-- VGA signals
+signal vga_disp_en           : std_logic;
+signal vga_col_raw           : integer range 0 to VGA_DX - 1;
+signal vga_row_raw           : integer range 0 to VGA_DY - 1;
+signal vga_col               : integer range 0 to VGA_DX - 1;
+signal vga_row               : integer range 0 to VGA_DY - 1;
+signal vga_col_next          : integer range 0 to VGA_DX - 1;
+signal vga_row_next          : integer range 0 to VGA_DY - 1;
+signal vga_hs_int            : std_logic;
+signal vga_vs_int            : std_logic;
+signal vga_address           : std_logic_vector(14 downto 0);
+
+-- LCD interface
+signal vga_frame_buffer_data : std_logic_vector(23 downto 0);
+
 
 -- constants necessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -255,96 +275,96 @@ begin
    gameboy : entity work.gb
       port map
       (
-         reset                   => qngbc_reset,      -- input
+         reset                   => main_qngbc_reset,      -- input
 
-         clk_sys                 => main_clk,         -- input
-         ce                      => sc_ce,            -- input
-         ce_2x                   => sc_ce_2x,         -- input
+         clk_sys                 => main_clk,              -- input
+         ce                      => main_sc_ce,            -- input
+         ce_2x                   => main_sc_ce_2x,         -- input
 
-         fast_boot               => c_fast_boot,      -- input
-         joystick                => c_joystick,       -- input
-         isGBC                   => qngbc_color,      -- input
-         isGBC_game              => isGBC_Game,       -- input
+         fast_boot               => c_fast_boot,           -- input
+         joystick                => c_joystick,            -- input
+         isGBC                   => main_qngbc_color,      -- input
+         isGBC_game              => main_isGBC_Game,       -- input
 
          -- Cartridge interface: Connects with the Memory Bank Controller (MBC)
-         cart_addr               => cart_addr,        -- output
-         cart_rd                 => cart_rd,          -- output
-         cart_wr                 => cart_wr,          -- output
-         cart_di                 => cart_di,          -- input
-         cart_do                 => cart_do,          -- output
+         cart_addr               => main_cart_addr,        -- output
+         cart_rd                 => main_cart_rd,          -- output
+         cart_wr                 => main_cart_wr,          -- output
+         cart_di                 => main_cart_di,          -- input
+         cart_do                 => main_cart_do,          -- output
 
          -- Game Boy BIOS interface
-         gbc_bios_addr           => gbc_bios_addr,    -- output
-         gbc_bios_do             => gbc_bios_data,    -- input
+         gbc_bios_addr           => main_gbc_bios_addr,    -- output
+         gbc_bios_do             => main_gbc_bios_data,    -- input
 
          -- audio
-         audio_l                 => pcm_audio_left,   -- output
-         audio_r                 => pcm_audio_right,  -- output
+         audio_l                 => main_pcm_audio_left,   -- output
+         audio_r                 => main_pcm_audio_right,  -- output
 
          -- lcd interface
-         lcd_clkena              => lcd_clkena,       -- output
-         lcd_data                => lcd_data,         -- output
-         lcd_mode                => lcd_mode,         -- output
-         lcd_on                  => lcd_on,           -- output
-         lcd_vsync               => lcd_vsync,        -- output
+         lcd_clkena              => main_lcd_clkena,       -- output
+         lcd_data                => main_lcd_data,         -- output
+         lcd_mode                => main_lcd_mode,         -- output
+         lcd_on                  => main_lcd_on,           -- output
+         lcd_vsync               => main_lcd_vsync,        -- output
 
-         joy_p54                 => joypad_p54,       -- output
-         joy_din                 => joypad_data,      -- input
+         joy_p54                 => main_joypad_p54,       -- output
+         joy_din                 => main_joypad_data,      -- input
 
-         speed                   => open,   --GBC     -- output
-         HDMA_on                 => HDMA_on,          -- output
+         speed                   => open,   --GBC          -- output
+         HDMA_on                 => main_HDMA_on,          -- output
 
          -- cheating/game code engine: not supported on MEGA65
-         gg_reset                => i_reset,          -- input
-         gg_en                   => c_dummy_0,        -- input
-         gg_code                 => c_dummy_129bit_0, -- input
-         gg_available            => open,             -- output
+         gg_reset                => i_reset,               -- input
+         gg_en                   => c_dummy_0,             -- input
+         gg_code                 => c_dummy_129bit_0,      -- input
+         gg_available            => open,                  -- output
 
          -- serial port: not supported on MEGA65
-         sc_int_clock2           => open,             -- output
-         serial_clk_in           => c_dummy_0,        -- input
-         serial_clk_out          => open,             -- output
-         serial_data_in          => c_dummy_0,        -- input
-         serial_data_out         => open,             -- output
+         sc_int_clock2           => open,                  -- output
+         serial_clk_in           => c_dummy_0,             -- input
+         serial_clk_out          => open,                  -- output
+         serial_data_in          => c_dummy_0,             -- input
+         serial_data_out         => open,                  -- output
 
          -- MiSTer's save states & rewind feature: not supported on MEGA65
-         cart_ram_size           => c_dummy_8bit_0,   -- input
-         save_state              => c_dummy_0,        -- input
-         load_state              => c_dummy_0,        -- input
-         savestate_number        => c_dummy_2bit_0,   -- input
-         sleep_savestate         => open,             -- output
-         state_loaded            => open,             -- output
-         SaveStateExt_Din        => open,             -- output
-         SaveStateExt_Adr        => open,             -- output
-         SaveStateExt_wren       => open,             -- output
-         SaveStateExt_rst        => open,             -- output
-         SaveStateExt_Dout       => c_dummy_64bit_0,  -- input
-         SaveStateExt_load       => open,             -- output
-         Savestate_CRAMAddr      => open,             -- output
-         Savestate_CRAMRWrEn     => open,             -- output
-         Savestate_CRAMWriteData => open,             -- output
-         Savestate_CRAMReadData  => c_dummy_8bit_0,   -- input
-         SAVE_out_Din            => open,             -- output
-         SAVE_out_Dout           => c_dummy_64bit_0,  -- input
-         SAVE_out_Adr            => open,             -- output
-         SAVE_out_rnw            => open,             -- output
-         SAVE_out_ena            => open,             -- output
-         SAVE_out_done           => c_dummy_0,        -- input
-         rewind_on               => c_dummy_0,        -- input
-         rewind_active           => c_dummy_0         -- input
-      );
+         cart_ram_size           => c_dummy_8bit_0,        -- input
+         save_state              => c_dummy_0,             -- input
+         load_state              => c_dummy_0,             -- input
+         savestate_number        => c_dummy_2bit_0,        -- input
+         sleep_savestate         => open,                  -- output
+         state_loaded            => open,                  -- output
+         SaveStateExt_Din        => open,                  -- output
+         SaveStateExt_Adr        => open,                  -- output
+         SaveStateExt_wren       => open,                  -- output
+         SaveStateExt_rst        => open,                  -- output
+         SaveStateExt_Dout       => c_dummy_64bit_0,       -- input
+         SaveStateExt_load       => open,                  -- output
+         Savestate_CRAMAddr      => open,                  -- output
+         Savestate_CRAMRWrEn     => open,                  -- output
+         Savestate_CRAMWriteData => open,                  -- output
+         Savestate_CRAMReadData  => c_dummy_8bit_0,        -- input
+         SAVE_out_Din            => open,                  -- output
+         SAVE_out_Dout           => c_dummy_64bit_0,       -- input
+         SAVE_out_Adr            => open,                  -- output
+         SAVE_out_rnw            => open,                  -- output
+         SAVE_out_ena            => open,                  -- output
+         SAVE_out_done           => c_dummy_0,             -- input
+         rewind_on               => c_dummy_0,             -- input
+         rewind_active           => c_dummy_0              -- input
+      ); -- gameboy : entity work.gb
 
    -- Speed control is mainly a clock divider and it also manages pause/resume/fast-forward/etc.
    gb_clk_ctrl : entity work.speedcontrol
       port map
       (
          clk_sys                 => main_clk,
-         pause                   => qngbc_pause,
+         pause                   => main_qngbc_pause,
          speedup                 => '0',
-         cart_act                => cart_rd or cart_wr,
-         HDMA_on                 => HDMA_on,
-         ce                      => sc_ce,
-         ce_2x                   => sc_ce_2x,
+         cart_act                => main_cart_rd or main_cart_wr,
+         HDMA_on                 => main_HDMA_on,
+         ce                      => main_sc_ce,
+         ce_2x                   => main_sc_ce_2x,
          refresh                 => open,
          ff_on                   => open
       );
@@ -355,32 +375,32 @@ begin
       (
          -- Game Boy's clock and reset
          clk_sys                 => main_clk,
-         ce_cpu2x                => sc_ce_2x,
-         reset                   => qngbc_reset,
+         ce_cpu2x                => main_sc_ce_2x,
+         reset                   => main_qngbc_reset,
 
          -- Game Boy's cartridge interface
-         cart_addr               => cart_addr,
-         cart_rd                 => cart_rd,
-         cart_wr                 => cart_wr,
-         cart_do                 => cart_do,
-         cart_di                 => cart_di,
+         cart_addr               => main_cart_addr,
+         cart_rd                 => main_cart_rd,
+         cart_wr                 => main_cart_wr,
+         cart_do                 => main_cart_do,
+         cart_di                 => main_cart_di,
 
          -- Cartridge ROM interface
-         rom_addr                => cartrom_addr,
-         rom_rd                  => cartrom_rd,
-         rom_data                => cartrom_data,
+         rom_addr                => main_cartrom_addr,
+         rom_rd                  => main_cartrom_rd,
+         rom_data                => main_cartrom_data,
 
          -- Cartridge RAM interface
-         ram_addr                => cartram_addr,
-         ram_rd                  => cartram_rd,
-         ram_wr                  => cartram_wr,
-         ram_do                  => cartram_data_out,
-         ram_di                  => cartram_data_in,
+         ram_addr                => main_cartram_addr,
+         ram_rd                  => main_cartram_rd,
+         ram_wr                  => main_cartram_wr,
+         ram_do                  => main_cartram_data_out,
+         ram_di                  => main_cartram_data_in,
 
          -- Cartridge flags
-         cart_mbc_type           => cart_mbc_type,
-         cart_rom_size           => cart_rom_size,
-         cart_ram_size           => cart_ram_size
+         cart_mbc_type           => main_cart_mbc_type,
+         cart_rom_size           => main_cart_rom_size,
+         cart_ram_size           => main_cart_ram_size
       );
 
    -- Generate the signals necessary to store the LCD output into the frame buffer
@@ -389,17 +409,17 @@ begin
    i_lcd_to_pixels : entity work.lcd_to_pixels
    port map (
       clk_i                      => main_clk,
-      sc_ce_i                    => sc_ce,
-      qngbc_color_i              => qngbc_color,
-      qngbc_color_mode_i         => qngbc_color_mode,
-      lcd_clkena_i               => lcd_clkena,
-      lcd_data_i                 => lcd_data,
-      lcd_mode_i                 => lcd_mode,
-      lcd_on_i                   => lcd_on,
-      lcd_vsync_i                => lcd_vsync,
-      pixel_out_we_o             => pixel_out_we,
-      pixel_out_ptr_o            => pixel_out_ptr,
-      pixel_out_data_o           => pixel_out_data
+      sc_ce_i                    => main_sc_ce,
+      qngbc_color_i              => main_qngbc_color,
+      qngbc_color_mode_i         => main_qngbc_color_mode,
+      lcd_clkena_i               => main_lcd_clkena,
+      lcd_data_i                 => main_lcd_data,
+      lcd_mode_i                 => main_lcd_mode,
+      lcd_on_i                   => main_lcd_on,
+      lcd_vsync_i                => main_lcd_vsync,
+      pixel_out_we_o             => main_pixel_out_we,
+      pixel_out_ptr_o            => main_pixel_out_ptr,
+      pixel_out_data_o           => main_pixel_out_data
    ); -- i_lcd_to_pixels
 
    -- MEGA65 keyboard and joystick controller
@@ -414,12 +434,12 @@ begin
          kio8                    => kb_io0,
          kio9                    => kb_io1,
          kio10                   => kb_io2,
-         joystick                => m65_joystick,
-         joy_map                 => qngbc_joy_map,
+         joystick                => main_m65_joystick,
+         joy_map                 => main_qngbc_joy_map,
 
-         p54                     => joypad_p54,
-         joypad                  => joypad_data_i,
-         full_matrix             => qngbc_keyb_matrix
+         p54                     => main_joypad_p54,
+         joypad                  => main_joypad_data_i,
+         full_matrix             => main_qngbc_keyb_matrix
       );
 
    -- debouncer for the RESET button as well as for the joysticks:
@@ -428,7 +448,7 @@ begin
    -- 1ms for the fire button
    do_dbnce_reset_n : entity work.debounce
       generic map(clk_freq => GB_CLK_SPEED, stable_time => 40)
-      port map (clk => main_clk, reset_n => '1', button => RESET_N, result => dbnce_reset_n);
+      port map (clk => main_clk, reset_n => '1', button => RESET_N, result => main_dbnce_reset_n);
    do_dbnce_joysticks : entity work.debouncer
       generic map
       (
@@ -445,11 +465,11 @@ begin
          joy_1_right_n           => joy_1_right_n,
          joy_1_fire_n            => joy_1_fire_n,
 
-         dbnce_joy1_up_n         => dbnce_joy1_up_n,
-         dbnce_joy1_down_n       => dbnce_joy1_down_n,
-         dbnce_joy1_left_n       => dbnce_joy1_left_n,
-         dbnce_joy1_right_n      => dbnce_joy1_right_n,
-         dbnce_joy1_fire_n       => dbnce_joy1_fire_n,
+         dbnce_joy1_up_n         => main_dbnce_joy1_up_n,
+         dbnce_joy1_down_n       => main_dbnce_joy1_down_n,
+         dbnce_joy1_left_n       => main_dbnce_joy1_left_n,
+         dbnce_joy1_right_n      => main_dbnce_joy1_right_n,
+         dbnce_joy1_fire_n       => main_dbnce_joy1_fire_n,
 
          joy_2_up_n              => joy_2_up_n,
          joy_2_down_n            => joy_2_down_n,
@@ -457,28 +477,28 @@ begin
          joy_2_right_n           => joy_2_right_n,
          joy_2_fire_n            => joy_2_fire_n,
 
-         dbnce_joy2_up_n         => dbnce_joy2_up_n,
-         dbnce_joy2_down_n       => dbnce_joy2_down_n,
-         dbnce_joy2_left_n       => dbnce_joy2_left_n,
-         dbnce_joy2_right_n      => dbnce_joy2_right_n,
-         dbnce_joy2_fire_n       => dbnce_joy2_fire_n
+         dbnce_joy2_up_n         => main_dbnce_joy2_up_n,
+         dbnce_joy2_down_n       => main_dbnce_joy2_down_n,
+         dbnce_joy2_left_n       => main_dbnce_joy2_left_n,
+         dbnce_joy2_right_n      => main_dbnce_joy2_right_n,
+         dbnce_joy2_fire_n       => main_dbnce_joy2_fire_n
       );
 
    -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
-   m65_joystick <= (dbnce_joy1_fire_n  and dbnce_joy2_fire_n) &
-                   (dbnce_joy1_up_n    and dbnce_joy2_up_n)   &
-                   (dbnce_joy1_down_n  and dbnce_joy2_down_n) &
-                   (dbnce_joy1_left_n  and dbnce_joy2_left_n) &
-                   (dbnce_joy1_right_n and dbnce_joy2_right_n);
+   main_m65_joystick <= (main_dbnce_joy1_fire_n  and main_dbnce_joy2_fire_n) &
+                        (main_dbnce_joy1_up_n    and main_dbnce_joy2_up_n)   &
+                        (main_dbnce_joy1_down_n  and main_dbnce_joy2_down_n) &
+                        (main_dbnce_joy1_left_n  and main_dbnce_joy2_left_n) &
+                        (main_dbnce_joy1_right_n and main_dbnce_joy2_right_n);
 
    -- Switch keyboard and joystick on/off according to the QNICE control and status register (see gbc.asm)
    -- joypad_data is active low
-   joypad_data <= joypad_data_i when qngbc_keyboard = '1' else (others => '1');
+   main_joypad_data <= main_joypad_data_i when main_qngbc_keyboard = '1' else (others => '1');
 
    -- Cartridge header flags
    -- Infos taken from: https://gbdev.io/pandocs/#the-cartridge-header and from MiSTer's mbc.sv
-   isGBC_Game <= true when cart_cgb_flag = x"80" or cart_cgb_flag = x"C0" else false;
-   isSGB_Game <= true when cart_sgb_flag = x"03" and cart_old_licensee = x"33" else false;
+   main_isGBC_Game <= true when main_cart_cgb_flag = x"80" or main_cart_cgb_flag = x"C0" else false;
+   main_isSGB_Game <= true when main_cart_sgb_flag = x"03" and main_cart_old_licensee = x"33" else false;
 
 
    ---------------------------------------------------------------------------------------------
@@ -511,41 +531,41 @@ begin
          SD_MISO                 => SD_MISO,                               -- input
 
          -- keyboard interface
-         full_matrix             => qngbc_keyb_matrix,                     -- input
+         full_matrix             => main_qngbc_keyb_matrix,                -- input
 
          -- VGA interface
          pixelclock              => vga_pixelclk,                          -- input
          vga_x                   => vga_col,                               -- input
          vga_y                   => vga_row,                               -- input
-         vga_on                  => qngbc_osm_on,                          -- output
-         vga_rgb                 => qngbc_osm_rgb,                         -- output
+         vga_on                  => vga_qngbc_osm_on,                      -- output
+         vga_rgb                 => vga_qngbc_osm_rgb,                     -- output
 
          -- Game Boy control
-         gbc_reset               => qngbc_reset,                           -- output
-         gbc_pause               => qngbc_pause,                           -- output
-         gbc_keyboard            => qngbc_keyboard,                        -- output
-         gbc_joystick            => qngbc_joystick,                        -- output
-         gbc_color               => qngbc_color,                           -- output
-         gbc_joy_map             => qngbc_joy_map,                         -- output
-         gbc_color_mode          => qngbc_color_mode,                      -- output
+         gbc_reset               => main_qngbc_reset,                      -- output
+         gbc_pause               => main_qngbc_pause,                      -- output
+         gbc_keyboard            => main_qngbc_keyboard,                   -- output
+         gbc_joystick            => main_qngbc_joystick,                   -- output
+         gbc_color               => main_qngbc_color,                      -- output
+         gbc_joy_map             => main_qngbc_joy_map,                    -- output
+         gbc_color_mode          => main_qngbc_color_mode,                 -- output
 
          -- Interfaces to Game Boy's RAMs (MMIO):
-         gbc_bios_addr           => qngbc_bios_addr,                       -- output
-         gbc_bios_we             => qngbc_bios_we,                         -- output
-         gbc_bios_data_in        => qngbc_bios_data_in,                    -- output
-         gbc_bios_data_out       => qngbc_bios_data_out,                   -- input
-         gbc_cart_addr           => qngbc_cart_addr,                       -- output
-         gbc_cart_we             => qngbc_cart_we,                         -- output
-         gbc_cart_data_in        => qngbc_cart_data_in,                    -- output
-         gbc_cart_data_out       => qngbc_cart_data_out,                   -- input
+         gbc_bios_addr           => qnice_qngbc_bios_addr,                 -- output
+         gbc_bios_we             => qnice_qngbc_bios_we,                   -- output
+         gbc_bios_data_in        => qnice_qngbc_bios_data_in,              -- output
+         gbc_bios_data_out       => qnice_qngbc_bios_data_out,             -- input
+         gbc_cart_addr           => qnice_qngbc_cart_addr,                 -- output
+         gbc_cart_we             => qnice_qngbc_cart_we,                   -- output
+         gbc_cart_data_in        => qnice_qngbc_cart_data_in,              -- output
+         gbc_cart_data_out       => qnice_qngbc_cart_data_out,             -- input
 
          -- Cartridge flags
-         cart_cgb_flag           => cart_cgb_flag,                         -- output
-         cart_sgb_flag           => cart_sgb_flag,                         -- output
-         cart_mbc_type           => cart_mbc_type,                         -- output
-         cart_rom_size           => cart_rom_size,                         -- output
-         cart_ram_size           => cart_ram_size,                         -- output
-         cart_old_licensee       => cart_old_licensee                      -- output
+         cart_cgb_flag           => main_cart_cgb_flag,                    -- output
+         cart_sgb_flag           => main_cart_sgb_flag,                    -- output
+         cart_mbc_type           => main_cart_mbc_type,                    -- output
+         cart_rom_size           => main_cart_rom_size,                    -- output
+         cart_ram_size           => main_cart_ram_size,                    -- output
+         cart_old_licensee       => main_cart_old_licensee                 -- output
       ); -- QNICE_SOC : entity work.QNICE
 
    -- Convert the Game Boy's PCM output to pulse density modulation
@@ -555,8 +575,8 @@ begin
       port map
       (
          cpuclock                => qnice_clk,
-         pcm_left                => signed(signed(pcm_audio_left) - 32768),
-         pcm_right               => signed(signed(pcm_audio_right) - 32768),
+         pcm_left                => signed(signed(main_pcm_audio_left) - 32768),
+         pcm_right               => signed(signed(main_pcm_audio_right) - 32768),
          pdm_left                => pwm_l,
          pdm_right               => pwm_r,
          audio_mode              => '0'
@@ -589,7 +609,7 @@ begin
       port map
       (
          pixel_clk               =>	vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
-         reset_n                 => dbnce_reset_n,    -- active low asycnchronous reset
+         reset_n                 => main_dbnce_reset_n,    -- active low asycnchronous reset
          h_sync                  => vga_hs_int,       -- horiztonal sync pulse
          v_sync                  => vga_vs_int,       -- vertical sync pulse
          disp_ena                => vga_disp_en,      -- display enable ('1' = display time, '0' = blanking time)
@@ -668,16 +688,16 @@ begin
             -- workaround in the meantime: the top/left pixel is set to be always black which seems to be less intrusive
             if (vga_col_raw > 0 or vga_row_raw > 0) and
                (vga_col_raw < GB_DX * GB_TO_VGA_SCALE and vga_row_raw < GB_DY * GB_TO_VGA_SCALE) then
-               VGA_RED   <= frame_buffer_data(23 downto 16);
-               VGA_GREEN <= frame_buffer_data(15 downto 8);
-               VGA_BLUE  <= frame_buffer_data(7 downto 0);
+               VGA_RED   <= vga_frame_buffer_data(23 downto 16);
+               VGA_GREEN <= vga_frame_buffer_data(15 downto 8);
+               VGA_BLUE  <= vga_frame_buffer_data(7 downto 0);
             end if;
 
             -- On-Screen-Menu (OSM) output
-            if qngbc_osm_on then
-               VGA_RED   <= qngbc_osm_rgb(23 downto 16);
-               VGA_GREEN <= qngbc_osm_rgb(15 downto 8);
-               VGA_BLUE  <= qngbc_osm_rgb(7 downto 0);
+            if vga_qngbc_osm_on then
+               VGA_RED   <= vga_qngbc_osm_rgb(23 downto 16);
+               VGA_GREEN <= vga_qngbc_osm_rgb(15 downto 8);
+               VGA_BLUE  <= vga_qngbc_osm_rgb(7 downto 0);
             end if;
          end if;
 
@@ -714,15 +734,15 @@ begin
       (
          -- GBC ROM interface
          clock_a        => main_clk,
-         address_a      => gbc_bios_addr,
-         q_a            => gbc_bios_data,
+         address_a      => main_gbc_bios_addr,
+         q_a            => main_gbc_bios_data,
 
          -- QNICE RAM interface
          clock_b        => qnice_clk,
-         address_b      => qngbc_bios_addr,
-         data_b         => qngbc_bios_data_in,
-         wren_b         => qngbc_bios_we,
-         q_b            => qngbc_bios_data_out
+         address_b      => qnice_qngbc_bios_addr,
+         data_b         => qnice_qngbc_bios_data_in,
+         wren_b         => qnice_qngbc_bios_we,
+         q_b            => qnice_qngbc_bios_data_out
       ); -- bios_rom : entity work.dualport_2clk_ram
 
 
@@ -739,16 +759,16 @@ begin
       (
          -- GBC Game Cartridge ROM Interface
          clock_a           => main_clk,
-         address_a         => cartrom_addr(CART_ROM_WIDTH - 1 downto 0),
-         do_latch_addr_a   => cartrom_rd,
-         q_a               => cartrom_data,
+         address_a         => main_cartrom_addr(CART_ROM_WIDTH - 1 downto 0),
+         do_latch_addr_a   => main_cartrom_rd,
+         q_a               => main_cartrom_data,
 
          -- QNICE RAM interface
          clock_b           => qnice_clk,
-         address_b         => qngbc_cart_addr(CART_ROM_WIDTH - 1 downto 0),
-         data_b            => qngbc_cart_data_in,
-         wren_b            => qngbc_cart_we,
-         q_b               => qngbc_cart_data_out
+         address_b         => qnice_qngbc_cart_addr(CART_ROM_WIDTH - 1 downto 0),
+         data_b            => qnice_qngbc_cart_data_in,
+         wren_b            => qnice_qngbc_cart_we,
+         q_b               => qnice_qngbc_cart_data_out
       ); -- game_cart_rom : entity work.dualport_2clk_ram
 
 
@@ -762,10 +782,10 @@ begin
       port map
       (
          clock_a           => main_clk,
-         address_a         => cartram_addr(CART_RAM_WIDTH - 1 downto 0),
-         data_a            => cartram_data_in,
-         wren_a            => cartram_wr,
-         q_a               => cartram_data_out
+         address_a         => main_cartram_addr(CART_RAM_WIDTH - 1 downto 0),
+         data_a            => main_cartram_data_in,
+         wren_a            => main_cartram_wr,
+         q_a               => main_cartram_data_out
       ); -- game_cart_ram : entity work.dualport_2clk_ram
 
 
@@ -782,16 +802,16 @@ begin
       port map
       (
          clock_a      => main_clk,
-         address_a    => std_logic_vector(to_unsigned(pixel_out_ptr, 15)),
-         data_a       => pixel_out_data,
-         wren_a       => pixel_out_we,
+         address_a    => std_logic_vector(to_unsigned(main_pixel_out_ptr, 15)),
+         data_a       => main_pixel_out_data,
+         wren_a       => main_pixel_out_we,
          q_a          => open,
 
          clock_b      => vga_pixelclk,
          address_b    => vga_address,
          data_b       => (others => '0'),
          wren_b       => '0',
-         q_b          => frame_buffer_data
+         q_b          => vga_frame_buffer_data
       ); -- frame_buffer : entity work.dualport_2clk_ram
 
 end beh;
