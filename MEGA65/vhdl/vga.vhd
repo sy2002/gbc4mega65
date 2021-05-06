@@ -23,9 +23,6 @@ entity vga is
       vga_address_o  : out std_logic_vector(14 downto 0);
       vga_data_i     : in  std_logic_vector(23 downto 0);
 
-      vga_row_o      : out integer range 0 to G_VGA_DY - 1;
-      vga_col_o      : out integer range 0 to G_VGA_DX - 1;
-
       -- VGA
       vga_red_o      : out std_logic_vector(7 downto 0);
       vga_green_o    : out std_logic_vector(7 downto 0);
@@ -295,9 +292,6 @@ begin
    vdac_sync_n_o  <= '0';
    vdac_blank_n_o <= '1';
    vdac_clk_o     <= not clk_i; -- inverting the clock leads to a sharper signal for some reason
-
-   vga_row_o <= vga_row;
-   vga_col_o <= vga_col;
 
 end synthesis;
 

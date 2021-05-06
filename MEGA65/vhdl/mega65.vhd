@@ -222,8 +222,6 @@ signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
 ---------------------------------------------------------------------------------------------
 
 -- VGA signals
-signal vga_col                : integer range 0 to VGA_DX - 1;
-signal vga_row                : integer range 0 to VGA_DY - 1;
 signal vga_address            : std_logic_vector(14 downto 0);
 
 -- LCD interface
@@ -422,8 +420,6 @@ begin
          vga_osm_vram_data_i      => vga_osm_vram_data,
          vga_osm_vram_attr_data_i => vga_osm_vram_attr_data,
          vga_address_o            => vga_address,
-         vga_row_o                => vga_row,
-         vga_col_o                => vga_col,
          vga_data_i               => vga_frame_buffer_data,
          vga_red_o                => vga_red,
          vga_green_o              => vga_green,
