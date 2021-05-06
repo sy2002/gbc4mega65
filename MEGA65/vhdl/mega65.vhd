@@ -106,6 +106,14 @@ constant VGA_DX            : integer := 800;          -- SVGA mode 800 x 600 @ 6
 constant VGA_DY            : integer := 600;          -- ditto
 constant GB_TO_VGA_SCALE   : integer := 4;            -- 160 x 144 => 4x => 640 x 576
 
+-- Constants for VGA output
+constant FONT_DX           : integer := 16;
+constant FONT_DY           : integer := 16;
+constant CHARS_DX          : integer := VGA_DX / FONT_DX;
+constant CHARS_DY          : integer := VGA_DY / FONT_DY;
+constant CHAR_MEM_SIZE     : integer := CHARS_DX * CHARS_DY;
+constant VRAM_ADDR_WIDTH   : integer := f_log2(CHAR_MEM_SIZE);
+
 -- clocks
 signal main_clk            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
 signal vga_pixelclk        : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
@@ -162,50 +170,76 @@ signal main_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
 ---------------------------------------------------------------------------------------------
 
 -- QNICE control signals (see also gbc.asm for more details)
-signal qnice_qngbc_reset         : std_logic;
-signal qnice_qngbc_pause         : std_logic;
-signal qnice_qngbc_keyboard      : std_logic;
-signal qnice_qngbc_joystick      : std_logic;
-signal qnice_qngbc_color         : std_logic;
-signal qnice_qngbc_joy_map       : std_logic_vector(1 downto 0);
-signal qnice_qngbc_color_mode    : std_logic;
-signal qnice_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
+signal qnice_qngbc_reset          : std_logic;
+signal qnice_qngbc_pause          : std_logic;
+signal qnice_qngbc_keyboard       : std_logic;
+signal qnice_qngbc_joystick       : std_logic;
+signal qnice_qngbc_color          : std_logic;
+signal qnice_qngbc_joy_map        : std_logic_vector(1 downto 0);
+signal qnice_qngbc_color_mode     : std_logic;
+signal qnice_qngbc_keyb_matrix    : std_logic_vector(15 downto 0);
+signal qnice_gbc_osm              : std_logic;
 
 -- cartridge flags
-signal qnice_cart_cgb_flag       : std_logic_vector(7 downto 0);
-signal qnice_cart_sgb_flag       : std_logic_vector(7 downto 0);
-signal qnice_cart_mbc_type       : std_logic_vector(7 downto 0);
-signal qnice_cart_rom_size       : std_logic_vector(7 downto 0);
-signal qnice_cart_ram_size       : std_logic_vector(7 downto 0);
-signal qnice_cart_old_licensee   : std_logic_vector(7 downto 0);
+signal qnice_cart_cgb_flag        : std_logic_vector(7 downto 0);
+signal qnice_cart_sgb_flag        : std_logic_vector(7 downto 0);
+signal qnice_cart_mbc_type        : std_logic_vector(7 downto 0);
+signal qnice_cart_rom_size        : std_logic_vector(7 downto 0);
+signal qnice_cart_ram_size        : std_logic_vector(7 downto 0);
+signal qnice_cart_old_licensee    : std_logic_vector(7 downto 0);
 
 -- QNICE control signals (see also gbc.asm for more details)
-signal qnice_qngbc_bios_addr     : std_logic_vector(11 downto 0);
-signal qnice_qngbc_bios_we       : std_logic;
-signal qnice_qngbc_bios_data_in  : std_logic_vector(7 downto 0);
-signal qnice_qngbc_bios_data_out : std_logic_vector(7 downto 0);
-signal qnice_qngbc_cart_addr     : std_logic_vector(22 downto 0);
-signal qnice_qngbc_cart_we       : std_logic;
-signal qnice_qngbc_cart_data_in  : std_logic_vector(7 downto 0);
-signal qnice_qngbc_cart_data_out : std_logic_vector(7 downto 0);
+signal qnice_qngbc_bios_addr      : std_logic_vector(11 downto 0);
+signal qnice_qngbc_bios_we        : std_logic;
+signal qnice_qngbc_bios_data_in   : std_logic_vector(7 downto 0);
+signal qnice_qngbc_bios_data_out  : std_logic_vector(7 downto 0);
+signal qnice_qngbc_cart_addr      : std_logic_vector(22 downto 0);
+signal qnice_qngbc_cart_we        : std_logic;
+signal qnice_qngbc_cart_data_in   : std_logic_vector(7 downto 0);
+signal qnice_qngbc_cart_data_out  : std_logic_vector(7 downto 0);
 
---signal qnice_qngbc_osm_on        : std_logic;
+-- On-Screen-Menu (OSM)
+signal qnice_osm_vram_addr        : std_logic_vector(VRAM_ADDR_WIDTH - 1 downto 0);
+signal qnice_osm_vram_data        : std_logic_vector(7 downto 0);
+signal qnice_osm_vram_attr_data   : std_logic_vector(7 downto 0);
+signal qnice_osm_font_addr        : std_logic_vector(11 downto 0);
+signal qnice_osm_font_data        : std_logic_vector(15 downto 0);
+signal qnice_osm_xy               : std_logic_vector(15 downto 0);
+signal qnice_osm_dxdy             : std_logic_vector(15 downto 0);
+signal qnice_osm_x1, qnice_osm_x2 : integer range 0 to CHARS_DX - 1;
+signal qnice_osm_y1, qnice_osm_y2 : integer range 0 to CHARS_DY - 1;
+
+signal qnice_vram_addr            : std_logic_vector(15 downto 0);
+signal qnice_vram_data_out        : std_logic_vector(15 downto 0);
+signal qnice_vram_attr_we         : std_logic;
+signal qnice_vram_attr_data_out_i : std_logic_vector(7 downto 0);
+signal qnice_vram_we              : std_logic;
+signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
+
 
 ---------------------------------------------------------------------------------------------
 -- vga_pixelclk
 ---------------------------------------------------------------------------------------------
 
-signal vga_qngbc_osm_on      : std_logic;
-signal vga_qngbc_osm_rgb     : std_logic_vector(23 downto 0);
-
 -- VGA signals
-signal vga_col               : integer range 0 to VGA_DX - 1;
-signal vga_row               : integer range 0 to VGA_DY - 1;
-signal vga_address           : std_logic_vector(14 downto 0);
+signal vga_col                : integer range 0 to VGA_DX - 1;
+signal vga_row                : integer range 0 to VGA_DY - 1;
+signal vga_address            : std_logic_vector(14 downto 0);
 
 -- LCD interface
-signal vga_frame_buffer_data : std_logic_vector(23 downto 0);
+signal vga_frame_buffer_data  : std_logic_vector(23 downto 0);
 
+-- On-Screen-Menu (OSM)
+signal vga_x_old              : integer range 0 to VGA_DX - 1;
+signal vga_y_old              : integer range 0 to VGA_DY - 1;
+signal vga_osm_xy             : std_logic_vector(15 downto 0);
+signal vga_osm_dxdy           : std_logic_vector(15 downto 0);
+signal vga_osm_x1, vga_osm_x2 : integer range 0 to CHARS_DX - 1;
+signal vga_osm_y1, vga_osm_y2 : integer range 0 to CHARS_DY - 1;
+signal vga_gbc_osm            : std_logic;
+signal vga_osm_vram_addr      : std_logic_vector(15 downto 0);
+signal vga_osm_vram_data      : std_logic_vector(7 downto 0);
+signal vga_osm_vram_attr_data : std_logic_vector(7 downto 0);
 
 -- constants necessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -219,6 +253,7 @@ constant c_dummy_129bit_0  : std_logic_vector(128 downto 0) := (others => '0');
 
 signal i_reset             : std_logic;
 
+
 begin
 
    -- MMCME2_ADV clock generators:
@@ -228,15 +263,15 @@ begin
    clk_gen : entity work.clk
       port map
       (
-         sys_clk_i         => CLK,
-         gbmain_o          => main_clk,         -- Game Boy's 33.554432 MHz main clock
-         qnice_o           => qnice_clk,        -- QNICE's 50 MHz main clock
-         pixelclk_o        => vga_pixelclk      -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+         sys_clk_i  => CLK,
+         gbmain_o   => main_clk,         -- Game Boy's 33.554432 MHz main clock
+         qnice_o    => qnice_clk,        -- QNICE's 50 MHz main clock
+         pixelclk_o => vga_pixelclk      -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
       );
 
    -- TODO: Achieve timing closure also when using the debouncer
    --i_reset           <= not dbnce_reset_n;
-   i_reset           <= not RESET_N; -- TODO/WARNING: might glitch
+   i_reset <= not RESET_N; -- TODO/WARNING: might glitch
 
 
    ---------------------------------------------------------------------------------------------
@@ -304,8 +339,8 @@ begin
    QNICE_SOC : entity work.QNICE
       generic map
       (
-         VGA_DX                  => VGA_DX,
-         VGA_DY                  => VGA_DY,
+         CHARS_DX                => CHARS_DX,
+         CHARS_DY                => CHARS_DY,
          MAX_ROM                 => SYS_ROM_MAX,
          MAX_RAM                 => SYS_RAM_MAX
       )
@@ -325,15 +360,17 @@ begin
          SD_MOSI                 => SD_MOSI,                               -- output
          SD_MISO                 => SD_MISO,                               -- input
 
+         osm_xy                  => qnice_osm_xy,                          -- output
+         osm_dxdy                => qnice_osm_dxdy,                        -- output
+         vram_addr               => qnice_vram_addr,                       -- output
+         vram_data_out           => qnice_vram_data_out,                   -- output
+         vram_attr_we            => qnice_vram_attr_we,                    -- output
+         vram_attr_data_out_i    => qnice_vram_attr_data_out_i,            -- input
+         vram_we                 => qnice_vram_we,                         -- output
+         vram_data_out_i         => qnice_vram_data_out_i,                 -- input
+
          -- keyboard interface
          full_matrix             => qnice_qngbc_keyb_matrix,               -- input
-
-         -- VGA interface
-         pixelclock              => vga_pixelclk,                          -- input
-         vga_x                   => vga_col,                               -- input
-         vga_y                   => vga_row,                               -- input
-         vga_on                  => vga_qngbc_osm_on,                      -- output
-         vga_rgb                 => vga_qngbc_osm_rgb,                     -- output
 
          -- Game Boy control
          gbc_reset               => qnice_qngbc_reset,                     -- output
@@ -343,6 +380,7 @@ begin
          gbc_color               => qnice_qngbc_color,                     -- output
          gbc_joy_map             => qnice_qngbc_joy_map,                   -- output
          gbc_color_mode          => qnice_qngbc_color_mode,                -- output
+         gbc_osm                 => qnice_gbc_osm,                         -- output
 
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr           => qnice_qngbc_bios_addr,                 -- output
@@ -377,22 +415,24 @@ begin
          G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE
       )
       port map (
-         clk_i          => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
-         rst_i          => reset_n,          -- active low asycnchronous reset
-         vga_address_o  => vga_address,
-         vga_row_o      => vga_row,
-         vga_col_o      => vga_col,
-         vga_data_i     => vga_frame_buffer_data,
-         vga_osm_on_i   => vga_qngbc_osm_on,
-         vga_osm_rgb_i  => vga_qngbc_osm_rgb,
-         vga_red_o      => vga_red,
-         vga_green_o    => vga_green,
-         vga_blue_o     => vga_blue,
-         vga_hs_o       => vga_hs,
-         vga_vs_o       => vga_vs,
-         vdac_clk_o     => vdac_clk,
-         vdac_sync_n_o  => vdac_sync_n,
-         vdac_blank_n_o => vdac_blank_n
+         clk_i                    => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
+         rst_i                    => reset_n,          -- active low asycnchronous reset
+         vga_gbc_osm_i            => vga_gbc_osm,
+         vga_osm_vram_addr_o      => vga_osm_vram_addr,
+         vga_osm_vram_data_i      => vga_osm_vram_data,
+         vga_osm_vram_attr_data_i => vga_osm_vram_attr_data,
+         vga_address_o            => vga_address,
+         vga_row_o                => vga_row,
+         vga_col_o                => vga_col,
+         vga_data_i               => vga_frame_buffer_data,
+         vga_red_o                => vga_red,
+         vga_green_o              => vga_green,
+         vga_blue_o               => vga_blue,
+         vga_hs_o                 => vga_hs,
+         vga_vs_o                 => vga_vs,
+         vdac_clk_o               => vdac_clk,
+         vdac_sync_n_o            => vdac_sync_n,
+         vdac_blank_n_o           => vdac_blank_n
       ); -- i_vga : entity work.vga
 
 
@@ -446,38 +486,45 @@ begin
          dest_out(15 downto 0)  => qnice_qngbc_keyb_matrix
       ); -- i_main2qnice: xpm_cdc_array_single
 
---   i_qnice2vga: xpm_cdc_single
---      port map (
---         src_clk   => qnice_clk,
---         src_in    => qnice_qngbc_osm_on,
---         dest_clk  => vga_pixelclk,
---         dest_out  => vga_qngbc_osm_on
---      ); -- i_qnice2main: xpm_cdc_single
-
+   i_qnice2vga: xpm_cdc_array_single
+      generic map (
+         WIDTH => 33
+      )
+      port map (
+         src_clk                => qnice_clk,
+         src_in(15 downto 0)    => qnice_osm_xy,
+         src_in(31 downto 16)   => qnice_osm_dxdy,
+         src_in(32)             => qnice_gbc_osm,
+         dest_clk               => vga_pixelclk,
+         dest_out(15 downto 0)  => vga_osm_xy,
+         dest_out(31 downto 16) => vga_osm_dxdy,
+         dest_out(32)           => vga_gbc_osm
+      ); -- i_qnice2vga: xpm_cdc_single
+      
 
    -- BIOS ROM / BOOT ROM
    bios_rom : entity work.dualport_2clk_ram
       generic map
       (
-         ADDR_WIDTH     => 12,
-         DATA_WIDTH     => 8,
-         ROM_PRELOAD    => true,       -- load default ROM in case no other ROM is on the SD card
-         ROM_FILE       => GBC_ROM,
-         FALLING_B      => true        -- QNICE reads/writes on the falling clock edge
+         ADDR_WIDTH  => 12,
+         DATA_WIDTH  => 8,
+         ROM_PRELOAD => true,       -- load default ROM in case no other ROM is on the SD card
+         ROM_FILE    => GBC_ROM,
+         FALLING_B   => true        -- QNICE reads/writes on the falling clock edge
       )
       port map
       (
          -- GBC ROM interface
-         clock_a        => main_clk,
-         address_a      => main_gbc_bios_addr,
-         q_a            => main_gbc_bios_data,
+         clock_a     => main_clk,
+         address_a   => main_gbc_bios_addr,
+         q_a         => main_gbc_bios_data,
 
          -- QNICE RAM interface
-         clock_b        => qnice_clk,
-         address_b      => qnice_qngbc_bios_addr,
-         data_b         => qnice_qngbc_bios_data_in,
-         wren_b         => qnice_qngbc_bios_we,
-         q_b            => qnice_qngbc_bios_data_out
+         clock_b     => qnice_clk,
+         address_b   => qnice_qngbc_bios_addr,
+         data_b      => qnice_qngbc_bios_data_in,
+         wren_b      => qnice_qngbc_bios_we,
+         q_b         => qnice_qngbc_bios_data_out
       ); -- bios_rom : entity work.dualport_2clk_ram
 
 
@@ -485,25 +532,25 @@ begin
    game_cart_rom : entity work.dualport_2clk_ram
       generic map
       (
-         ADDR_WIDTH        => CART_ROM_WIDTH,
-         DATA_WIDTH        => 8,
-         LATCH_ADDR_A      => true,       -- the gbc core expects that the RAM latches the address on cart_rd
-         FALLING_B         => true        -- QNICE reads/writes on the falling clock edge
+         ADDR_WIDTH      => CART_ROM_WIDTH,
+         DATA_WIDTH      => 8,
+         LATCH_ADDR_A    => true,       -- the gbc core expects that the RAM latches the address on cart_rd
+         FALLING_B       => true        -- QNICE reads/writes on the falling clock edge
       )
       port map
       (
          -- GBC Game Cartridge ROM Interface
-         clock_a           => main_clk,
-         address_a         => main_cartrom_addr(CART_ROM_WIDTH - 1 downto 0),
-         do_latch_addr_a   => main_cartrom_rd,
-         q_a               => main_cartrom_data,
+         clock_a         => main_clk,
+         address_a       => main_cartrom_addr(CART_ROM_WIDTH - 1 downto 0),
+         do_latch_addr_a => main_cartrom_rd,
+         q_a             => main_cartrom_data,
 
          -- QNICE RAM interface
-         clock_b           => qnice_clk,
-         address_b         => qnice_qngbc_cart_addr(CART_ROM_WIDTH - 1 downto 0),
-         data_b            => qnice_qngbc_cart_data_in,
-         wren_b            => qnice_qngbc_cart_we,
-         q_b               => qnice_qngbc_cart_data_out
+         clock_b         => qnice_clk,
+         address_b       => qnice_qngbc_cart_addr(CART_ROM_WIDTH - 1 downto 0),
+         data_b          => qnice_qngbc_cart_data_in,
+         wren_b          => qnice_qngbc_cart_we,
+         q_b             => qnice_qngbc_cart_data_out
       ); -- game_cart_rom : entity work.dualport_2clk_ram
 
 
@@ -511,16 +558,16 @@ begin
    game_cart_ram : entity work.dualport_2clk_ram
       generic map
       (
-         ADDR_WIDTH        => CART_RAM_WIDTH,
-         DATA_WIDTH        => 8
+         ADDR_WIDTH   => CART_RAM_WIDTH,
+         DATA_WIDTH   => 8
       )
       port map
       (
-         clock_a           => main_clk,
-         address_a         => main_cartram_addr(CART_RAM_WIDTH - 1 downto 0),
-         data_a            => main_cartram_data_in,
-         wren_a            => main_cartram_wr,
-         q_a               => main_cartram_data_out
+         clock_a      => main_clk,
+         address_a    => main_cartram_addr(CART_RAM_WIDTH - 1 downto 0),
+         data_a       => main_cartram_data_in,
+         wren_a       => main_cartram_wr,
+         q_a          => main_cartram_data_out
       ); -- game_cart_ram : entity work.dualport_2clk_ram
 
 
@@ -548,6 +595,56 @@ begin
          wren_b       => '0',
          q_b          => vga_frame_buffer_data
       ); -- frame_buffer : entity work.dualport_2clk_ram
+
+   -- Dual port & dual clock screen RAM / video RAM: contains the "ASCII" codes of the characters
+   vram : entity work.dualport_2clk_ram
+      generic map
+      (
+         ADDR_WIDTH   => VRAM_ADDR_WIDTH,
+         DATA_WIDTH   => 8,
+         FALLING_A    => true              -- QNICE expects read/write to happen at the falling clock edge
+      )
+      port map
+      (
+         clock_a      => qnice_clk,
+         address_a    => qnice_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),
+         data_a       => qnice_vram_data_out(7 downto 0),
+         wren_a       => qnice_vram_we,
+         q_a          => qnice_vram_data_out_i,
+
+         clock_b      => vga_pixelclk,
+         address_b    => vga_osm_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),
+         q_b          => vga_osm_vram_data
+      ); -- vram : entity work.dualport_2clk_ram
+
+   -- Dual port & dual clock attribute RAM: contains inverse attribute, light/dark attrib. and colors of the chars
+   -- bit 7: 1=inverse
+   -- bit 6: 1=dark, 0=bright
+   -- bit 5: background red
+   -- bit 4: background green
+   -- bit 3: background blue
+   -- bit 2: foreground red
+   -- bit 1: foreground green
+   -- bit 0: foreground blue
+   vram_attr : entity work.dualport_2clk_ram
+      generic map
+      (
+         ADDR_WIDTH   => VRAM_ADDR_WIDTH,
+         DATA_WIDTH   => 8,
+         FALLING_A    => true
+      )
+      port map
+      (
+         clock_a      => qnice_clk,
+         address_a    => qnice_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),
+         data_a       => qnice_vram_data_out(7 downto 0),
+         wren_a       => qnice_vram_attr_we,
+         q_a          => qnice_vram_attr_data_out_i,
+
+         clock_b      => vga_pixelclk,
+         address_b    => vga_osm_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),       -- same address as VRAM
+         q_b          => vga_osm_vram_attr_data
+      ); -- vram_attr : entity work.dualport_2clk_ram
 
 end beh;
 

@@ -1,6 +1,7 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use work.qnice_tools.all;
 
 entity vga is
    generic  (
@@ -14,13 +15,16 @@ entity vga is
       clk_i          : in  std_logic;
       rst_i          : in  std_logic;
 
+      vga_gbc_osm_i            : in  std_logic;
+      vga_osm_vram_addr_o      : out std_logic_vector(15 downto 0);
+      vga_osm_vram_data_i      : in  std_logic_vector(7 downto 0);
+      vga_osm_vram_attr_data_i : in  std_logic_vector(7 downto 0);
+
       vga_address_o  : out std_logic_vector(14 downto 0);
-      vga_row_o      : out integer range 0 to G_VGA_DY - 1;
-      vga_col_o      : out integer range 0 to G_VGA_DX - 1;
       vga_data_i     : in  std_logic_vector(23 downto 0);
 
-      vga_osm_on_i   : in  std_logic;
-      vga_osm_rgb_i  : in  std_logic_vector(23 downto 0);
+      vga_row_o      : out integer range 0 to G_VGA_DY - 1;
+      vga_col_o      : out integer range 0 to G_VGA_DX - 1;
 
       -- VGA
       vga_red_o      : out std_logic_vector(7 downto 0);
@@ -38,18 +42,109 @@ end vga;
 
 architecture synthesis of vga is
 
+   -- Constants for VGA output
+   constant FONT_DX         : integer := 16;
+   constant FONT_DY         : integer := 16;
+   constant CHARS_DX        : integer := G_VGA_DX / FONT_DX;
+   constant CHARS_DY        : integer := G_VGA_DY / FONT_DY;
+   constant CHAR_MEM_SIZE   : integer := CHARS_DX * CHARS_DY;
+   constant VRAM_ADDR_WIDTH : integer := f_log2(CHAR_MEM_SIZE);
+
    -- VGA signals
-   signal vga_disp_en         : std_logic;
-   signal vga_col_raw         : integer range 0 to G_VGA_DX - 1;
-   signal vga_row_raw         : integer range 0 to G_VGA_DY - 1;
-   signal vga_col             : integer range 0 to G_VGA_DX - 1;
-   signal vga_row             : integer range 0 to G_VGA_DY - 1;
-   signal vga_col_next        : integer range 0 to G_VGA_DX - 1;
-   signal vga_row_next        : integer range 0 to G_VGA_DY - 1;
-   signal vga_hs              : std_logic;
-   signal vga_vs              : std_logic;
+   signal vga_disp_en  : std_logic;
+   signal vga_col_raw  : integer range 0 to G_VGA_DX - 1;
+   signal vga_row_raw  : integer range 0 to G_VGA_DY - 1;
+   signal vga_col      : integer range 0 to G_VGA_DX - 1;
+   signal vga_row      : integer range 0 to G_VGA_DY - 1;
+   signal vga_col_next : integer range 0 to G_VGA_DX - 1;
+   signal vga_row_next : integer range 0 to G_VGA_DY - 1;
+   signal vga_hs       : std_logic;
+   signal vga_vs       : std_logic;
+
+   signal vga_x        : integer range 0 to G_VGA_DX - 1;
+   signal vga_y        : integer range 0 to G_VGA_DY - 1;
+   signal vga_x_old    : integer range 0 to G_VGA_DX - 1;
+   signal vga_y_old    : integer range 0 to G_VGA_DY - 1;
+   signal vga_osm_on   : std_logic;
+   signal vga_osm_rgb  : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
+
+   signal vga_osm_xy             : std_logic_vector(15 downto 0);
+   signal vga_osm_dxdy           : std_logic_vector(15 downto 0);
+   signal vga_osm_x1, vga_osm_x2 : integer range 0 to CHARS_DX - 1;
+   signal vga_osm_y1, vga_osm_y2 : integer range 0 to CHARS_DY - 1;
+
+   signal vga_osm_font_addr      : std_logic_vector(11 downto 0);
+   signal vga_osm_font_data      : std_logic_vector(15 downto 0);
 
 begin
+
+   vga_x <= vga_col;
+   vga_y <= vga_row;
+
+   -- it takes one pixelclock cycle until the vram returns the data
+   latch_vga_xy : process(clk_i)
+   begin
+      if rising_edge(clk_i) then
+         vga_x_old <= vga_x;
+         vga_y_old <= vga_y;
+      end if;
+   end process;
+
+   calc_boundaries : process (all)
+      variable vga_osm_x : integer range 0 to CHARS_DX - 1;
+      variable vga_osm_y : integer range 0 to CHARS_DY - 1;
+   begin
+      vga_osm_x  := to_integer(unsigned(vga_osm_xy(15 downto 8)));
+      vga_osm_y  := to_integer(unsigned(vga_osm_xy(7 downto 0)));
+      vga_osm_x1 <= vga_osm_x;
+      vga_osm_y1 <= vga_osm_y;
+      vga_osm_x2 <= vga_osm_x + to_integer(unsigned(vga_osm_dxdy(15 downto 8)));
+      vga_osm_y2 <= vga_osm_y + to_integer(unsigned(vga_osm_dxdy(7 downto 0)));
+   end process;
+
+   -- render OSM: calculate the pixel that needs to be shown at the given position
+   -- TODO: either here or in the top file: we are +1 pixel too much to the right (what about the vertical axis?)
+   render_osm : process (all)
+      variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
+      variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
+      variable vga_x_mod_16 : integer range 0 to 15;
+      variable vga_y_mod_16 : integer range 0 to 15;
+
+      function attr2rgb(attr: in std_logic_vector(3 downto 0)) return std_logic_vector is
+      variable r, g, b: std_logic_vector(7 downto 0);
+      variable brightness : std_logic_vector(7 downto 0);
+      begin
+         -- see comment above at vram_attr to understand the Attribute VRAM bit patterns
+         brightness := x"FF" when attr(3) = '0' else x"7F";
+         r := brightness when attr(2) = '1' else x"00";
+         g := brightness when attr(1) = '1' else x"00";
+         b := brightness when attr(0) = '1' else x"00";
+         return r & g & b;
+      end attr2rgb;
+
+   begin
+      vga_x_div_16 := to_integer(to_unsigned(vga_x, 16)(9 downto 4));
+      vga_y_div_16 := to_integer(to_unsigned(vga_y, 16)(9 downto 4));
+      vga_x_mod_16 := to_integer(to_unsigned(vga_x_old, 16)(3 downto 0));
+      vga_y_mod_16 := to_integer(to_unsigned(vga_y_old, 16)(3 downto 0));
+      vga_osm_vram_addr_o <= std_logic_vector(to_unsigned(vga_y_div_16 * CHARS_DX + vga_x_div_16, 16));
+      vga_osm_font_addr <= std_logic_vector(to_unsigned(to_integer(unsigned(vga_osm_vram_data_i)) * FONT_DY + vga_y_mod_16, 12));
+      -- if pixel is set in font (and take care of inverse on/off)
+      if vga_osm_font_data(15 - vga_x_mod_16) = not vga_osm_vram_attr_data_i(7) then
+         -- foreground color
+         vga_osm_rgb <= attr2rgb(vga_osm_vram_attr_data_i(6) & vga_osm_vram_attr_data_i(2 downto 0));
+      else
+         -- background color
+         vga_osm_rgb <= attr2rgb(vga_osm_vram_attr_data_i(6 downto 3));
+      end if;
+
+      if vga_x_div_16 >= vga_osm_x1 and vga_x_div_16 < vga_osm_x2 and vga_y_div_16 >= vga_osm_y1 and vga_y_div_16 < vga_osm_y2 then
+         vga_osm_on <= vga_gbc_osm_i;
+      else
+         vga_osm_on <= '0';
+      end if;
+   end process;
+
 
    -- SVGA mode 800 x 600 @ 60 Hz
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)
@@ -162,10 +257,10 @@ begin
             end if;
 
             -- On-Screen-Menu (OSM) output
-            if vga_osm_on_i then
-               vga_red_o   <= vga_osm_rgb_i(23 downto 16);
-               vga_green_o <= vga_osm_rgb_i(15 downto 8);
-               vga_blue_o  <= vga_osm_rgb_i(7 downto 0);
+            if vga_osm_on then
+               vga_red_o   <= vga_osm_rgb(23 downto 16);
+               vga_green_o <= vga_osm_rgb(15 downto 8);
+               vga_blue_o  <= vga_osm_rgb(7 downto 0);
             end if;
          end if;
 
@@ -174,6 +269,24 @@ begin
          vga_vs_o <= vga_vs;
       end if;
    end process; -- p_video_signal_latches : process(vga_pixelclk)
+
+   -- 16x16 pixel font ROM
+   font : entity work.BROM
+      generic map
+      (
+         FILE_NAME    => "../font/Anikki-16x16.rom",
+         ADDR_WIDTH   => 12,
+         DATA_WIDTH   => 16,
+         LATCH_ACTIVE => false
+      )
+      port map
+      (
+         clk          => clk_i,
+         ce           => '1',
+         address      => vga_osm_font_addr,
+         data         => vga_osm_font_data
+      ); -- font : entity work.BROM
+
 
    -- make the VDAC output the image
    -- for some reason, the VDAC does not like non-zero values outside the visible window
