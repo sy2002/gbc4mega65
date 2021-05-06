@@ -416,6 +416,8 @@ begin
          clk_i                    => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
          rst_i                    => reset_n,          -- active low asycnchronous reset
          vga_gbc_osm_i            => vga_gbc_osm,
+         vga_osm_xy_i             => vga_osm_xy,
+         vga_osm_dxdy_i           => vga_osm_dxdy,
          vga_osm_vram_addr_o      => vga_osm_vram_addr,
          vga_osm_vram_data_i      => vga_osm_vram_data,
          vga_osm_vram_attr_data_i => vga_osm_vram_attr_data,

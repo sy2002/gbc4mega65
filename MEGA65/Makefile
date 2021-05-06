@@ -22,6 +22,7 @@ VHDL2008=\
 	$(PPRDIR)/../QNICE/vhdl/alu.vhd \
 	$(PPRDIR)/vhdl/debouncer.vhd \
 	$(PPRDIR)/vhdl/lcd_to_pixels.vhd \
+	$(PPRDIR)/vhdl/vga_osm.vhd \
 	$(PPRDIR)/vhdl/vga.vhd \
 	$(PPRDIR)/vhdl/main.vhd \
 	$(PPRDIR)/vhdl/mega65.vhd \
