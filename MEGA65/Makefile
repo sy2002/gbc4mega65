@@ -113,6 +113,7 @@ $(TCL): Makefile
 	echo "route_design" >> $@
 	echo "write_checkpoint -force $(DCP)" >> $@
 	echo "write_bitstream -force $(BIT)" >> $@
+	echo "set mmi_file $(MMI)" >> $@
 	echo "source gen-mmi.tcl" >> $@
 	echo "exit" >> $@
 

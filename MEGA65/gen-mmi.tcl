@@ -10,6 +10,8 @@
 #
 # This script is based on information in the document:
 # https://www.xilinx.com/support/documentation/sw_manuals/xilinx2018_1/ug898-vivado-embedded-design.pdf
+#
+# Note: Must set the tcl-variable mmi_file to the destination file name before calling this script.
 
 # Get a list of the BRAMs for the ROM. There are 8 in total.
 set memInsts [get_cells -hier -filter {PRIMITIVE_TYPE =~ BMEM.*.* && NAME =~ *QNICE_SOC/rom*}]
@@ -57,7 +59,7 @@ proc compare {a b} {
 set memSorted [lsort -command compare $memProps]
 
 # Generate output file
-set fp [open build/MEGA65-R3.mmi w]
+set fp [open $mmi_file w]
 
 # preamble
 puts $fp "<MemInfo Version=\"1\" Minor=\"1\">"
