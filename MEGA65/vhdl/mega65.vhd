@@ -15,10 +15,13 @@
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.qnice_tools.all;
+
+Library xpm;
+use xpm.vcomponents.all;
 
 entity MEGA65_Core is
 generic (
@@ -113,10 +116,6 @@ signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 M
 -- main_clk
 ---------------------------------------------------------------------------------------------
 
--- Audio signals
-signal main_pcm_audio_left      : std_logic_vector(15 downto 0);
-signal main_pcm_audio_right     : std_logic_vector(15 downto 0);
-
 -- debounced signals for the reset button and the joysticks
 signal main_dbnce_reset_n       : std_logic;
 
@@ -163,6 +162,24 @@ signal main_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
 ---------------------------------------------------------------------------------------------
 
 -- QNICE control signals (see also gbc.asm for more details)
+signal qnice_qngbc_reset         : std_logic;
+signal qnice_qngbc_pause         : std_logic;
+signal qnice_qngbc_keyboard      : std_logic;
+signal qnice_qngbc_joystick      : std_logic;
+signal qnice_qngbc_color         : std_logic;
+signal qnice_qngbc_joy_map       : std_logic_vector(1 downto 0);
+signal qnice_qngbc_color_mode    : std_logic;
+signal qnice_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
+
+-- cartridge flags
+signal qnice_cart_cgb_flag       : std_logic_vector(7 downto 0);
+signal qnice_cart_sgb_flag       : std_logic_vector(7 downto 0);
+signal qnice_cart_mbc_type       : std_logic_vector(7 downto 0);
+signal qnice_cart_rom_size       : std_logic_vector(7 downto 0);
+signal qnice_cart_ram_size       : std_logic_vector(7 downto 0);
+signal qnice_cart_old_licensee   : std_logic_vector(7 downto 0);
+
+-- QNICE control signals (see also gbc.asm for more details)
 signal qnice_qngbc_bios_addr     : std_logic_vector(11 downto 0);
 signal qnice_qngbc_bios_we       : std_logic;
 signal qnice_qngbc_bios_data_in  : std_logic_vector(7 downto 0);
@@ -172,6 +189,7 @@ signal qnice_qngbc_cart_we       : std_logic;
 signal qnice_qngbc_cart_data_in  : std_logic_vector(7 downto 0);
 signal qnice_qngbc_cart_data_out : std_logic_vector(7 downto 0);
 
+--signal qnice_qngbc_osm_on        : std_logic;
 
 ---------------------------------------------------------------------------------------------
 -- vga_pixelclk
@@ -237,8 +255,8 @@ begin
          kb_io0                 => kb_io0,
          kb_io1                 => kb_io1,
          kb_io2                 => kb_io2,
-         main_pcm_audio_left    => main_pcm_audio_left,
-         main_pcm_audio_right   => main_pcm_audio_right,
+         pwm_l                  => pwm_l,
+         pwm_r                  => pwm_r,
          main_gbc_bios_addr     => main_gbc_bios_addr,
          main_gbc_bios_data     => main_gbc_bios_data,
          main_pixel_out_we      => main_pixel_out_we,
@@ -308,7 +326,7 @@ begin
          SD_MISO                 => SD_MISO,                               -- input
 
          -- keyboard interface
-         full_matrix             => main_qngbc_keyb_matrix,                -- input
+         full_matrix             => qnice_qngbc_keyb_matrix,               -- input
 
          -- VGA interface
          pixelclock              => vga_pixelclk,                          -- input
@@ -318,13 +336,13 @@ begin
          vga_rgb                 => vga_qngbc_osm_rgb,                     -- output
 
          -- Game Boy control
-         gbc_reset               => main_qngbc_reset,                      -- output
-         gbc_pause               => main_qngbc_pause,                      -- output
-         gbc_keyboard            => main_qngbc_keyboard,                   -- output
-         gbc_joystick            => main_qngbc_joystick,                   -- output
-         gbc_color               => main_qngbc_color,                      -- output
-         gbc_joy_map             => main_qngbc_joy_map,                    -- output
-         gbc_color_mode          => main_qngbc_color_mode,                 -- output
+         gbc_reset               => qnice_qngbc_reset,                     -- output
+         gbc_pause               => qnice_qngbc_pause,                     -- output
+         gbc_keyboard            => qnice_qngbc_keyboard,                  -- output
+         gbc_joystick            => qnice_qngbc_joystick,                  -- output
+         gbc_color               => qnice_qngbc_color,                     -- output
+         gbc_joy_map             => qnice_qngbc_joy_map,                   -- output
+         gbc_color_mode          => qnice_qngbc_color_mode,                -- output
 
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr           => qnice_qngbc_bios_addr,                 -- output
@@ -337,27 +355,13 @@ begin
          gbc_cart_data_out       => qnice_qngbc_cart_data_out,             -- input
 
          -- Cartridge flags
-         cart_cgb_flag           => main_cart_cgb_flag,                    -- output
-         cart_sgb_flag           => main_cart_sgb_flag,                    -- output
-         cart_mbc_type           => main_cart_mbc_type,                    -- output
-         cart_rom_size           => main_cart_rom_size,                    -- output
-         cart_ram_size           => main_cart_ram_size,                    -- output
-         cart_old_licensee       => main_cart_old_licensee                 -- output
+         cart_cgb_flag           => qnice_cart_cgb_flag,                   -- output
+         cart_sgb_flag           => qnice_cart_sgb_flag,                   -- output
+         cart_mbc_type           => qnice_cart_mbc_type,                   -- output
+         cart_rom_size           => qnice_cart_rom_size,                   -- output
+         cart_ram_size           => qnice_cart_ram_size,                   -- output
+         cart_old_licensee       => qnice_cart_old_licensee                -- output
       ); -- QNICE_SOC : entity work.QNICE
-
-   -- Convert the Game Boy's PCM output to pulse density modulation
-   -- TODO: Is this component configured correctly when it comes to clock speed, constants used within
-   -- the component, subtracting 32768 while converting to signed, etc.
-   pcm2pdm : entity work.pcm_to_pdm
-      port map
-      (
-         cpuclock                => qnice_clk,
-         pcm_left                => signed(signed(main_pcm_audio_left) - 32768),
-         pcm_right               => signed(signed(main_pcm_audio_right) - 32768),
-         pdm_left                => pwm_l,
-         pdm_right               => pwm_r,
-         audio_mode              => '0'
-      );
 
 
    ---------------------------------------------------------------------------------------------
@@ -373,7 +377,7 @@ begin
          G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE
       )
       port map (
-         clk_i          =>	vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
+         clk_i          => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
          rst_i          => reset_n,          -- active low asycnchronous reset
          vga_address_o  => vga_address,
          vga_row_o      => vga_row,
@@ -395,6 +399,61 @@ begin
    ---------------------------------------------------------------------------------------------
    -- Dual Clocks
    ---------------------------------------------------------------------------------------------
+
+   i_qnice2main: xpm_cdc_array_single
+      generic map (
+         WIDTH => 56
+      )
+      port map (
+         src_clk                => qnice_clk,
+         src_in(0)              => qnice_qngbc_reset,
+         src_in(1)              => qnice_qngbc_pause,
+         src_in(2)              => qnice_qngbc_keyboard,
+         src_in(3)              => qnice_qngbc_joystick,
+         src_in(4)              => qnice_qngbc_color,
+         src_in(6 downto 5)     => qnice_qngbc_joy_map,
+         src_in(7)              => qnice_qngbc_color_mode,
+         src_in(15 downto 8)    => qnice_cart_cgb_flag,
+         src_in(23 downto 16)   => qnice_cart_sgb_flag,
+         src_in(31 downto 24)   => qnice_cart_mbc_type,
+         src_in(39 downto 32)   => qnice_cart_rom_size,
+         src_in(47 downto 40)   => qnice_cart_ram_size,
+         src_in(55 downto 48)   => qnice_cart_old_licensee,
+         dest_clk               => main_clk,
+         dest_out(0)            => main_qngbc_reset,
+         dest_out(1)            => main_qngbc_pause,
+         dest_out(2)            => main_qngbc_keyboard,
+         dest_out(3)            => main_qngbc_joystick,
+         dest_out(4)            => main_qngbc_color,
+         dest_out(6 downto 5)   => main_qngbc_joy_map,
+         dest_out(7)            => main_qngbc_color_mode,
+         dest_out(15 downto 8)  => main_cart_cgb_flag,
+         dest_out(23 downto 16) => main_cart_sgb_flag,
+         dest_out(31 downto 24) => main_cart_mbc_type,
+         dest_out(39 downto 32) => main_cart_rom_size,
+         dest_out(47 downto 40) => main_cart_ram_size,
+         dest_out(55 downto 48) => main_cart_old_licensee
+      ); -- i_qnice2main: xpm_cdc_array_single
+
+   i_main2qnice: xpm_cdc_array_single
+      generic map (
+         WIDTH => 16
+      )
+      port map (
+         src_clk                => main_clk,
+         src_in(15 downto 0)    => main_qngbc_keyb_matrix,
+         dest_clk               => qnice_clk,
+         dest_out(15 downto 0)  => qnice_qngbc_keyb_matrix
+      ); -- i_main2qnice: xpm_cdc_array_single
+
+--   i_qnice2vga: xpm_cdc_single
+--      port map (
+--         src_clk   => qnice_clk,
+--         src_in    => qnice_qngbc_osm_on,
+--         dest_clk  => vga_pixelclk,
+--         dest_out  => vga_qngbc_osm_on
+--      ); -- i_qnice2main: xpm_cdc_single
+
 
    -- BIOS ROM / BOOT ROM
    bios_rom : entity work.dualport_2clk_ram

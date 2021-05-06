@@ -8,11 +8,14 @@
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
-library IEEE;
-use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.NUMERIC_STD.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 use work.env1_globals.all;
 use work.qnice_tools.all;
+
+Library xpm;
+use xpm.vcomponents.all;
 
 entity QNICE is
 generic (
@@ -186,6 +189,11 @@ signal osm_xy                     : std_logic_vector(15 downto 0);
 signal osm_dxdy                   : std_logic_vector(15 downto 0);
 signal osm_x1, osm_x2             : integer range 0 to CHARS_DX - 1;
 signal osm_y1, osm_y2             : integer range 0 to CHARS_DY - 1;
+signal vga_osm_xy                 : std_logic_vector(15 downto 0);
+signal vga_osm_dxdy               : std_logic_vector(15 downto 0);
+signal vga_osm_x1, vga_osm_x2     : integer range 0 to CHARS_DX - 1;
+signal vga_osm_y1, vga_osm_y2     : integer range 0 to CHARS_DY - 1;
+signal vga_gbc_osm                : std_logic;
 
 begin
 
@@ -616,10 +624,25 @@ begin
          vga_y_old <= vga_y;
       end if;
    end process;
+
+   i_qnice2vga: xpm_cdc_array_single
+      generic map (
+         WIDTH => 33
+      )
+      port map (
+         src_clk                => clk50,
+         src_in(15 downto 0)    => osm_xy,
+         src_in(31 downto 16)   => osm_dxdy,
+         src_in(32)             => gbc_osm,
+         dest_clk               => pixelclock,
+         dest_out(15 downto 0)  => vga_osm_xy,
+         dest_out(31 downto 16) => vga_osm_dxdy,
+         dest_out(32)           => vga_gbc_osm
+      ); -- i_qnice2vga: xpm_cdc_single
       
    -- render OSM: calculate the pixel that needs to be shown at the given position  
    -- TODO: either here or in the top file: we are +1 pixel too much to the right (what about the vertical axis?) 
-   render_osm : process(vga_x, vga_y, vga_x_old, vga_y_old, osm_vram_data, osm_vram_attr_data, osm_font_data, osm_x1, osm_y1, osm_x2, osm_y2, gbc_osm)
+   render_osm : process (all)
       variable vga_x_div_16 : integer range 0 to CHARS_DX - 1;
       variable vga_y_div_16 : integer range 0 to CHARS_DY - 1;
       variable vga_x_mod_16 : integer range 0 to 15;
@@ -653,22 +676,24 @@ begin
          vga_rgb <= attr2rgb(osm_vram_attr_data(6 downto 3));
       end if;
       
-      if vga_x_div_16 >= osm_x1 and vga_x_div_16 < osm_x2 and vga_y_div_16 >= osm_y1 and vga_y_div_16 < osm_y2 then
-         vga_on <= gbc_osm;
+      if vga_x_div_16 >= vga_osm_x1 and vga_x_div_16 < vga_osm_x2 and vga_y_div_16 >= vga_osm_y1 and vga_y_div_16 < vga_osm_y2 then
+         vga_on <= vga_gbc_osm;
       else
          vga_on <= '0';
       end if;
    end process;   
    
-   calc_boundaries : process(osm_xy, osm_dxdy)
-      variable osm_x : integer range 0 to CHARS_DX - 1;
-      variable osm_y : integer range 0 to CHARS_DY - 1;
+   calc_boundaries : process (vga_osm_xy, vga_osm_dxdy)
+      variable vga_osm_x : integer range 0 to CHARS_DX - 1;
+      variable vga_osm_y : integer range 0 to CHARS_DY - 1;
    begin
-      osm_x  := to_integer(unsigned(osm_xy(15 downto 8)));
-      osm_y  := to_integer(unsigned(osm_xy(7 downto 0)));
-      osm_x1 <= osm_x;
-      osm_y1 <= osm_y;
-      osm_x2 <= osm_x + to_integer(unsigned(osm_dxdy(15 downto 8)));
-      osm_y2 <= osm_y + to_integer(unsigned(osm_dxdy(7 downto 0)));
+      vga_osm_x  := to_integer(unsigned(vga_osm_xy(15 downto 8)));
+      vga_osm_y  := to_integer(unsigned(vga_osm_xy(7 downto 0)));
+      vga_osm_x1 <= vga_osm_x;
+      vga_osm_y1 <= vga_osm_y;
+      vga_osm_x2 <= vga_osm_x + to_integer(unsigned(vga_osm_dxdy(15 downto 8)));
+      vga_osm_y2 <= vga_osm_y + to_integer(unsigned(vga_osm_dxdy(7 downto 0)));
    end process;
+
 end beh;
+

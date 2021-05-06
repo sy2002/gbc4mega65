@@ -13,16 +13,6 @@ create_generated_clock -name gbmainclk [get_pins */clk_gen/i_mmcme2_adv/CLKOUT0]
 create_generated_clock -name qniceclk  [get_pins */clk_gen/i_mmcme2_adv/CLKOUT1]
 create_generated_clock -name pixelclk  [get_pins */clk_gen/i_mmcme2_adv/CLKOUT2]
 
-## Make the general clocks and the pixelclock unrelated to other to avoid erroneous timing
-## violations, and hopefully make everything synthesise faster
-set_clock_groups -asynchronous \
-     -group { CLK gbmainclk qniceclk} \
-     -group { pixelclk }
-     
-set_clock_groups -asynchronous \
-     -group { CLK gbmainclk } \
-     -group { qniceclk }
-          
 ## QNICE's EAE combinatorial division networks take longer than
 ## the regular clock period, so we specify a multicycle path
 ## see also the comments in EAE.vhd and explanations in UG903/chapter 5/Multicycle Paths as well as ug911/page 25
