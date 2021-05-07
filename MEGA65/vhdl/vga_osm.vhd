@@ -41,14 +41,6 @@ architecture synthesis of vga_osm is
    constant VRAM_ADDR_WIDTH : integer := f_log2(CHAR_MEM_SIZE);
 
    -- VGA signals
-   signal vga_disp_en  : std_logic;
-   signal vga_col_raw  : integer range 0 to G_VGA_DX - 1;
-   signal vga_row_raw  : integer range 0 to G_VGA_DY - 1;
-   signal vga_col_next : integer range 0 to G_VGA_DX - 1;
-   signal vga_row_next : integer range 0 to G_VGA_DY - 1;
-   signal vga_hs       : std_logic;
-   signal vga_vs       : std_logic;
-
    signal vga_x        : integer range 0 to G_VGA_DX - 1;
    signal vga_y        : integer range 0 to G_VGA_DY - 1;
    signal vga_x_old    : integer range 0 to G_VGA_DX - 1;
@@ -128,43 +120,6 @@ begin
          vga_osm_on_o <= '0';
       end if;
    end process;
-
-
-   -- Scaler: 160 x 144 => 4x => 640 x 576
-   -- Scaling by 4 is a convenient special case: We just need to use a SHR operation.
-   -- We are doing this by taking the bits "9 downto 2" from the current column and row.
-   -- This is a hardcoded and very fast operation.
-   p_scaler : process (all)
-      variable src_x: std_logic_vector(9 downto 0);
-      variable src_y: std_logic_vector(9 downto 0);
-      variable dst_x: std_logic_vector(7 downto 0);
-      variable dst_y: std_logic_vector(7 downto 0);
-      variable dst_x_i: integer range 0 to G_GB_DX - 1;
-      variable dst_y_i: integer range 0 to G_GB_DY - 1;
-      variable nextrow: integer range 0 to G_GB_DY - 1;
-   begin
-      src_x    := std_logic_vector(to_unsigned(vga_col_i, 10));
-      src_y    := std_logic_vector(to_unsigned(vga_row_i, 10));
-      dst_x    := src_x(9 downto 2);
-      dst_y    := src_y(9 downto 2);
-      dst_x_i  := to_integer(unsigned(dst_x));
-      dst_y_i  := to_integer(unsigned(dst_y));
-      nextrow  := dst_y_i + 1;
-
-      -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
-      -- to always address one pixel ahead of were we currently stand
-      if dst_x_i < G_GB_DX - 1 then
-         vga_col_next <= dst_x_i + 1;
-         vga_row_next <= dst_y_i;
-      else
-         vga_col_next <= 0;
-         if nextrow < G_GB_DY then
-            vga_row_next <= nextrow;
-         else
-            vga_row_next <= 0;
-         end if;
-      end if;
-   end process p_scaler;
 
 
    -- 16x16 pixel font ROM

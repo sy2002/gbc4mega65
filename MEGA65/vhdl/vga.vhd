@@ -1,3 +1,14 @@
+----------------------------------------------------------------------------------
+-- Game Boy Color for MEGA65 (gbc4mega65)
+--
+-- VGA control block.
+--
+-- This block overlays the On Screen Menu (OSM) on top of the Core output.
+--
+-- This machine is based on Gameboy_MiSTer
+-- MEGA65 port done by sy2002 and MJoergen in 2021 and licensed under GPL v3
+----------------------------------------------------------------------------------
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -5,49 +16,43 @@ use work.qnice_tools.all;
 
 entity vga is
    generic  (
-      G_VGA_DX          : integer;
-      G_VGA_DY          : integer;
-      G_GB_DX           : integer;
-      G_GB_DY           : integer;
-      G_GB_TO_VGA_SCALE : integer
+      G_VGA_DX          : integer;  -- 800
+      G_VGA_DY          : integer;  -- 600
+      G_GB_DX           : integer;  -- 160
+      G_GB_DY           : integer;  -- 144
+      G_GB_TO_VGA_SCALE : integer   -- 4 : 160x144 => 640x576
    );
    port (
-      clk_i          : in  std_logic;
-      rst_i          : in  std_logic;
+      clk_i                    : in  std_logic;
+      rst_i                    : in  std_logic;
 
-      vga_gbc_osm_i            : in  std_logic;
-      vga_osm_xy_i             : in  std_logic_vector(15 downto 0);
-      vga_osm_dxdy_i           : in  std_logic_vector(15 downto 0);
+      -- OSM configuration
+      vga_osm_cfg_enable_i     : in  std_logic;
+      vga_osm_cfg_xy_i         : in  std_logic_vector(15 downto 0);
+      vga_osm_cfg_dxdy_i       : in  std_logic_vector(15 downto 0);
+
+      -- OSM interface to VRAM
       vga_osm_vram_addr_o      : out std_logic_vector(15 downto 0);
       vga_osm_vram_data_i      : in  std_logic_vector(7 downto 0);
       vga_osm_vram_attr_data_i : in  std_logic_vector(7 downto 0);
 
-      vga_address_o  : out std_logic_vector(14 downto 0);
-      vga_data_i     : in  std_logic_vector(23 downto 0);
+      -- Core interface to VRAM
+      vga_core_vram_addr_o     : out std_logic_vector(14 downto 0);
+      vga_core_vram_data_i     : in  std_logic_vector(23 downto 0);
 
-      -- VGA
-      vga_red_o      : out std_logic_vector(7 downto 0);
-      vga_green_o    : out std_logic_vector(7 downto 0);
-      vga_blue_o     : out std_logic_vector(7 downto 0);
-      vga_hs_o       : out std_logic;
-      vga_vs_o       : out std_logic;
-
-      -- VDAC
-      vdac_clk_o     : out std_logic;
-      vdac_sync_n_o  : out std_logic;
-      vdac_blank_n_o : out std_logic
+      -- VGA / VDAC output
+      vga_red_o                : out std_logic_vector(7 downto 0);
+      vga_green_o              : out std_logic_vector(7 downto 0);
+      vga_blue_o               : out std_logic_vector(7 downto 0);
+      vga_hs_o                 : out std_logic;
+      vga_vs_o                 : out std_logic;
+      vdac_clk_o               : out std_logic;
+      vdac_sync_n_o            : out std_logic;
+      vdac_blank_n_o           : out std_logic
    );
 end vga;
 
 architecture synthesis of vga is
-
-   -- Constants for VGA output
-   constant FONT_DX         : integer := 16;
-   constant FONT_DY         : integer := 16;
-   constant CHARS_DX        : integer := G_VGA_DX / FONT_DX;
-   constant CHARS_DY        : integer := G_VGA_DY / FONT_DY;
-   constant CHAR_MEM_SIZE   : integer := CHARS_DX * CHARS_DY;
-   constant VRAM_ADDR_WIDTH : integer := f_log2(CHAR_MEM_SIZE);
 
    -- VGA signals
    signal vga_disp_en  : std_logic;
@@ -55,10 +60,11 @@ architecture synthesis of vga is
    signal vga_row_raw  : integer range 0 to G_VGA_DY - 1;
    signal vga_col      : integer range 0 to G_VGA_DX - 1;
    signal vga_row      : integer range 0 to G_VGA_DY - 1;
-   signal vga_col_next : integer range 0 to G_VGA_DX - 1;
-   signal vga_row_next : integer range 0 to G_VGA_DY - 1;
    signal vga_hs       : std_logic;
    signal vga_vs       : std_logic;
+
+   signal vga_core_on  : std_logic;
+   signal vga_core_rgb : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
 
    signal vga_osm_on   : std_logic;
    signal vga_osm_rgb  : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
@@ -130,9 +136,9 @@ begin
          rst_i                    => rst_i,
          vga_col_i                => vga_col,
          vga_row_i                => vga_row,
-         vga_osm_xy_i             => vga_osm_xy_i,
-         vga_osm_dxdy_i           => vga_osm_dxdy_i,
-         vga_gbc_osm_i            => vga_gbc_osm_i,
+         vga_osm_xy_i             => vga_osm_cfg_xy_i,
+         vga_osm_dxdy_i           => vga_osm_cfg_dxdy_i,
+         vga_gbc_osm_i            => vga_osm_cfg_enable_i,
          vga_osm_vram_addr_o      => vga_osm_vram_addr_o,
          vga_osm_vram_data_i      => vga_osm_vram_data_i,
          vga_osm_vram_attr_data_i => vga_osm_vram_attr_data_i,
@@ -141,44 +147,25 @@ begin
       ); -- i_vga_osm : entity work.vga_osm
 
 
-   -- Scaler: 160 x 144 => 4x => 640 x 576
-   -- Scaling by 4 is a convenient special case: We just need to use a SHR operation.
-   -- We are doing this by taking the bits "9 downto 2" from the current column and row.
-   -- This is a hardcoded and very fast operation.
-   p_scaler : process (all)
-      variable src_x: std_logic_vector(9 downto 0);
-      variable src_y: std_logic_vector(9 downto 0);
-      variable dst_x: std_logic_vector(7 downto 0);
-      variable dst_y: std_logic_vector(7 downto 0);
-      variable dst_x_i: integer range 0 to G_GB_DX - 1;
-      variable dst_y_i: integer range 0 to G_GB_DY - 1;
-      variable nextrow: integer range 0 to G_GB_DY - 1;
-   begin
-      src_x    := std_logic_vector(to_unsigned(vga_col, 10));
-      src_y    := std_logic_vector(to_unsigned(vga_row, 10));
-      dst_x    := src_x(9 downto 2);
-      dst_y    := src_y(9 downto 2);
-      dst_x_i  := to_integer(unsigned(dst_x));
-      dst_y_i  := to_integer(unsigned(dst_y));
-      nextrow  := dst_y_i + 1;
+   i_vga_core : entity work.vga_core
+      generic map (
+         G_VGA_DX             => G_VGA_DX,
+         G_VGA_DY             => G_VGA_DY,
+         G_GB_DX              => G_GB_DX,
+         G_GB_DY              => G_GB_DY,
+         G_GB_TO_VGA_SCALE    => G_GB_TO_VGA_SCALE
+      )
+      port map (
+         clk_i                => clk_i,
+         rst_i                => rst_i,
+         vga_col_i            => vga_col,
+         vga_row_i            => vga_row,
+         vga_core_vram_addr_o => vga_core_vram_addr_o,
+         vga_core_vram_data_i => vga_core_vram_data_i,
+         vga_core_on_o        => vga_core_on,
+         vga_core_rgb_o       => vga_core_rgb
+      ); -- i_vga_core : entity work.vga_core
 
-      -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
-      -- to always address one pixel ahead of were we currently stand
-      if dst_x_i < G_GB_DX - 1 then
-         vga_col_next <= dst_x_i + 1;
-         vga_row_next <= dst_y_i;
-      else
-         vga_col_next <= 0;
-         if nextrow < G_GB_DY then
-            vga_row_next <= nextrow;
-         else
-            vga_row_next <= 0;
-         end if;
-      end if;
-   end process p_scaler;
-
-
-   vga_address_o <= std_logic_vector(to_unsigned(vga_row_next * G_GB_DX + vga_col_next, 15));
 
    p_video_signal_latches : process (clk_i)
    begin
@@ -188,15 +175,11 @@ begin
          vga_green_o <= (others => '0');
 
          if vga_disp_en then
-            -- Game Boy output
-            -- TODO: Investigate, why the top/left pixel is always white and solve it;
-            -- workaround in the meantime: the top/left pixel is set to be always black which seems to be less intrusive
-            if (vga_col_raw > 0 or vga_row_raw > 0) and
-               (vga_col_raw < G_GB_DX * G_GB_TO_VGA_SCALE and
-                vga_row_raw < G_GB_DY * G_GB_TO_VGA_SCALE) then
-               vga_red_o   <= vga_data_i(23 downto 16);
-               vga_green_o <= vga_data_i(15 downto 8);
-               vga_blue_o  <= vga_data_i(7 downto 0);
+            -- MEGA65 core output
+            if vga_core_on then
+               vga_red_o   <= vga_core_rgb(23 downto 16);
+               vga_green_o <= vga_core_rgb(15 downto 8);
+               vga_blue_o  <= vga_core_rgb(7 downto 0);
             end if;
 
             -- On-Screen-Menu (OSM) output

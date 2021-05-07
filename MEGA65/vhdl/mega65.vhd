@@ -178,7 +178,6 @@ signal qnice_qngbc_color          : std_logic;
 signal qnice_qngbc_joy_map        : std_logic_vector(1 downto 0);
 signal qnice_qngbc_color_mode     : std_logic;
 signal qnice_qngbc_keyb_matrix    : std_logic_vector(15 downto 0);
-signal qnice_gbc_osm              : std_logic;
 
 -- cartridge flags
 signal qnice_cart_cgb_flag        : std_logic_vector(7 downto 0);
@@ -204,8 +203,9 @@ signal qnice_osm_vram_data        : std_logic_vector(7 downto 0);
 signal qnice_osm_vram_attr_data   : std_logic_vector(7 downto 0);
 signal qnice_osm_font_addr        : std_logic_vector(11 downto 0);
 signal qnice_osm_font_data        : std_logic_vector(15 downto 0);
-signal qnice_osm_xy               : std_logic_vector(15 downto 0);
-signal qnice_osm_dxdy             : std_logic_vector(15 downto 0);
+signal qnice_osm_cfg_enable       : std_logic;
+signal qnice_osm_cfg_xy           : std_logic_vector(15 downto 0);
+signal qnice_osm_cfg_dxdy         : std_logic_vector(15 downto 0);
 signal qnice_osm_x1, qnice_osm_x2 : integer range 0 to CHARS_DX - 1;
 signal qnice_osm_y1, qnice_osm_y2 : integer range 0 to CHARS_DY - 1;
 
@@ -228,13 +228,9 @@ signal vga_address            : std_logic_vector(14 downto 0);
 signal vga_frame_buffer_data  : std_logic_vector(23 downto 0);
 
 -- On-Screen-Menu (OSM)
-signal vga_x_old              : integer range 0 to VGA_DX - 1;
-signal vga_y_old              : integer range 0 to VGA_DY - 1;
-signal vga_osm_xy             : std_logic_vector(15 downto 0);
-signal vga_osm_dxdy           : std_logic_vector(15 downto 0);
-signal vga_osm_x1, vga_osm_x2 : integer range 0 to CHARS_DX - 1;
-signal vga_osm_y1, vga_osm_y2 : integer range 0 to CHARS_DY - 1;
-signal vga_gbc_osm            : std_logic;
+signal vga_osm_cfg_enable     : std_logic;
+signal vga_osm_cfg_xy         : std_logic_vector(15 downto 0);
+signal vga_osm_cfg_dxdy       : std_logic_vector(15 downto 0);
 signal vga_osm_vram_addr      : std_logic_vector(15 downto 0);
 signal vga_osm_vram_data      : std_logic_vector(7 downto 0);
 signal vga_osm_vram_attr_data : std_logic_vector(7 downto 0);
@@ -358,8 +354,9 @@ begin
          SD_MOSI                 => SD_MOSI,                               -- output
          SD_MISO                 => SD_MISO,                               -- input
 
-         osm_xy                  => qnice_osm_xy,                          -- output
-         osm_dxdy                => qnice_osm_dxdy,                        -- output
+         gbc_osm                 => qnice_osm_cfg_enable,                  -- output
+         osm_xy                  => qnice_osm_cfg_xy,                      -- output
+         osm_dxdy                => qnice_osm_cfg_dxdy,                    -- output
          vram_addr               => qnice_vram_addr,                       -- output
          vram_data_out           => qnice_vram_data_out,                   -- output
          vram_attr_we            => qnice_vram_attr_we,                    -- output
@@ -378,7 +375,6 @@ begin
          gbc_color               => qnice_qngbc_color,                     -- output
          gbc_joy_map             => qnice_qngbc_joy_map,                   -- output
          gbc_color_mode          => qnice_qngbc_color_mode,                -- output
-         gbc_osm                 => qnice_gbc_osm,                         -- output
 
          -- Interfaces to Game Boy's RAMs (MMIO):
          gbc_bios_addr           => qnice_qngbc_bios_addr,                 -- output
@@ -415,14 +411,14 @@ begin
       port map (
          clk_i                    => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
          rst_i                    => reset_n,          -- active low asycnchronous reset
-         vga_gbc_osm_i            => vga_gbc_osm,
-         vga_osm_xy_i             => vga_osm_xy,
-         vga_osm_dxdy_i           => vga_osm_dxdy,
+         vga_osm_cfg_enable_i     => vga_osm_cfg_enable,
+         vga_osm_cfg_xy_i         => vga_osm_cfg_xy,
+         vga_osm_cfg_dxdy_i       => vga_osm_cfg_dxdy,
          vga_osm_vram_addr_o      => vga_osm_vram_addr,
          vga_osm_vram_data_i      => vga_osm_vram_data,
          vga_osm_vram_attr_data_i => vga_osm_vram_attr_data,
-         vga_address_o            => vga_address,
-         vga_data_i               => vga_frame_buffer_data,
+         vga_core_vram_addr_o     => vga_address,
+         vga_core_vram_data_i     => vga_frame_buffer_data,
          vga_red_o                => vga_red,
          vga_green_o              => vga_green,
          vga_blue_o               => vga_blue,
@@ -490,13 +486,13 @@ begin
       )
       port map (
          src_clk                => qnice_clk,
-         src_in(15 downto 0)    => qnice_osm_xy,
-         src_in(31 downto 16)   => qnice_osm_dxdy,
-         src_in(32)             => qnice_gbc_osm,
+         src_in(15 downto 0)    => qnice_osm_cfg_xy,
+         src_in(31 downto 16)   => qnice_osm_cfg_dxdy,
+         src_in(32)             => qnice_osm_cfg_enable,
          dest_clk               => vga_pixelclk,
-         dest_out(15 downto 0)  => vga_osm_xy,
-         dest_out(31 downto 16) => vga_osm_dxdy,
-         dest_out(32)           => vga_gbc_osm
+         dest_out(15 downto 0)  => vga_osm_cfg_xy,
+         dest_out(31 downto 16) => vga_osm_cfg_dxdy,
+         dest_out(32)           => vga_osm_cfg_enable
       ); -- i_qnice2vga: xpm_cdc_single
       
 
