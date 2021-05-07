@@ -26,17 +26,17 @@ entity vga is
       clk_i                : in  std_logic;
       rst_i                : in  std_logic;
 
-      -- OSM configuration
+      -- OSM configuration from QNICE
       vga_osm_cfg_enable_i : in  std_logic;
       vga_osm_cfg_xy_i     : in  std_logic_vector(15 downto 0);
       vga_osm_cfg_dxdy_i   : in  std_logic_vector(15 downto 0);
 
-      -- OSM interface to VRAM
+      -- OSM interface to VRAM (character and palette index)
       vga_osm_vram_addr_o  : out std_logic_vector(15 downto 0);
       vga_osm_vram_data_i  : in  std_logic_vector(7 downto 0);
       vga_osm_vram_attr_i  : in  std_logic_vector(7 downto 0);
 
-      -- Core interface to VRAM
+      -- Core interface to VRAM (RGB colors)
       vga_core_vram_addr_o : out std_logic_vector(14 downto 0);
       vga_core_vram_data_i : in  std_logic_vector(23 downto 0);
 
