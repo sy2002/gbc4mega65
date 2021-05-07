@@ -228,24 +228,24 @@ signal vga_address            : std_logic_vector(14 downto 0);
 signal vga_frame_buffer_data  : std_logic_vector(23 downto 0);
 
 -- On-Screen-Menu (OSM)
-signal vga_osm_cfg_enable     : std_logic;
-signal vga_osm_cfg_xy         : std_logic_vector(15 downto 0);
-signal vga_osm_cfg_dxdy       : std_logic_vector(15 downto 0);
-signal vga_osm_vram_addr      : std_logic_vector(15 downto 0);
-signal vga_osm_vram_data      : std_logic_vector(7 downto 0);
-signal vga_osm_vram_attr_data : std_logic_vector(7 downto 0);
+signal vga_osm_cfg_enable : std_logic;
+signal vga_osm_cfg_xy     : std_logic_vector(15 downto 0);
+signal vga_osm_cfg_dxdy   : std_logic_vector(15 downto 0);
+signal vga_osm_vram_addr  : std_logic_vector(15 downto 0);
+signal vga_osm_vram_data  : std_logic_vector(7 downto 0);
+signal vga_osm_vram_attr  : std_logic_vector(7 downto 0);
 
 -- constants necessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
-constant c_fast_boot       : std_logic := '0';
-constant c_joystick        : std_logic_vector(7 downto 0) := X"FF";
-constant c_dummy_0         : std_logic := '0';
-constant c_dummy_2bit_0    : std_logic_vector(1 downto 0) := (others => '0');
-constant c_dummy_8bit_0    : std_logic_vector(7 downto 0) := (others => '0');
-constant c_dummy_64bit_0   : std_logic_vector(63 downto 0) := (others => '0');
-constant c_dummy_129bit_0  : std_logic_vector(128 downto 0) := (others => '0');
+constant c_fast_boot      : std_logic := '0';
+constant c_joystick       : std_logic_vector(7 downto 0) := X"FF";
+constant c_dummy_0        : std_logic := '0';
+constant c_dummy_2bit_0   : std_logic_vector(1 downto 0) := (others => '0');
+constant c_dummy_8bit_0   : std_logic_vector(7 downto 0) := (others => '0');
+constant c_dummy_64bit_0  : std_logic_vector(63 downto 0) := (others => '0');
+constant c_dummy_129bit_0 : std_logic_vector(128 downto 0) := (others => '0');
 
-signal i_reset             : std_logic;
+signal i_reset            : std_logic;
 
 
 begin
@@ -409,24 +409,24 @@ begin
          G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE
       )
       port map (
-         clk_i                    => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
-         rst_i                    => reset_n,          -- active low asycnchronous reset
-         vga_osm_cfg_enable_i     => vga_osm_cfg_enable,
-         vga_osm_cfg_xy_i         => vga_osm_cfg_xy,
-         vga_osm_cfg_dxdy_i       => vga_osm_cfg_dxdy,
-         vga_osm_vram_addr_o      => vga_osm_vram_addr,
-         vga_osm_vram_data_i      => vga_osm_vram_data,
-         vga_osm_vram_attr_data_i => vga_osm_vram_attr_data,
-         vga_core_vram_addr_o     => vga_address,
-         vga_core_vram_data_i     => vga_frame_buffer_data,
-         vga_red_o                => vga_red,
-         vga_green_o              => vga_green,
-         vga_blue_o               => vga_blue,
-         vga_hs_o                 => vga_hs,
-         vga_vs_o                 => vga_vs,
-         vdac_clk_o               => vdac_clk,
-         vdac_sync_n_o            => vdac_sync_n,
-         vdac_blank_n_o           => vdac_blank_n
+         clk_i                => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
+         rst_i                => reset_n,          -- active low asycnchronous reset
+         vga_osm_cfg_enable_i => vga_osm_cfg_enable,
+         vga_osm_cfg_xy_i     => vga_osm_cfg_xy,
+         vga_osm_cfg_dxdy_i   => vga_osm_cfg_dxdy,
+         vga_osm_vram_addr_o  => vga_osm_vram_addr,
+         vga_osm_vram_data_i  => vga_osm_vram_data,
+         vga_osm_vram_attr_i  => vga_osm_vram_attr,
+         vga_core_vram_addr_o => vga_address,
+         vga_core_vram_data_i => vga_frame_buffer_data,
+         vga_red_o            => vga_red,
+         vga_green_o          => vga_green,
+         vga_blue_o           => vga_blue,
+         vga_hs_o             => vga_hs,
+         vga_vs_o             => vga_vs,
+         vdac_clk_o           => vdac_clk,
+         vdac_sync_n_o        => vdac_sync_n,
+         vdac_blank_n_o       => vdac_blank_n
       ); -- i_vga : entity work.vga
 
 
@@ -637,7 +637,7 @@ begin
 
          clock_b      => vga_pixelclk,
          address_b    => vga_osm_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),       -- same address as VRAM
-         q_b          => vga_osm_vram_attr_data
+         q_b          => vga_osm_vram_attr
       ); -- vram_attr : entity work.dualport_2clk_ram
 
 end beh;

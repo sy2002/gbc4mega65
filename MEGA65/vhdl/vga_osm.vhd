@@ -12,21 +12,21 @@ entity vga_osm is
       G_GB_TO_VGA_SCALE : integer
    );
    port (
-      clk_i                    : in  std_logic;
-      rst_i                    : in  std_logic;
+      clk_i               : in  std_logic;
+      rst_i               : in  std_logic;
 
-      vga_col_i                : integer range 0 to G_VGA_DX - 1;
-      vga_row_i                : integer range 0 to G_VGA_DY - 1;
+      vga_col_i           : integer range 0 to G_VGA_DX - 1;
+      vga_row_i           : integer range 0 to G_VGA_DY - 1;
 
-      vga_gbc_osm_i            : in  std_logic;
-      vga_osm_xy_i             : in  std_logic_vector(15 downto 0);
-      vga_osm_dxdy_i           : in  std_logic_vector(15 downto 0);
-      vga_osm_vram_addr_o      : out std_logic_vector(15 downto 0);
-      vga_osm_vram_data_i      : in  std_logic_vector(7 downto 0);
-      vga_osm_vram_attr_data_i : in  std_logic_vector(7 downto 0);
+      vga_gbc_osm_i       : in  std_logic;
+      vga_osm_xy_i        : in  std_logic_vector(15 downto 0);
+      vga_osm_dxdy_i      : in  std_logic_vector(15 downto 0);
+      vga_osm_vram_addr_o : out std_logic_vector(15 downto 0);
+      vga_osm_vram_data_i : in  std_logic_vector(7 downto 0);
+      vga_osm_vram_attr_i : in  std_logic_vector(7 downto 0);
 
-      vga_osm_on_o             : out std_logic;
-      vga_osm_rgb_o            : out std_logic_vector(23 downto 0)
+      vga_osm_on_o        : out std_logic;
+      vga_osm_rgb_o       : out std_logic_vector(23 downto 0)
    );
 end vga_osm;
 
@@ -106,12 +106,12 @@ begin
       vga_osm_vram_addr_o <= std_logic_vector(to_unsigned(vga_y_div_16 * CHARS_DX + vga_x_div_16, 16));
       vga_osm_font_addr <= std_logic_vector(to_unsigned(to_integer(unsigned(vga_osm_vram_data_i)) * FONT_DY + vga_y_mod_16, 12));
       -- if pixel is set in font (and take care of inverse on/off)
-      if vga_osm_font_data(15 - vga_x_mod_16) = not vga_osm_vram_attr_data_i(7) then
+      if vga_osm_font_data(15 - vga_x_mod_16) = not vga_osm_vram_attr_i(7) then
          -- foreground color
-         vga_osm_rgb_o <= attr2rgb(vga_osm_vram_attr_data_i(6) & vga_osm_vram_attr_data_i(2 downto 0));
+         vga_osm_rgb_o <= attr2rgb(vga_osm_vram_attr_i(6) & vga_osm_vram_attr_i(2 downto 0));
       else
          -- background color
-         vga_osm_rgb_o <= attr2rgb(vga_osm_vram_attr_data_i(6 downto 3));
+         vga_osm_rgb_o <= attr2rgb(vga_osm_vram_attr_i(6 downto 3));
       end if;
 
       if vga_x_div_16 >= vga_osm_x1 and vga_x_div_16 < vga_osm_x2 and vga_y_div_16 >= vga_osm_y1 and vga_y_div_16 < vga_osm_y2 then

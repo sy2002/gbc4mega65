@@ -23,49 +23,49 @@ entity vga is
       G_GB_TO_VGA_SCALE : integer   -- 4 : 160x144 => 640x576
    );
    port (
-      clk_i                    : in  std_logic;
-      rst_i                    : in  std_logic;
+      clk_i                : in  std_logic;
+      rst_i                : in  std_logic;
 
       -- OSM configuration
-      vga_osm_cfg_enable_i     : in  std_logic;
-      vga_osm_cfg_xy_i         : in  std_logic_vector(15 downto 0);
-      vga_osm_cfg_dxdy_i       : in  std_logic_vector(15 downto 0);
+      vga_osm_cfg_enable_i : in  std_logic;
+      vga_osm_cfg_xy_i     : in  std_logic_vector(15 downto 0);
+      vga_osm_cfg_dxdy_i   : in  std_logic_vector(15 downto 0);
 
       -- OSM interface to VRAM
-      vga_osm_vram_addr_o      : out std_logic_vector(15 downto 0);
-      vga_osm_vram_data_i      : in  std_logic_vector(7 downto 0);
-      vga_osm_vram_attr_data_i : in  std_logic_vector(7 downto 0);
+      vga_osm_vram_addr_o  : out std_logic_vector(15 downto 0);
+      vga_osm_vram_data_i  : in  std_logic_vector(7 downto 0);
+      vga_osm_vram_attr_i  : in  std_logic_vector(7 downto 0);
 
       -- Core interface to VRAM
-      vga_core_vram_addr_o     : out std_logic_vector(14 downto 0);
-      vga_core_vram_data_i     : in  std_logic_vector(23 downto 0);
+      vga_core_vram_addr_o : out std_logic_vector(14 downto 0);
+      vga_core_vram_data_i : in  std_logic_vector(23 downto 0);
 
       -- VGA / VDAC output
-      vga_red_o                : out std_logic_vector(7 downto 0);
-      vga_green_o              : out std_logic_vector(7 downto 0);
-      vga_blue_o               : out std_logic_vector(7 downto 0);
-      vga_hs_o                 : out std_logic;
-      vga_vs_o                 : out std_logic;
-      vdac_clk_o               : out std_logic;
-      vdac_sync_n_o            : out std_logic;
-      vdac_blank_n_o           : out std_logic
+      vga_red_o            : out std_logic_vector(7 downto 0);
+      vga_green_o          : out std_logic_vector(7 downto 0);
+      vga_blue_o           : out std_logic_vector(7 downto 0);
+      vga_hs_o             : out std_logic;
+      vga_vs_o             : out std_logic;
+      vdac_clk_o           : out std_logic;
+      vdac_sync_n_o        : out std_logic;
+      vdac_blank_n_o       : out std_logic
    );
 end vga;
 
 architecture synthesis of vga is
 
    -- VGA signals
-   signal vga_disp_en  : std_logic;
-   signal vga_col_raw  : integer range 0 to G_VGA_DX - 1;
-   signal vga_row_raw  : integer range 0 to G_VGA_DY - 1;
-   signal vga_col      : integer range 0 to G_VGA_DX - 1;
-   signal vga_row      : integer range 0 to G_VGA_DY - 1;
    signal vga_hs       : std_logic;
    signal vga_vs       : std_logic;
+   signal vga_disp_en  : std_logic;
+   signal vga_col      : integer range 0 to G_VGA_DX - 1;
+   signal vga_row      : integer range 0 to G_VGA_DY - 1;
 
+   -- Delayed VGA signals
+   signal vga_hs_d     : std_logic;
+   signal vga_vs_d     : std_logic;
    signal vga_core_on  : std_logic;
    signal vga_core_rgb : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
-
    signal vga_osm_on   : std_logic;
    signal vga_osm_rgb  : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
 
@@ -77,50 +77,31 @@ begin
    vga_pixels_and_timing : entity work.vga_controller
       generic map
       (
-         H_PIXELS  => G_VGA_DX,         -- horizontal display width in pixels
-         V_PIXELS  => G_VGA_DY,         -- vertical display width in rows
+         H_PIXELS  => G_VGA_DX,    -- horizontal display width in pixels
+         V_PIXELS  => G_VGA_DY,    -- vertical display width in rows
 
-         H_PULSE   => 128,              -- horiztonal sync pulse width in pixels
-         H_BP      => 88,               -- horiztonal back porch width in pixels
-         H_FP      => 40,               -- horiztonal front porch width in pixels
-         H_POL     => '1',              -- horizontal sync pulse polarity (1 = positive, 0 = negative)
+         H_PULSE   => 128,         -- horiztonal sync pulse width in pixels
+         H_BP      => 88,          -- horiztonal back porch width in pixels
+         H_FP      => 40,          -- horiztonal front porch width in pixels
+         H_POL     => '1',         -- horizontal sync pulse polarity (1 = positive, 0 = negative)
 
-         V_PULSE   => 4,                -- vertical sync pulse width in rows
-         V_BP      => 23,               -- vertical back porch width in rows
-         V_FP      => 1,                -- vertical front porch width in rows
-         V_POL     => '1'               -- vertical sync pulse polarity (1 = positive, 0 = negative)
+         V_PULSE   => 4,           -- vertical sync pulse width in rows
+         V_BP      => 23,          -- vertical back porch width in rows
+         V_FP      => 1,           -- vertical front porch width in rows
+         V_POL     => '1'          -- vertical sync pulse polarity (1 = positive, 0 = negative)
       )
       port map
       (
-         pixel_clk => clk_i,            -- pixel clock at frequency of VGA mode being used
-         reset_n   => rst_i,            -- active low asycnchronous reset
-         h_sync    => vga_hs,           -- horiztonal sync pulse
-         v_sync    => vga_vs,           -- vertical sync pulse
-         disp_ena  => vga_disp_en,      -- display enable ('1' = display time, '0' = blanking time)
-         column    => vga_col_raw,      -- horizontal pixel coordinate
-         row       => vga_row_raw,      -- vertical pixel coordinate
-         n_blank   => open,             -- direct blacking output to DAC
-         n_sync    => open              -- sync-on-green output to DAC
+         pixel_clk => clk_i,       -- pixel clock at frequency of VGA mode being used
+         reset_n   => rst_i,       -- active low asycnchronous reset
+         h_sync    => vga_hs,      -- horiztonal sync pulse
+         v_sync    => vga_vs,      -- vertical sync pulse
+         disp_ena  => vga_disp_en, -- display enable ('1' = display time, '0' = blanking time)
+         column    => vga_col,     -- horizontal pixel coordinate
+         row       => vga_row,     -- vertical pixel coordinate
+         n_blank   => open,        -- direct blacking output to DAC
+         n_sync    => open         -- sync-on-green output to DAC
       ); -- vga_pixels_and_timing : entity work.vga_controller
-
-
-   -- due to the latching of the VGA signals, we are one pixel off: compensate for that
-   p_adjust_pixel_skew : process (all)
-      variable nextrow  : integer range 0 to G_VGA_DY - 1;
-   begin
-      nextrow := vga_row_raw + 1;
-      if vga_col_raw < G_VGA_DX - 1 then
-         vga_col <= vga_col_raw + 1;
-         vga_row <= vga_row_raw;
-      else
-         vga_col <= 0;
-         if nextrow < G_VGA_DY then
-            vga_row <= nextrow;
-         else
-            vga_row <= 0;
-         end if;
-      end if;
-   end process p_adjust_pixel_skew;
 
 
    i_vga_osm : entity work.vga_osm
@@ -132,18 +113,18 @@ begin
          G_GB_TO_VGA_SCALE => G_GB_TO_VGA_SCALE
       )
       port map (
-         clk_i                    => clk_i,
-         rst_i                    => rst_i,
-         vga_col_i                => vga_col,
-         vga_row_i                => vga_row,
-         vga_osm_xy_i             => vga_osm_cfg_xy_i,
-         vga_osm_dxdy_i           => vga_osm_cfg_dxdy_i,
-         vga_gbc_osm_i            => vga_osm_cfg_enable_i,
-         vga_osm_vram_addr_o      => vga_osm_vram_addr_o,
-         vga_osm_vram_data_i      => vga_osm_vram_data_i,
-         vga_osm_vram_attr_data_i => vga_osm_vram_attr_data_i,
-         vga_osm_on_o             => vga_osm_on,
-         vga_osm_rgb_o            => vga_osm_rgb
+         clk_i               => clk_i,
+         rst_i               => rst_i,
+         vga_col_i           => vga_col,
+         vga_row_i           => vga_row,
+         vga_osm_xy_i        => vga_osm_cfg_xy_i,
+         vga_osm_dxdy_i      => vga_osm_cfg_dxdy_i,
+         vga_gbc_osm_i       => vga_osm_cfg_enable_i,
+         vga_osm_vram_addr_o => vga_osm_vram_addr_o,
+         vga_osm_vram_data_i => vga_osm_vram_data_i,
+         vga_osm_vram_attr_i => vga_osm_vram_attr_i,
+         vga_osm_on_o        => vga_osm_on,
+         vga_osm_rgb_o       => vga_osm_rgb
       ); -- i_vga_osm : entity work.vga_osm
 
 
@@ -174,6 +155,9 @@ begin
          vga_blue_o  <= (others => '0');
          vga_green_o <= (others => '0');
 
+         vga_hs_d <= vga_hs;
+         vga_vs_d <= vga_vs;
+
          if vga_disp_en then
             -- MEGA65 core output
             if vga_core_on then
@@ -191,8 +175,8 @@ begin
          end if;
 
          -- VGA horizontal and vertical sync
-         vga_hs_o <= vga_hs;
-         vga_vs_o <= vga_vs;
+         vga_hs_o <= vga_hs_d;
+         vga_vs_o <= vga_vs_d;
       end if;
    end process; -- p_video_signal_latches : process(vga_pixelclk)
 
