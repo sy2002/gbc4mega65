@@ -143,4 +143,14 @@ clean:
 	rm -f usage_statistics_webtalk.*
 	rm -f vivado*
 	rm -f webtalk*
+	rm -rf MEGA65-R2.cache/
+	rm -rf MEGA65-R2.hw/
+	rm -rf MEGA65-R2.ip_user_files/
+	rm -rf MEGA65-R2.runs/
+	rm -rf MEGA65-R2.sim/
+	rm -rf MEGA65-R3.cache/
+	rm -rf MEGA65-R3.hw/
+	rm -rf MEGA65-R3.ip_user_files/
+	rm -rf MEGA65-R3.runs/
+	rm -rf MEGA65-R3.sim/
 
