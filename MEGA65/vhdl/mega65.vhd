@@ -221,11 +221,9 @@ signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
 -- vga_pixelclk
 ---------------------------------------------------------------------------------------------
 
--- VGA signals
-signal vga_address            : std_logic_vector(14 downto 0);
-
--- LCD interface
-signal vga_frame_buffer_data  : std_logic_vector(23 downto 0);
+-- Core frame buffer
+signal vga_core_vram_addr  : std_logic_vector(14 downto 0);
+signal vga_core_vram_data  : std_logic_vector(23 downto 0);
 
 -- On-Screen-Menu (OSM)
 signal vga_osm_cfg_enable : std_logic;
@@ -417,8 +415,8 @@ begin
          vga_osm_vram_addr_o  => vga_osm_vram_addr,
          vga_osm_vram_data_i  => vga_osm_vram_data,
          vga_osm_vram_attr_i  => vga_osm_vram_attr,
-         vga_core_vram_addr_o => vga_address,
-         vga_core_vram_data_i => vga_frame_buffer_data,
+         vga_core_vram_addr_o => vga_core_vram_addr,
+         vga_core_vram_data_i => vga_core_vram_data,
          vga_red_o            => vga_red,
          vga_green_o          => vga_green,
          vga_blue_o           => vga_blue,
@@ -568,7 +566,7 @@ begin
    -- Dual clock & dual port RAM that acts as framebuffer: the LCD display of the gameboy is
    -- written here by the GB core (using its local clock) and the VGA/HDMI display is being fed
    -- using the pixel clock
-   frame_buffer : entity work.dualport_2clk_ram
+   core_frame_buffer : entity work.dualport_2clk_ram
       generic map
       (
          ADDR_WIDTH   => 15,
@@ -584,14 +582,14 @@ begin
          q_a          => open,
 
          clock_b      => vga_pixelclk,
-         address_b    => vga_address,
+         address_b    => vga_core_vram_addr,
          data_b       => (others => '0'),
          wren_b       => '0',
-         q_b          => vga_frame_buffer_data
-      ); -- frame_buffer : entity work.dualport_2clk_ram
+         q_b          => vga_core_vram_data
+      ); -- core_frame_buffer : entity work.dualport_2clk_ram
 
    -- Dual port & dual clock screen RAM / video RAM: contains the "ASCII" codes of the characters
-   vram : entity work.dualport_2clk_ram
+   osm_vram : entity work.dualport_2clk_ram
       generic map
       (
          ADDR_WIDTH   => VRAM_ADDR_WIDTH,
@@ -609,7 +607,7 @@ begin
          clock_b      => vga_pixelclk,
          address_b    => vga_osm_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),
          q_b          => vga_osm_vram_data
-      ); -- vram : entity work.dualport_2clk_ram
+      ); -- osm_vram : entity work.dualport_2clk_ram
 
    -- Dual port & dual clock attribute RAM: contains inverse attribute, light/dark attrib. and colors of the chars
    -- bit 7: 1=inverse
@@ -620,7 +618,7 @@ begin
    -- bit 2: foreground red
    -- bit 1: foreground green
    -- bit 0: foreground blue
-   vram_attr : entity work.dualport_2clk_ram
+   osm_vram_attr : entity work.dualport_2clk_ram
       generic map
       (
          ADDR_WIDTH   => VRAM_ADDR_WIDTH,
@@ -638,7 +636,7 @@ begin
          clock_b      => vga_pixelclk,
          address_b    => vga_osm_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),       -- same address as VRAM
          q_b          => vga_osm_vram_attr
-      ); -- vram_attr : entity work.dualport_2clk_ram
+      ); -- osm_vram_attr : entity work.dualport_2clk_ram
 
 end beh;
 
