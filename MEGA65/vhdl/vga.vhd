@@ -55,19 +55,22 @@ end vga;
 architecture synthesis of vga is
 
    -- VGA signals
-   signal vga_hs       : std_logic;
-   signal vga_vs       : std_logic;
-   signal vga_disp_en  : std_logic;
-   signal vga_col      : integer range 0 to G_VGA_DX - 1;
-   signal vga_row      : integer range 0 to G_VGA_DY - 1;
+   signal vga_hs         : std_logic;
+   signal vga_vs         : std_logic;
+   signal vga_disp_en    : std_logic;
+   signal vga_col        : integer range 0 to G_VGA_DX - 1;
+   signal vga_row        : integer range 0 to G_VGA_DY - 1;
 
    -- Delayed VGA signals
-   signal vga_hs_d     : std_logic;
-   signal vga_vs_d     : std_logic;
-   signal vga_core_on  : std_logic;
-   signal vga_core_rgb : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
-   signal vga_osm_on   : std_logic;
-   signal vga_osm_rgb  : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
+   signal vga_hs_d       : std_logic;
+   signal vga_vs_d       : std_logic;
+   signal vga_disp_en_d  : std_logic;
+
+   -- Core and OSM pixel data
+   signal vga_core_on_d  : std_logic;
+   signal vga_core_rgb_d : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
+   signal vga_osm_on_d   : std_logic;
+   signal vga_osm_rgb_d  : std_logic_vector(23 downto 0);   -- 23..0 = RGB, 8 bits each
 
 begin
 
@@ -104,29 +107,34 @@ begin
       ); -- vga_pixels_and_timing : entity work.vga_controller
 
 
+   -----------------------------------------------
+   -- Instantiate On-Screen-Memory generator
+   -----------------------------------------------
+
    i_vga_osm : entity work.vga_osm
       generic map (
-         G_VGA_DX          => G_VGA_DX,
-         G_VGA_DY          => G_VGA_DY,
-         G_GB_DX           => G_GB_DX,
-         G_GB_DY           => G_GB_DY,
-         G_GB_TO_VGA_SCALE => G_GB_TO_VGA_SCALE
+         G_VGA_DX => G_VGA_DX,
+         G_VGA_DY => G_VGA_DY
       )
       port map (
-         clk_i               => clk_i,
-         rst_i               => rst_i,
-         vga_col_i           => vga_col,
-         vga_row_i           => vga_row,
-         vga_osm_xy_i        => vga_osm_cfg_xy_i,
-         vga_osm_dxdy_i      => vga_osm_cfg_dxdy_i,
-         vga_gbc_osm_i       => vga_osm_cfg_enable_i,
-         vga_osm_vram_addr_o => vga_osm_vram_addr_o,
-         vga_osm_vram_data_i => vga_osm_vram_data_i,
-         vga_osm_vram_attr_i => vga_osm_vram_attr_i,
-         vga_osm_on_o        => vga_osm_on,
-         vga_osm_rgb_o       => vga_osm_rgb
+         clk_i                => clk_i,
+         rst_i                => rst_i,
+         vga_col_i            => vga_col,
+         vga_row_i            => vga_row,
+         vga_osm_cfg_xy_i     => vga_osm_cfg_xy_i,
+         vga_osm_cfg_dxdy_i   => vga_osm_cfg_dxdy_i,
+         vga_osm_cfg_enable_i => vga_osm_cfg_enable_i,
+         vga_osm_vram_addr_o  => vga_osm_vram_addr_o,
+         vga_osm_vram_data_i  => vga_osm_vram_data_i,
+         vga_osm_vram_attr_i  => vga_osm_vram_attr_i,
+         vga_osm_on_o         => vga_osm_on_d,
+         vga_osm_rgb_o        => vga_osm_rgb_d
       ); -- i_vga_osm : entity work.vga_osm
 
+
+   -----------------------------------------------
+   -- Instantiate Core Display generator
+   -----------------------------------------------
 
    i_vga_core : entity work.vga_core
       generic map (
@@ -143,34 +151,42 @@ begin
          vga_row_i            => vga_row,
          vga_core_vram_addr_o => vga_core_vram_addr_o,
          vga_core_vram_data_i => vga_core_vram_data_i,
-         vga_core_on_o        => vga_core_on,
-         vga_core_rgb_o       => vga_core_rgb
+         vga_core_on_o        => vga_core_on_d,
+         vga_core_rgb_o       => vga_core_rgb_d
       ); -- i_vga_core : entity work.vga_core
+
+
+   p_delay : process (clk_i)
+   begin
+      if rising_edge(clk_i) then
+         vga_hs_d      <= vga_hs;
+         vga_vs_d      <= vga_vs;
+         vga_disp_en_d <= vga_disp_en;
+      end if;
+   end process p_delay;
 
 
    p_video_signal_latches : process (clk_i)
    begin
       if rising_edge(clk_i) then
+         -- Default border color
          vga_red_o   <= (others => '0');
          vga_blue_o  <= (others => '0');
          vga_green_o <= (others => '0');
 
-         vga_hs_d <= vga_hs;
-         vga_vs_d <= vga_vs;
-
-         if vga_disp_en then
+         if vga_disp_en_d then
             -- MEGA65 core output
-            if vga_core_on then
-               vga_red_o   <= vga_core_rgb(23 downto 16);
-               vga_green_o <= vga_core_rgb(15 downto 8);
-               vga_blue_o  <= vga_core_rgb(7 downto 0);
+            if vga_core_on_d then
+               vga_red_o   <= vga_core_rgb_d(23 downto 16);
+               vga_green_o <= vga_core_rgb_d(15 downto 8);
+               vga_blue_o  <= vga_core_rgb_d(7 downto 0);
             end if;
 
             -- On-Screen-Menu (OSM) output
-            if vga_osm_on then
-               vga_red_o   <= vga_osm_rgb(23 downto 16);
-               vga_green_o <= vga_osm_rgb(15 downto 8);
-               vga_blue_o  <= vga_osm_rgb(7 downto 0);
+            if vga_osm_on_d then
+               vga_red_o   <= vga_osm_rgb_d(23 downto 16);
+               vga_green_o <= vga_osm_rgb_d(15 downto 8);
+               vga_blue_o  <= vga_osm_rgb_d(7 downto 0);
             end if;
          end if;
 
