@@ -7,7 +7,7 @@ Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
 
 Learn more about where to [download and how to get started](#Installation).
 
-**WARNING: Beta version 0.7 - See constraints below**
+**WARNING: Beta version 0.8 - See constraints below**
 
 ![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg)
 
@@ -16,7 +16,8 @@ This core is based on the
 itself is based on the
 [MiST](https://github.com/mist-devel/gameboy) Game Boy core.
 
-[sy2002](http://www.sy2002.de) ported the core to the MEGA65 in 2021.
+[sy2002](http://www.sy2002.de) and
+[MJoergen](https://github.com/MJoergen) ported the core to the MEGA65 in 2021.
 
 Special thanks to [Robert Peip](https://github.com/RobertPeip)
 for his invaluable support and to [Till Harbaum](https://github.com/harbaum)
@@ -35,11 +36,14 @@ Features
   Super Mario Land via joystick
 * Optional color grading to desaturate the colors, similarly to how they
   looked on the LCD display of the original Game Boy Color hardware.
+* Support for both MEGA65 SD card slots
+* HDMI video and audio (on R3 machines only) and in parallel
+  VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack (on all machines)
 
 Installation
 ------------
 
-1. [Download](https://github.com/sy2002/gbc4mega65/releases/download/V0.7/bitstream-and-core.zip)
+1. [Download](https://github.com/sy2002/gbc4mega65/releases/download/V0.8/bitstream-and-core.zip)
    the ZIP file that contains the bitstream and the core file and unpack it.
 2. Choose the right subfolder depending on the type of your MEGA65:
    `R2` or `R3`
@@ -57,13 +61,11 @@ Installation
    `cgb_boot.bin`. Rename the file to `cgb_bios.bin` and place it in
    the `/gbc` folder.
 
-Constraints of the current Beta version 0.7
+Constraints of the current Beta version 0.8
 --------------------------------------------
 
 * MEGA65 R2 machines: Maximum cartridge size: 256kB
 * MEGA65 R3 machines: Maximum cartridge size: 1MB
-* VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack - no HDMI
-* Only supports MEGA65's bottom SD card slot, the rear slot is ignored
 * Flickering in rare situations due to no double bufffering, no frame blending
 * No savegames
 

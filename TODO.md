@@ -1,15 +1,13 @@
 Roadmap / TODOs until V1.0
 ==========================
 
-Done in V0.8 (reminder for release notes)
+Done in V0.9 (reminder for release notes)
 -----------------------------------------
 
 TODO until V1.0
 ---------------
 
-* HDMI support
 * HyperRAM support for ROMs up to 8 MB on both machine types R2 and R3
-* Smart support of both MEGA65 SD Card slots
 * Support OpenEmu's Classic color schemes "Grayscale" (already supported),
   "Greenscale" and "Pocket": https://github.com/OpenEmu/Gambatte-Core/blob/master/GBGameCore.mm#L574
 * Double buffering support
