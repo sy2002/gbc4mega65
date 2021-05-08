@@ -39,7 +39,7 @@ ENTITY vga_controller IS
 		v_pol		:	STD_LOGIC := '1');	--vertical sync pulse polarity (1 = positive, 0 = negative)
 	PORT(
 		pixel_clk	:	IN		STD_LOGIC;	--pixel clock at frequency of VGA mode being used
-		reset_n		:	IN		STD_LOGIC;	--active low asycnchronous reset
+		reset_n		:	IN		STD_LOGIC;	--active low sycnchronous reset
 		h_sync		:	OUT	STD_LOGIC;	--horiztonal sync pulse
 		v_sync		:	OUT	STD_LOGIC;	--vertical sync pulse
 		disp_ena		:	OUT	STD_LOGIC;	--display enable ('1' = display time, '0' = blanking time)
@@ -62,16 +62,7 @@ BEGIN
 		VARIABLE v_count	:	INTEGER RANGE 0 TO v_period - 1 := 0;  --vertical counter (counts the rows)
 	BEGIN
 	
-		IF(reset_n = '0') THEN		--reset asserted
-			h_count := 0;				--reset horizontal counter
-			v_count := 0;				--reset vertical counter
-			h_sync <= NOT h_pol;		--deassert horizontal sync
-			v_sync <= NOT v_pol;		--deassert vertical sync
-			disp_ena <= '0';			--disable display
-			column <= 0;				--reset column pixel coordinate
-			row <= 0;					--reset row pixel coordinate
-			
-		ELSIF(pixel_clk'EVENT AND pixel_clk = '1') THEN
+		IF(pixel_clk'EVENT AND pixel_clk = '1') THEN
 
 			--counters
 			IF(h_count < h_period - 1) THEN		--horizontal counter (pixels)
@@ -114,7 +105,18 @@ BEGIN
 				disp_ena <= '0';												--disable display
 			END IF;
 
+         IF(reset_n = '0') THEN		--reset asserted
+            h_count := 0;				--reset horizontal counter
+            v_count := 0;				--reset vertical counter
+            h_sync <= NOT h_pol;		--deassert horizontal sync
+            v_sync <= NOT v_pol;		--deassert vertical sync
+            disp_ena <= '0';			--disable display
+            column <= 0;				--reset column pixel coordinate
+            row <= 0;					--reset row pixel coordinate
+         END IF;
+
 		END IF;
+			
 	END PROCESS;
 
 END behavior;

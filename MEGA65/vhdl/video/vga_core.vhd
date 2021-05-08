@@ -37,6 +37,7 @@ architecture synthesis of vga_core is
 
    signal vga_col_next : integer range 0 to G_VGA_DX - 1;
    signal vga_row_next : integer range 0 to G_VGA_DY - 1;
+   signal vga_core_on  : std_logic;
 
 begin
 
@@ -78,11 +79,18 @@ begin
 
    vga_core_vram_addr_o <= std_logic_vector(to_unsigned(vga_row_next * G_GB_DX + vga_col_next, 15));
 
-   vga_core_on_o <= '1' when
+   vga_core_on <= '1' when
             vga_col_i >= 0 and vga_col_i < G_GB_DX * G_GB_TO_VGA_SCALE and
             vga_row_i >= 0 and vga_row_i < G_GB_DY * G_GB_TO_VGA_SCALE
          else '0';
    vga_core_rgb_o <= vga_core_vram_data_i;
+
+   p_delay : process (clk_i)
+   begin
+      if rising_edge(clk_i) then
+         vga_core_on_o <= vga_core_on;
+      end if;
+   end process;
 
 end synthesis;
 
