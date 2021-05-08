@@ -1,10 +1,9 @@
 Gameboy Color for MEGA65 aka gbc4mega65
 =======================================
 
-done in 2021 by sy2002
-
-www.sy2002.de
-github.com/sy2002
+done in 2021 by
+    * sy2002     github.com/sy2002     www.sy2002.de
+    * MJoergen   github.com/MJoergen
 
 gbc4mega65 is licensed under the terms of GNU/GPL v3, for more information please read the file LICENSE
 Parts of gbc4mega65 are licensed under other Free-software licenses as described in the source code
@@ -39,8 +38,8 @@ gbc4mega65:
       done by the SameBoy Development Team
       Original GitHub Repository https://github.com/LIJI32/SameBoy
 
-Other than that and my own work, gbc4mega65 uses:
--------------------------------------------------
+Other than that and our own work, gbc4mega65 uses:
+--------------------------------------------------
   
   * Various MEGA65 drivers taken from the MEGA65 VHDL source by Paul Gardner-Stephen
     https://github.com/MEGA65/mega65-core
@@ -50,6 +49,9 @@ Other than that and my own work, gbc4mega65 uses:
 
   * VGA Timing Generator, done by Scott Larson
     https://www.digikey.com/eewiki/pages/viewpage.action?pageId=15925278
+
+  * VGA to HDMI converter IP core, done by Adam Barnes
+    https://github.com/amb5l/tyto_project
 
   * Debouncer: I/O debouncing used for the joysticks, done by Scott Larson
     https://www.digikey.com/eewiki/pages/viewpage.action?pageId=4980758
