@@ -2,7 +2,7 @@
 -- Game Boy Color for MEGA65 (gbc4mega65)
 --
 -- Main file that contains the whole machine.
-
+--
 -- It can be configured to fit the different MEGA65 models using generics:
 -- The different FPGA RAM sizes of R2 and R3 lead to different maximum sizes for
 -- the cartridge ROM and RAM. Have a look at m65_const.vhd to learn more.
@@ -164,7 +164,6 @@ signal main_qngbc_joy_map       : std_logic_vector(1 downto 0);
 signal main_qngbc_color_mode    : std_logic;
 signal main_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
 
-
 ---------------------------------------------------------------------------------------------
 -- qnice_clk
 ---------------------------------------------------------------------------------------------
@@ -198,16 +197,9 @@ signal qnice_qngbc_cart_data_in   : std_logic_vector(7 downto 0);
 signal qnice_qngbc_cart_data_out  : std_logic_vector(7 downto 0);
 
 -- On-Screen-Menu (OSM)
-signal qnice_osm_vram_addr        : std_logic_vector(VRAM_ADDR_WIDTH - 1 downto 0);
-signal qnice_osm_vram_data        : std_logic_vector(7 downto 0);
-signal qnice_osm_vram_attr_data   : std_logic_vector(7 downto 0);
-signal qnice_osm_font_addr        : std_logic_vector(11 downto 0);
-signal qnice_osm_font_data        : std_logic_vector(15 downto 0);
 signal qnice_osm_cfg_enable       : std_logic;
 signal qnice_osm_cfg_xy           : std_logic_vector(15 downto 0);
 signal qnice_osm_cfg_dxdy         : std_logic_vector(15 downto 0);
-signal qnice_osm_x1, qnice_osm_x2 : integer range 0 to CHARS_DX - 1;
-signal qnice_osm_y1, qnice_osm_y2 : integer range 0 to CHARS_DY - 1;
 
 signal qnice_vram_addr            : std_logic_vector(15 downto 0);
 signal qnice_vram_data_out        : std_logic_vector(15 downto 0);
@@ -215,7 +207,6 @@ signal qnice_vram_attr_we         : std_logic;
 signal qnice_vram_attr_data_out_i : std_logic_vector(7 downto 0);
 signal qnice_vram_we              : std_logic;
 signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
-
 
 ---------------------------------------------------------------------------------------------
 -- vga_pixelclk
