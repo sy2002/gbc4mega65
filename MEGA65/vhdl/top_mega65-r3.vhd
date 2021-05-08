@@ -37,6 +37,12 @@ port (
    vdac_sync_n    : out std_logic;
    vdac_blank_n   : out std_logic;
    
+   -- Digital Video
+   tmds_data_p    : out std_logic_vector(2 downto 0);
+   tmds_data_n    : out std_logic_vector(2 downto 0);
+   tmds_clk_p     : out std_logic;
+   tmds_clk_n     : out std_logic;
+
    -- MEGA65 smart keyboard controller
    kb_io0         : out std_logic;                 -- clock to keyboard
    kb_io1         : out std_logic;                 -- data output to keyboard
@@ -99,6 +105,11 @@ begin
          vdac_clk       => vdac_clk,
          vdac_sync_n    => vdac_sync_n,
          vdac_blank_n   => vdac_blank_n,
+
+         tmds_data_p    => tmds_data_p,
+         tmds_data_n    => tmds_data_n,
+         tmds_clk_p     => tmds_clk_p,
+         tmds_clk_n     => tmds_clk_n,
          
          -- MEGA65 smart keyboard controller
          kb_io0         => kb_io0,

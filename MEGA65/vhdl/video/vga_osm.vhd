@@ -24,7 +24,6 @@ entity vga_osm is
    );
    port (
       clk_i                : in  std_logic;
-      rst_i                : in  std_logic;
 
       vga_col_i            : in  integer range 0 to G_VGA_DX - 1;
       vga_row_i            : in  integer range 0 to G_VGA_DY - 1;

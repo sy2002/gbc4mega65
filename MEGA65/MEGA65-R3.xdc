@@ -12,6 +12,7 @@ create_clock -period 10.000 -name CLK [get_ports CLK]
 create_generated_clock -name gbmainclk [get_pins */clk_gen/i_mmcme2_adv/CLKOUT0]
 create_generated_clock -name qniceclk  [get_pins */clk_gen/i_mmcme2_adv/CLKOUT1]
 create_generated_clock -name pixelclk  [get_pins */clk_gen/i_mmcme2_adv/CLKOUT2]
+create_generated_clock -name pixelclk5 [get_pins */clk_gen/i_mmcme2_adv/CLKOUT3]
 
 ## QNICE's EAE combinatorial division networks take longer than
 ## the regular clock period, so we specify a multicycle path
@@ -91,6 +92,16 @@ set_property -dict {PACKAGE_PIN V14  IOSTANDARD LVCMOS33} [get_ports VGA_VS]
 set_property -dict {PACKAGE_PIN AA9  IOSTANDARD LVCMOS33} [get_ports vdac_clk]
 set_property -dict {PACKAGE_PIN V10  IOSTANDARD LVCMOS33} [get_ports vdac_sync_n]
 set_property -dict {PACKAGE_PIN W11  IOSTANDARD LVCMOS33} [get_ports vdac_blank_n]
+
+# HDMI output
+set_property -dict {PACKAGE_PIN Y1   IOSTANDARD TMDS_33}  [get_ports tmds_clk_n]
+set_property -dict {PACKAGE_PIN W1   IOSTANDARD TMDS_33}  [get_ports tmds_clk_p]
+set_property -dict {PACKAGE_PIN AB1  IOSTANDARD TMDS_33}  [get_ports {tmds_data_n[0]}]
+set_property -dict {PACKAGE_PIN AA1  IOSTANDARD TMDS_33}  [get_ports {tmds_data_p[0]}]
+set_property -dict {PACKAGE_PIN AB2  IOSTANDARD TMDS_33}  [get_ports {tmds_data_n[1]}]
+set_property -dict {PACKAGE_PIN AB3  IOSTANDARD TMDS_33}  [get_ports {tmds_data_p[1]}]
+set_property -dict {PACKAGE_PIN AB5  IOSTANDARD TMDS_33}  [get_ports {tmds_data_n[2]}]
+set_property -dict {PACKAGE_PIN AA5  IOSTANDARD TMDS_33}  [get_ports {tmds_data_p[2]}]
 
 ## HyperRAM (standard)
 #set_property -dict {PACKAGE_PIN D22 IOSTANDARD LVCMOS33 PULLUP FALSE SLEW FAST DRIVE 16} [get_ports hr_clk_p]

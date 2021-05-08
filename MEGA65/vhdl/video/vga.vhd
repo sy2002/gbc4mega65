@@ -24,7 +24,7 @@ entity vga is
    );
    port (
       clk_i                : in  std_logic;
-      rst_i                : in  std_logic;
+      rstn_i               : in  std_logic;
 
       -- OSM configuration from QNICE
       vga_osm_cfg_enable_i : in  std_logic;
@@ -46,6 +46,7 @@ entity vga is
       vga_blue_o           : out std_logic_vector(7 downto 0);
       vga_hs_o             : out std_logic;
       vga_vs_o             : out std_logic;
+      vga_de_o             : out std_logic;
       vdac_clk_o           : out std_logic;
       vdac_sync_n_o        : out std_logic;
       vdac_blank_n_o       : out std_logic
@@ -96,7 +97,7 @@ begin
       port map
       (
          pixel_clk => clk_i,       -- pixel clock at frequency of VGA mode being used
-         reset_n   => rst_i,       -- active low asycnchronous reset
+         reset_n   => rstn_i,      -- active low asycnchronous reset
          h_sync    => vga_hs,      -- horiztonal sync pulse
          v_sync    => vga_vs,      -- vertical sync pulse
          disp_ena  => vga_disp_en, -- display enable ('1' = display time, '0' = blanking time)
@@ -118,7 +119,6 @@ begin
       )
       port map (
          clk_i                => clk_i,
-         rst_i                => rst_i,
          vga_col_i            => vga_col,
          vga_row_i            => vga_row,
          vga_osm_cfg_xy_i     => vga_osm_cfg_xy_i,
@@ -146,7 +146,6 @@ begin
       )
       port map (
          clk_i                => clk_i,
-         rst_i                => rst_i,
          vga_col_i            => vga_col,
          vga_row_i            => vga_row,
          vga_core_vram_addr_o => vga_core_vram_addr_o,
@@ -193,6 +192,7 @@ begin
          -- VGA horizontal and vertical sync
          vga_hs_o <= vga_hs_d;
          vga_vs_o <= vga_vs_d;
+         vga_de_o <= vga_disp_en_d;
       end if;
    end process; -- p_video_signal_latches : process(vga_pixelclk)
 

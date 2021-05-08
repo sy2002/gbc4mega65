@@ -25,6 +25,10 @@ VHDL2008=\
 	$(PPRDIR)/vhdl/video/vga_osm.vhd \
 	$(PPRDIR)/vhdl/video/vga_core.vhd \
 	$(PPRDIR)/vhdl/video/vga.vhd \
+	$(PPRDIR)/vhdl/drivers/vga_to_hdmi.vhd \
+	$(PPRDIR)/vhdl/drivers/types_pkg.vhd \
+	$(PPRDIR)/vhdl/drivers/serialiser_10to1_selectio.vhd \
+	$(PPRDIR)/vhdl/drivers/hdmi_tx_encoder.vhd \
 	$(PPRDIR)/vhdl/main.vhd \
 	$(PPRDIR)/vhdl/mega65.vhd \
 	$(PPRDIR)/vhdl/qnice.vhd \

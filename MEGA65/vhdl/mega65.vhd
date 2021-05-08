@@ -20,7 +20,10 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.qnice_tools.all;
 
-Library xpm;
+library work;
+use work.types_pkg.all;
+
+library xpm;
 use xpm.vcomponents.all;
 
 entity MEGA65_Core is
@@ -50,6 +53,12 @@ port (
    vdac_clk       : out std_logic;
    vdac_sync_n    : out std_logic;
    vdac_blank_n   : out std_logic;
+
+   -- Digital Video
+   tmds_data_p    : out std_logic_vector(2 downto 0);
+   tmds_data_n    : out std_logic_vector(2 downto 0);
+   tmds_clk_p     : out std_logic;
+   tmds_clk_n     : out std_logic;
 
    -- MEGA65 smart keyboard controller
    kb_io0         : out std_logic;                 -- clock to keyboard
@@ -117,6 +126,7 @@ constant VRAM_ADDR_WIDTH   : integer := f_log2(CHAR_MEM_SIZE);
 -- clocks
 signal main_clk            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
 signal vga_pixelclk        : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
+signal vga_pixelclk5       : std_logic;               -- Digital Video output: 200.00 MHz
 signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 MHz
 
 
@@ -212,9 +222,12 @@ signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
 -- vga_pixelclk
 ---------------------------------------------------------------------------------------------
 
+signal vga_de             : std_logic;
+signal vga_tmds           : slv_9_0_t(0 to 2);              -- parallel TMDS symbol stream x 3 channels
+
 -- Core frame buffer
-signal vga_core_vram_addr  : std_logic_vector(14 downto 0);
-signal vga_core_vram_data  : std_logic_vector(23 downto 0);
+signal vga_core_vram_addr : std_logic_vector(14 downto 0);
+signal vga_core_vram_data : std_logic_vector(23 downto 0);
 
 -- On-Screen-Menu (OSM)
 signal vga_osm_cfg_enable : std_logic;
@@ -246,10 +259,11 @@ begin
    clk_gen : entity work.clk
       port map
       (
-         sys_clk_i  => CLK,
-         gbmain_o   => main_clk,         -- Game Boy's 33.554432 MHz main clock
-         qnice_o    => qnice_clk,        -- QNICE's 50 MHz main clock
-         pixelclk_o => vga_pixelclk      -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+         sys_clk_i   => CLK,
+         gbmain_o    => main_clk,         -- Game Boy's 33.554432 MHz main clock
+         qnice_o     => qnice_clk,        -- QNICE's 50 MHz main clock
+         pixelclk_o  => vga_pixelclk,     -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+         pixelclk5_o => vga_pixelclk5     -- 200.00 MHz pixelclock for Digital Video
       );
 
    -- TODO: Achieve timing closure also when using the debouncer
@@ -399,7 +413,7 @@ begin
       )
       port map (
          clk_i                => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
-         rst_i                => reset_n,          -- active low asycnchronous reset
+         rstn_i               => reset_n,          -- active low asycnchronous reset
          vga_osm_cfg_enable_i => vga_osm_cfg_enable,
          vga_osm_cfg_xy_i     => vga_osm_cfg_xy,
          vga_osm_cfg_dxdy_i   => vga_osm_cfg_dxdy,
@@ -413,11 +427,71 @@ begin
          vga_blue_o           => vga_blue,
          vga_hs_o             => vga_hs,
          vga_vs_o             => vga_vs,
+         vga_de_o             => vga_de,
          vdac_clk_o           => vdac_clk,
          vdac_sync_n_o        => vdac_sync_n,
          vdac_blank_n_o       => vdac_blank_n
       ); -- i_vga : entity work.vga
 
+
+   i_vga_to_hdmi : entity work.vga_to_hdmi
+      port map (
+         select_44100 => '0',
+         dvi          => '0',
+         vic          => std_logic_vector(to_unsigned(17,8)), -- CEA/CTA VIC 17=576p50 PAL, 2 = 480p60 NTSC
+         aspect       => "01",                                -- 01=4:3, 10=16:9
+         pix_rep      => '0',                                 -- no pixel repetition
+         vs_pol       => '1',                                 -- 1=active high
+         hs_pol       => '1',
+
+         vga_rst      => i_reset,                             -- active high reset
+         vga_clk      => vga_pixelclk,                        -- VGA pixel clock
+         vga_vs       => vga_vs,
+         vga_hs       => vga_hs,
+         vga_de       => vga_de,
+         vga_r        => vga_red,
+         vga_g        => vga_green,
+         vga_b        => vga_blue,
+
+         -- PCM audio
+         pcm_rst      => '1',
+         pcm_clk      => '0',
+         pcm_clken    => '0',
+         pcm_l        => (others => '0'),
+         pcm_r        => (others => '0'),
+         pcm_acr      => '0',
+         pcm_n        => (others => '0'),
+         pcm_cts      => (others => '0'),
+
+         -- TMDS output (parallel)
+         tmds         => vga_tmds
+      ); -- i_vga_to_hdmi: entity work.vga_to_hdmi
+
+
+   -- serialiser: in this design we use TMDS SelectIO outputs
+   GEN_HDMI_DATA: for i in 0 to 2 generate
+   begin
+      HDMI_DATA: entity work.serialiser_10to1_selectio
+      port map (
+         rst     => i_reset,
+         clk     => vga_pixelclk,
+         clk_x5  => vga_pixelclk5,
+         d       => vga_tmds(i),
+         out_p   => TMDS_data_p(i),
+         out_n   => TMDS_data_n(i)
+      ); -- HDMI_DATA: entity work.serialiser_10to1_selectio
+   end generate GEN_HDMI_DATA;
+
+   HDMI_CLK: entity work.serialiser_10to1_selectio
+   port map (
+         rst     => i_reset,
+         clk     => vga_pixelclk,
+         clk_x5  => vga_pixelclk5,
+         d       => "0000011111",
+         out_p   => TMDS_clk_p,
+         out_n   => TMDS_clk_n
+      ); -- HDMI_CLK: entity work.serialiser_10to1_selectio
+      
 
    ---------------------------------------------------------------------------------------------
    -- Dual Clocks

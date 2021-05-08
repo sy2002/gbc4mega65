@@ -19,20 +19,22 @@ use unisim.vcomponents.all;
 
 entity clk is
    port (
-      sys_clk_i  : in  std_logic;   -- expects 100 MHz
-      gbmain_o   : out std_logic;   -- Game Boy's 33.554432 MHz main clock
-      qnice_o    : out std_logic;   -- QNICE's 50 MHz main clock
-      pixelclk_o : out std_logic    -- outputs 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+      sys_clk_i   : in  std_logic;   -- expects 100 MHz
+      gbmain_o    : out std_logic;   -- Game Boy's 33.554432 MHz main clock
+      qnice_o     : out std_logic;   -- QNICE's 50 MHz main clock
+      pixelclk_o  : out std_logic;   -- outputs 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+      pixelclk5_o : out std_logic    -- outputs 200.00 MHz pixelclock for Digital Video
    );
 end clk;
 
 architecture rtl of clk is
 
-signal clkfb         : std_logic;
-signal clkfb_mmcm    : std_logic;
-signal gbmain_mmcm   : std_logic;
-signal qnice_mmcm    : std_logic;
-signal pixelclk_mmcm : std_logic;
+signal clkfb          : std_logic;
+signal clkfb_mmcm     : std_logic;
+signal gbmain_mmcm    : std_logic;
+signal qnice_mmcm     : std_logic;
+signal pixelclk_mmcm  : std_logic;
+signal pixelclk5_mmcm : std_logic;
 
 begin
 
@@ -59,7 +61,11 @@ begin
          CLKOUT2_DIVIDE       => 20,         -- Pixelclock @ 40.00 MHz
          CLKOUT2_PHASE        => 0.000,
          CLKOUT2_DUTY_CYCLE   => 0.500,
-         CLKOUT2_USE_FINE_PS  => FALSE
+         CLKOUT2_USE_FINE_PS  => FALSE,
+         CLKOUT3_DIVIDE       => 4,          -- Pixelclock5 @ 200.00 MHz
+         CLKOUT3_PHASE        => 0.000,
+         CLKOUT3_DUTY_CYCLE   => 0.500,
+         CLKOUT3_USE_FINE_PS  => FALSE
       )
       port map (
          -- Output clocks
@@ -67,6 +73,7 @@ begin
          CLKOUT0             => gbmain_mmcm,
          CLKOUT1             => qnice_mmcm,
          CLKOUT2             => pixelclk_mmcm,
+         CLKOUT3             => pixelclk5_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb,
          CLKIN1              => sys_clk_i,
@@ -121,6 +128,12 @@ begin
       port map (
          I => pixelclk_mmcm,
          O => pixelclk_o
+      );
+      
+   pixelclk5_bufg : BUFG
+      port map (
+         I => pixelclk5_mmcm,
+         O => pixelclk5_o
       );
       
 end architecture rtl;
