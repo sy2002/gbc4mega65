@@ -596,7 +596,7 @@ _GR_HELP_2      MOVE    GBC$CSR, R8
 ; Strings
 ; ----------------------------------------------------------------------------
 
-STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.7\nMiSTer port done by sy2002 in 2021\n\n"
+STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.8\nMiSTer port done by sy2002 & MJoergen in 2021\n\n"
 
 STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
