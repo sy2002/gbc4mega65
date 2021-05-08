@@ -22,9 +22,9 @@ VHDL2008=\
 	$(PPRDIR)/../QNICE/vhdl/alu.vhd \
 	$(PPRDIR)/vhdl/debouncer.vhd \
 	$(PPRDIR)/vhdl/lcd_to_pixels.vhd \
-	$(PPRDIR)/vhdl/vga_osm.vhd \
-	$(PPRDIR)/vhdl/vga_core.vhd \
-	$(PPRDIR)/vhdl/vga.vhd \
+	$(PPRDIR)/vhdl/video/vga_osm.vhd \
+	$(PPRDIR)/vhdl/video/vga_core.vhd \
+	$(PPRDIR)/vhdl/video/vga.vhd \
 	$(PPRDIR)/vhdl/main.vhd \
 	$(PPRDIR)/vhdl/mega65.vhd \
 	$(PPRDIR)/vhdl/qnice.vhd \
@@ -70,7 +70,7 @@ VHDL=\
 	$(PPRDIR)/vhdl/m65_const.vhd \
 	$(PPRDIR)/vhdl/qnice_globals.vhd \
 	$(PPRDIR)/vhdl/qnice_mmio.vhd \
-	$(PPRDIR)/vhdl/vga_controller.vhd
+	$(PPRDIR)/vhdl/video/vga_controller.vhd
 
 VERILOG=\
 	$(PPRDIR)/../rtl/gb.v \
