@@ -141,6 +141,15 @@ signal main_dbnce_reset_n       : std_logic;
 signal main_gbc_bios_addr       : std_logic_vector(11 downto 0);
 signal main_gbc_bios_data       : std_logic_vector(7 downto 0);
 
+-- Audio
+signal main_pcm_audio_left      : std_logic_vector(15 downto 0);
+signal main_pcm_audio_right     : std_logic_vector(15 downto 0);
+signal main_pcm_clken           : std_logic;
+signal main_pcm_clken_count     : integer range 0 to 698;
+signal main_pcm_acr             : std_logic;                     -- HDMI ACR packet strobe (frequency = 128fs/N e.g. 1kHz)
+signal main_pcm_n               : std_logic_vector(19 downto 0); -- HDMI ACR N value
+signal main_pcm_cts             : std_logic_vector(19 downto 0); -- HDMI ACR CTS value
+
 -- LCD interface
 signal main_pixel_out_we        : std_logic;
 signal main_pixel_out_ptr       : integer range 0 to (GB_DX * GB_DY) - 1 := 0;
@@ -287,8 +296,8 @@ begin
          kb_io0                 => kb_io0,
          kb_io1                 => kb_io1,
          kb_io2                 => kb_io2,
-         pwm_l                  => pwm_l,
-         pwm_r                  => pwm_r,
+         main_pcm_audio_left    => main_pcm_audio_left,
+         main_pcm_audio_right   => main_pcm_audio_right,
          main_gbc_bios_addr     => main_gbc_bios_addr,
          main_gbc_bios_data     => main_gbc_bios_data,
          main_pixel_out_we      => main_pixel_out_we,
@@ -326,6 +335,20 @@ begin
          joy_2_right_n          => joy_2_right_n,
          joy_2_fire_n           => joy_2_fire_n
       ); -- i_main : entity work.main is
+
+   -- Convert the Game Boy's PCM output to pulse density modulation
+   -- TODO: Is this component configured correctly when it comes to clock speed, constants used within
+   -- the component, subtracting 32768 while converting to signed, etc.
+   pcm2pdm : entity work.pcm_to_pdm
+      port map
+      (
+         cpuclock                => main_clk,
+         pcm_left                => signed(signed(main_pcm_audio_left) - 32768),
+         pcm_right               => signed(signed(main_pcm_audio_right) - 32768),
+         pdm_left                => pwm_l,
+         pdm_right               => pwm_r,
+         audio_mode              => '0'
+      );
 
 
    ---------------------------------------------------------------------------------------------
@@ -433,6 +456,46 @@ begin
          vdac_blank_n_o       => vdac_blank_n
       ); -- i_vga : entity work.vga
 
+   p_main_pcm_clken : process (main_clk)
+   begin
+      if rising_edge(main_clk) then
+         main_pcm_clken <= '0';
+         if main_pcm_clken_count = 0 then
+            main_pcm_clken_count <= 698;  -- 33554432 / 699 ~ 48000
+            main_pcm_clken <= '1';
+         else
+            main_pcm_clken_count <= main_pcm_clken_count - 1;
+         end if;
+      end if;
+   end process p_main_pcm_clken;
+
+   -- N and CTS values for HDMI Audio Clock Regeneration.
+   -- depends on pixel clock and audio sample rate
+   main_pcm_n   <= std_logic_vector(to_unsigned(6144,  main_pcm_n'length));    -- 48000*128/1000
+   main_pcm_cts <= std_logic_vector(to_unsigned(40000, main_pcm_cts'length));  -- vga_pixelclk/1000
+
+   -- ACR packet rate should be 128fs/N = 1kHz
+   p_main_pcm_acr : process (main_clk)
+      variable count : integer range 0 to 47;
+   begin
+      if rising_edge(main_clk) then
+         if main_pcm_clken = '1' then  -- 48 kHz
+            main_pcm_acr <= '0';
+            if count = 47 then
+               count := 0;
+               main_pcm_acr <= '1';    -- 1 kHz
+            else
+               count := count+1;                
+            end if;
+         end if;
+
+         if i_reset = '1' then
+            count := 0;
+            main_pcm_acr <= '0';
+         end if;
+      end if;
+   end process p_main_pcm_acr;
+
 
    i_vga_to_hdmi : entity work.vga_to_hdmi
       port map (
@@ -454,14 +517,14 @@ begin
          vga_b        => vga_blue,
 
          -- PCM audio
-         pcm_rst      => '1',
-         pcm_clk      => '0',
-         pcm_clken    => '0',
-         pcm_l        => (others => '0'),
-         pcm_r        => (others => '0'),
-         pcm_acr      => '0',
-         pcm_n        => (others => '0'),
-         pcm_cts      => (others => '0'),
+         pcm_rst      => i_reset,
+         pcm_clk      => main_clk,
+         pcm_clken    => main_pcm_clken,
+         pcm_l        => std_logic_vector(main_pcm_audio_left  xor X"8000"),
+         pcm_r        => std_logic_vector(main_pcm_audio_right xor X"8000"),
+         pcm_acr      => main_pcm_acr,
+         pcm_n        => main_pcm_n,
+         pcm_cts      => main_pcm_cts,
 
          -- TMDS output (parallel)
          tmds         => vga_tmds

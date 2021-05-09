@@ -18,8 +18,8 @@ entity main is
       kb_io2                 : in  std_logic;
 
       -- Audio
-      pwm_l                  : out std_logic;
-      pwm_r                  : out std_logic;
+      main_pcm_audio_left    : out std_logic_vector(15 downto 0);
+      main_pcm_audio_right   : out std_logic_vector(15 downto 0);
 
       -- Game Boy BIOS
       main_gbc_bios_addr     : out std_logic_vector(11 downto 0);
@@ -78,10 +78,6 @@ architecture synthesis of main is
    constant GBC_OSS_ROM       : string := "../../BootROMs/cgb_boot.rom";   -- Alternative Open Source GBC ROM
 
    constant GBC_ROM           : string := GBC_OSS_ROM;   -- use Open Source ROMs by default
-
-   -- Audio
-   signal main_pcm_audio_left      : std_logic_vector(15 downto 0);
-   signal main_pcm_audio_right     : std_logic_vector(15 downto 0);
 
    -- debounced signals for the reset button and the joysticks
    signal main_dbnce_reset_n       : std_logic;
@@ -356,20 +352,6 @@ begin
          dbnce_joy2_right_n      => main_dbnce_joy2_right_n,
          dbnce_joy2_fire_n       => main_dbnce_joy2_fire_n
       ); -- do_dbnce_joysticks : entity work.debouncer
-
-   -- Convert the Game Boy's PCM output to pulse density modulation
-   -- TODO: Is this component configured correctly when it comes to clock speed, constants used within
-   -- the component, subtracting 32768 while converting to signed, etc.
-   pcm2pdm : entity work.pcm_to_pdm
-      port map
-      (
-         cpuclock                => main_clk,
-         pcm_left                => signed(signed(main_pcm_audio_left) - 32768),
-         pcm_right               => signed(signed(main_pcm_audio_right) - 32768),
-         pdm_left                => pwm_l,
-         pdm_right               => pwm_r,
-         audio_mode              => '0'
-      );
 
    -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
    main_m65_joystick <= (main_dbnce_joy1_fire_n  and main_dbnce_joy2_fire_n) &
