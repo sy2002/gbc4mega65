@@ -3,9 +3,9 @@
 --
 -- Main clock & QNICE-clock generator using the Xilinx specific MMCME2_ADV
 --
--- The MiSTer core expects 8x the clock speed of the original Game Boy:
+-- The MiSTer main expects 8x the clock speed of the original Game Boy:
 --   8 x 4.194304 MHz = 33.554432 MHz
--- The QNICE core expects 50 MHz
+-- The QNICE main expects 50 MHz
 --
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
@@ -17,24 +17,31 @@ use ieee.std_logic_1164.all;
 library unisim;
 use unisim.vcomponents.all;
 
+library xpm;
+use xpm.vcomponents.all;
+
 entity clk is
    port (
-      sys_clk_i   : in  std_logic;   -- expects 100 MHz
-      gbmain_o    : out std_logic;   -- Game Boy's 33.554432 MHz main clock
-      qnice_o     : out std_logic;   -- QNICE's 50 MHz main clock
-      pixelclk_o  : out std_logic;   -- outputs 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
-      pixelclk5_o : out std_logic    -- outputs 200.00 MHz pixelclock for Digital Video
+      sys_clk_i    : in  std_logic;   -- expects 100 MHz
+      sys_rstn_i   : in  std_logic;   -- Asynchronous, asserted low
+      main_clk_o   : out std_logic;   -- main's 33.554432 MHz main clock
+      main_rst_o   : out std_logic;   -- main's reset, synchronized
+      qnice_clk_o  : out std_logic;   -- QNICE's 50 MHz main clock
+      qnice_rst_o  : out std_logic;   -- QNICE's reset, synchronized
+      pixel_clk_o  : out std_logic;   -- VGA's 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+      pixel_rst_o  : out std_logic;   -- VGA's reset, synchronized
+      pixel_clk5_o : out std_logic    -- VGA's 200.00 MHz pixelclock for Digital Video
    );
 end clk;
 
 architecture rtl of clk is
 
-signal clkfb          : std_logic;
-signal clkfb_mmcm     : std_logic;
-signal gbmain_mmcm    : std_logic;
-signal qnice_mmcm     : std_logic;
-signal pixelclk_mmcm  : std_logic;
-signal pixelclk5_mmcm : std_logic;
+signal clkfb           : std_logic;
+signal clkfb_mmcm      : std_logic;
+signal main_clk_mmcm   : std_logic;
+signal qnice_clk_mmcm  : std_logic;
+signal pixel_clk_mmcm  : std_logic;
+signal pixel_clk5_mmcm : std_logic;
 
 begin
 
@@ -70,10 +77,10 @@ begin
       port map (
          -- Output clocks
          CLKFBOUT            => clkfb_mmcm,
-         CLKOUT0             => gbmain_mmcm,
-         CLKOUT1             => qnice_mmcm,
-         CLKOUT2             => pixelclk_mmcm,
-         CLKOUT3             => pixelclk5_mmcm,
+         CLKOUT0             => main_clk_mmcm,
+         CLKOUT1             => qnice_clk_mmcm,
+         CLKOUT2             => pixel_clk_mmcm,
+         CLKOUT3             => pixel_clk5_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb,
          CLKIN1              => sys_clk_i,
@@ -112,28 +119,66 @@ begin
          O => clkfb
       );
       
-   gbmain_bufg : BUFG
+   main_clk_bufg : BUFG
       port map (
-         I => gbmain_mmcm,
-         O => gbmain_o
+         I => main_clk_mmcm,
+         O => main_clk_o
       );
 
-   qnice_bufg : BUFG
+   qnice_clk_bufg : BUFG
       port map (
-         I => qnice_mmcm,
-         O => qnice_o
+         I => qnice_clk_mmcm,
+         O => qnice_clk_o
       );
 
-   pixelclk_bufg : BUFG
+   pixel_clk_bufg : BUFG
       port map (
-         I => pixelclk_mmcm,
-         O => pixelclk_o
+         I => pixel_clk_mmcm,
+         O => pixel_clk_o
       );
       
-   pixelclk5_bufg : BUFG
+   pixel_clk5_bufg : BUFG
       port map (
-         I => pixelclk5_mmcm,
-         O => pixelclk5_o
+         I => pixel_clk5_mmcm,
+         O => pixel_clk5_o
+      );
+
+
+   -------------------------------------
+   -- Reset generation
+   -------------------------------------
+
+   i_xpm_cdc_sync_rst_main : xpm_cdc_sync_rst
+      generic map (
+         INIT_SYNC_FF => 1  -- Enable simulation init values
+      )
+      port map (
+         src_rst  => not sys_rstn_i,   -- 1-bit input: Source reset signal.
+         dest_clk => main_clk_o,       -- 1-bit input: Destination clock.
+         dest_rst => main_rst_o        -- 1-bit output: src_rst synchronized to the destination clock domain.
+                                       -- This output is registered.
+      );
+
+   i_xpm_cdc_sync_rst_qnice : xpm_cdc_sync_rst
+      generic map (
+         INIT_SYNC_FF => 1  -- Enable simulation init values
+      )
+      port map (
+         src_rst  => not sys_rstn_i,   -- 1-bit input: Source reset signal.
+         dest_clk => qnice_clk_o,      -- 1-bit input: Destination clock.
+         dest_rst => qnice_rst_o       -- 1-bit output: src_rst synchronized to the destination clock domain.
+                                       -- This output is registered.
+      );
+
+   i_xpm_cdc_sync_rst_pixel : xpm_cdc_sync_rst
+      generic map (
+         INIT_SYNC_FF => 1  -- Enable simulation init values
+      )
+      port map (
+         src_rst  => not sys_rstn_i,   -- 1-bit input: Source reset signal.
+         dest_clk => pixel_clk_o,      -- 1-bit input: Destination clock.
+         dest_rst => pixel_rst_o       -- 1-bit output: src_rst synchronized to the destination clock domain.
+                                       -- This output is registered.
       );
       
 end architecture rtl;

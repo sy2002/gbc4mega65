@@ -19,6 +19,7 @@ TOP=MEGA65_R3
 # Specify source files
 PPRDIR=.
 VHDL2008=\
+	$(PPRDIR)/vhdl/clk.vhd \
 	$(PPRDIR)/../QNICE/vhdl/alu.vhd \
 	$(PPRDIR)/vhdl/debouncer.vhd \
 	$(PPRDIR)/vhdl/lcd_to_pixels.vhd \
@@ -64,7 +65,6 @@ VHDL=\
 	$(PPRDIR)/../rtl/T80/T80.vhd \
 	$(PPRDIR)/vhdl/2port2clk_ram.vhd \
 	$(PPRDIR)/vhdl/block_rom.vhd \
-	$(PPRDIR)/vhdl/clk.vhd \
 	$(PPRDIR)/vhdl/debounce.vhd \
 	$(PPRDIR)/vhdl/drivers/kb_matrix_ram.vhdl \
 	$(PPRDIR)/vhdl/drivers/matrix_to_keynum.vhdl \

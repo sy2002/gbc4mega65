@@ -125,17 +125,19 @@ constant VRAM_ADDR_WIDTH   : integer := f_log2(CHAR_MEM_SIZE);
 
 -- clocks
 signal main_clk            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
-signal vga_pixelclk        : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
-signal vga_pixelclk5       : std_logic;               -- Digital Video output: 200.00 MHz
+signal vga_clk             : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
+signal vga_clk5            : std_logic;               -- Digital Video output: 200.00 MHz
 signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 MHz
+
+-- resets
+signal main_rst            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
+signal vga_rst             : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
+signal qnice_rst           : std_logic;               -- QNICE main clock @ 50 MHz
 
 
 ---------------------------------------------------------------------------------------------
 -- main_clk
 ---------------------------------------------------------------------------------------------
-
--- debounced signals for the reset button and the joysticks
-signal main_dbnce_reset_n       : std_logic;
 
 -- Game Boy
 signal main_gbc_bios_addr       : std_logic_vector(11 downto 0);
@@ -183,6 +185,7 @@ signal main_qngbc_joy_map       : std_logic_vector(1 downto 0);
 signal main_qngbc_color_mode    : std_logic;
 signal main_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
 
+
 ---------------------------------------------------------------------------------------------
 -- qnice_clk
 ---------------------------------------------------------------------------------------------
@@ -227,8 +230,9 @@ signal qnice_vram_attr_data_out_i : std_logic_vector(7 downto 0);
 signal qnice_vram_we              : std_logic;
 signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
 
+
 ---------------------------------------------------------------------------------------------
--- vga_pixelclk
+-- vga_clk
 ---------------------------------------------------------------------------------------------
 
 signal vga_de             : std_logic;
@@ -256,28 +260,26 @@ constant c_dummy_8bit_0   : std_logic_vector(7 downto 0) := (others => '0');
 constant c_dummy_64bit_0  : std_logic_vector(63 downto 0) := (others => '0');
 constant c_dummy_129bit_0 : std_logic_vector(128 downto 0) := (others => '0');
 
-signal i_reset            : std_logic;
-
 
 begin
 
    -- MMCME2_ADV clock generators:
-   --    Core clock:          33.554432 MHz
+   --    Main clock:          33.554432 MHz
    --    Pixelclock:          40 MHz
    --    QNICE co-processor:  50 MHz
    clk_gen : entity work.clk
       port map
       (
-         sys_clk_i   => CLK,
-         gbmain_o    => main_clk,         -- Game Boy's 33.554432 MHz main clock
-         qnice_o     => qnice_clk,        -- QNICE's 50 MHz main clock
-         pixelclk_o  => vga_pixelclk,     -- 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
-         pixelclk5_o => vga_pixelclk5     -- 200.00 MHz pixelclock for Digital Video
+         sys_clk_i    => CLK,
+         sys_rstn_i   => RESET_N,
+         main_clk_o   => main_clk,         -- Core's 33.554432 MHz main clock
+         main_rst_o   => main_rst,         -- Core's reset, synchronized
+         qnice_clk_o  => qnice_clk,        -- QNICE's 50 MHz main clock
+         qnice_rst_o  => qnice_rst,        -- QNICE's reset, synchronized
+         pixel_clk_o  => vga_clk,          -- VGA's 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+         pixel_rst_o  => vga_rst,          -- VGA's reset, synchronized
+         pixel_clk5_o => vga_clk5          -- VGA's 200.00 MHz pixelclock for Digital Video
       );
-
-   -- TODO: Achieve timing closure also when using the debouncer
-   --i_reset           <= not dbnce_reset_n;
-   i_reset <= not RESET_N; -- TODO/WARNING: might glitch
 
 
    ---------------------------------------------------------------------------------------------
@@ -292,7 +294,7 @@ begin
       )
       port map (
          main_clk               => main_clk,
-         reset_n                => reset_n,
+         reset_n                => not main_rst,
          kb_io0                 => kb_io0,
          kb_io1                 => kb_io1,
          kb_io2                 => kb_io2,
@@ -348,7 +350,7 @@ begin
          pdm_left                => pwm_l,
          pdm_right               => pwm_r,
          audio_mode              => '0'
-      );
+      ); -- pcm2pdm : entity work.pcm_to_pdm
 
 
    ---------------------------------------------------------------------------------------------
@@ -367,7 +369,7 @@ begin
       port map
       (
          CLK50                   => qnice_clk,        -- 50 MHz clock      -- input
-         RESET_N                 => RESET_N,                               -- input
+         RESET_N                 => not qnice_rst,                         -- input
 
          -- serial communication (rxd, txd only; rts/cts are not available)
          -- 115.200 baud, 8-N-1
@@ -423,7 +425,7 @@ begin
 
 
    ---------------------------------------------------------------------------------------------
-   -- vga_pixelclk
+   -- vga_clk
    ---------------------------------------------------------------------------------------------
 
    i_vga : entity work.vga
@@ -435,8 +437,8 @@ begin
          G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE
       )
       port map (
-         clk_i                => vga_pixelclk,     -- pixel clock at frequency of VGA mode being used
-         rstn_i               => reset_n,          -- active low asycnchronous reset
+         clk_i                => vga_clk,     -- pixel clock at frequency of VGA mode being used
+         rstn_i               => not vga_rst,
          vga_osm_cfg_enable_i => vga_osm_cfg_enable,
          vga_osm_cfg_xy_i     => vga_osm_cfg_xy,
          vga_osm_cfg_dxdy_i   => vga_osm_cfg_dxdy,
@@ -472,7 +474,7 @@ begin
    -- N and CTS values for HDMI Audio Clock Regeneration.
    -- depends on pixel clock and audio sample rate
    main_pcm_n   <= std_logic_vector(to_unsigned(6144,  main_pcm_n'length));    -- 48000*128/1000
-   main_pcm_cts <= std_logic_vector(to_unsigned(40000, main_pcm_cts'length));  -- vga_pixelclk/1000
+   main_pcm_cts <= std_logic_vector(to_unsigned(40000, main_pcm_cts'length));  -- vga_clk/1000
 
    -- ACR packet rate should be 128fs/N = 1kHz
    p_main_pcm_acr : process (main_clk)
@@ -489,7 +491,7 @@ begin
             end if;
          end if;
 
-         if i_reset = '1' then
+         if main_rst = '1' then
             count := 0;
             main_pcm_acr <= '0';
          end if;
@@ -507,8 +509,8 @@ begin
          vs_pol       => '1',                                 -- 1=active high
          hs_pol       => '1',
 
-         vga_rst      => i_reset,                             -- active high reset
-         vga_clk      => vga_pixelclk,                        -- VGA pixel clock
+         vga_rst      => vga_rst,                             -- active high reset
+         vga_clk      => vga_clk,                             -- VGA pixel clock
          vga_vs       => vga_vs,
          vga_hs       => vga_hs,
          vga_de       => vga_de,
@@ -517,7 +519,7 @@ begin
          vga_b        => vga_blue,
 
          -- PCM audio
-         pcm_rst      => i_reset,
+         pcm_rst      => main_rst,
          pcm_clk      => main_clk,
          pcm_clken    => main_pcm_clken,
          pcm_l        => std_logic_vector(main_pcm_audio_left  xor X"8000"),
@@ -536,9 +538,9 @@ begin
    begin
       HDMI_DATA: entity work.serialiser_10to1_selectio
       port map (
-         rst     => i_reset,
-         clk     => vga_pixelclk,
-         clk_x5  => vga_pixelclk5,
+         rst     => vga_rst,
+         clk     => vga_clk,
+         clk_x5  => vga_clk5,
          d       => vga_tmds(i),
          out_p   => TMDS_data_p(i),
          out_n   => TMDS_data_n(i)
@@ -547,9 +549,9 @@ begin
 
    HDMI_CLK: entity work.serialiser_10to1_selectio
    port map (
-         rst     => i_reset,
-         clk     => vga_pixelclk,
-         clk_x5  => vga_pixelclk5,
+         rst     => vga_rst,
+         clk     => vga_clk,
+         clk_x5  => vga_clk5,
          d       => "0000011111",
          out_p   => TMDS_clk_p,
          out_n   => TMDS_clk_n
@@ -615,7 +617,7 @@ begin
          src_in(15 downto 0)    => qnice_osm_cfg_xy,
          src_in(31 downto 16)   => qnice_osm_cfg_dxdy,
          src_in(32)             => qnice_osm_cfg_enable,
-         dest_clk               => vga_pixelclk,
+         dest_clk               => vga_clk,
          dest_out(15 downto 0)  => vga_osm_cfg_xy,
          dest_out(31 downto 16) => vga_osm_cfg_dxdy,
          dest_out(32)           => vga_osm_cfg_enable
@@ -709,7 +711,7 @@ begin
          wren_a       => main_pixel_out_we,
          q_a          => open,
 
-         clock_b      => vga_pixelclk,
+         clock_b      => vga_clk,
          address_b    => vga_core_vram_addr,
          data_b       => (others => '0'),
          wren_b       => '0',
@@ -732,7 +734,7 @@ begin
          wren_a       => qnice_vram_we,
          q_a          => qnice_vram_data_out_i,
 
-         clock_b      => vga_pixelclk,
+         clock_b      => vga_clk,
          address_b    => vga_osm_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),
          q_b          => vga_osm_vram_data
       ); -- osm_vram : entity work.dualport_2clk_ram
@@ -761,7 +763,7 @@ begin
          wren_a       => qnice_vram_attr_we,
          q_a          => qnice_vram_attr_data_out_i,
 
-         clock_b      => vga_pixelclk,
+         clock_b      => vga_clk,
          address_b    => vga_osm_vram_addr(VRAM_ADDR_WIDTH-1 downto 0),       -- same address as VRAM
          q_b          => vga_osm_vram_attr
       ); -- osm_vram_attr : entity work.dualport_2clk_ram
