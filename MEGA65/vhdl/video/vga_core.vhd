@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------------
 -- Game Boy Color for MEGA65 (gbc4mega65)
 --
--- VGA core interface.
+-- VGA core interface
 --
 -- This block provides a bridge between the VGA control block and the MEGA65 core.
 --

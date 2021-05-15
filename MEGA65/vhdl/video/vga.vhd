@@ -33,7 +33,7 @@ entity vga is
       vga_osm_cfg_xy_i     : in  std_logic_vector(15 downto 0);
       vga_osm_cfg_dxdy_i   : in  std_logic_vector(15 downto 0);
 
-      -- OSM interface to VRAM (character and palette index)
+      -- OSM interface to VRAM (character RAM and attribute RAM)
       vga_osm_vram_addr_o  : out std_logic_vector(15 downto 0);
       vga_osm_vram_data_i  : in  std_logic_vector(7 downto 0);
       vga_osm_vram_attr_i  : in  std_logic_vector(7 downto 0);
