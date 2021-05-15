@@ -16,37 +16,48 @@ use ieee.numeric_std.all;
 
 entity vga_core is
    generic  (
-      G_VGA_DX          : integer;  -- 800
-      G_VGA_DY          : integer;  -- 600
-      G_GB_DX           : integer;  -- 160
-      G_GB_DY           : integer;  -- 144
-      G_GB_TO_VGA_SCALE : integer   -- 4 : 160x144 => 640x576
+      G_VGA_DX               : natural;  -- 800
+      G_VGA_DY               : natural;  -- 600
+      G_GB_DX                : natural;  -- 160
+      G_GB_DY                : natural;  -- 144
+      G_GB_TO_VGA_SCALE      : natural   -- 4 : 160x144 => 640x576
    );
    port (
       -- pixel clock and current position on screen relative to pixel clock
-      clk_i                : in  std_logic;
-      vga_col_i            : in  integer range 0 to G_VGA_DX - 1;
-      vga_row_i            : in  integer range 0 to G_VGA_DY - 1;
+      clk_i                  : in  std_logic;
+      vga_col_i              : in  integer range 0 to G_VGA_DX - 1;
+      vga_row_i              : in  integer range 0 to G_VGA_DY - 1;
       
+      -- double buffering information for being used by the display decoder:
+      --   vga_core_dbl_buf_i: information to which "page" the core is currently writing to:
+      --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+      --   vga_core_dbl_buf_ptr_i: lcd pointer into which the core is currently writing to 
+      vga_core_dbl_buf_i     : in  std_logic;
+      vga_core_dbl_buf_ptr_i : in  std_logic_vector(14 downto 0);
+         
       -- 15-bit Game Boy RGB that will be converted
-      vga_core_vram_addr_o : out std_logic_vector(15 downto 0);
-      vga_core_vram_data_i : in  std_logic_vector(14 downto 0);
+      vga_core_vram_addr_o   : out std_logic_vector(15 downto 0);
+      vga_core_vram_data_i   : in  std_logic_vector(14 downto 0);
       
       -- Rendering attributes
-      vga_color_i          : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
-      vga_color_mode_i     : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
+      vga_color_i            : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
+      vga_color_mode_i       : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
             
       -- 24-bit RGB that can be displayed on screen
-      vga_core_on_o        : out std_logic;
-      vga_core_rgb_o       : out std_logic_vector(23 downto 0)    -- 23..0 = RGB, 8 bits each
+      vga_core_on_o          : out std_logic;
+      vga_core_rgb_o         : out std_logic_vector(23 downto 0)    -- 23..0 = RGB, 8 bits each
    );
 end vga_core;
 
 architecture synthesis of vga_core is
 
-   signal vga_col_next : integer range 0 to G_VGA_DX - 1;
-   signal vga_row_next : integer range 0 to G_VGA_DY - 1;
-   signal vga_core_on  : std_logic;
+   signal vga_col_next    : integer range 0 to G_VGA_DX - 1;
+   signal vga_row_next    : integer range 0 to G_VGA_DY - 1;
+   signal vga_core_on     : std_logic;
+   
+   -- vga_core_dbl_buf_i tells us, where the core is currently writing to
+   -- double_buf_read defines, which "bank" we are reading from: 0=0..32767, 1=32768..65535
+   signal double_buf_read : std_logic := '0';
 
 begin
 
@@ -85,8 +96,23 @@ begin
          end if;
       end if;
    end process p_scaler;
+   
+   dbl_buf : process (clk_i)
+   begin
+      if rising_edge(clk_i) then
+         if vga_row_next = 0 then
+		      -- Read from write buffer if it is far enough (as in "60 rows" equals 1/3 of the screen) ahead, ...
+            if to_integer(unsigned(vga_core_dbl_buf_ptr_i)) >= G_GB_DX * 60 then
+               double_buf_read <= vga_core_dbl_buf_i;
+            -- ... otherwise read from the double buffer that is currently not being written to              
+            else
+               double_buf_read <= not vga_core_dbl_buf_i;
+            end if;           
+         end if;
+      end if;
+   end process;
 
-   vga_core_vram_addr_o <= std_logic_vector(to_unsigned(vga_row_next * G_GB_DX + vga_col_next, 16));
+   vga_core_vram_addr_o <= double_buf_read & std_logic_vector(to_unsigned(vga_row_next * G_GB_DX + vga_col_next, 15));
 
    vga_core_on <= '1' when
             vga_col_i >= 0 and vga_col_i < G_GB_DX * G_GB_TO_VGA_SCALE and

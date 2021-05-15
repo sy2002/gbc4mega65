@@ -4,70 +4,77 @@ use ieee.numeric_std.all;
 
 entity main is
    generic (
-      G_GB_CLK_SPEED         : integer;
-      G_GB_DX                : integer;
-      G_GB_DY                : integer
+      G_GB_CLK_SPEED           : natural;
+      G_GB_DX                  : natural;
+      G_GB_DY                  : natural
    );
    port (
-      main_clk               : in  std_logic;
-      reset_n                : in  std_logic;
+      main_clk                 : in  std_logic;
+      reset_n                  : in  std_logic;
 
       -- MEGA65 smart keyboard controller
-      kb_io0                 : out std_logic;
-      kb_io1                 : out std_logic;
-      kb_io2                 : in  std_logic;
+      kb_io0                   : out std_logic;
+      kb_io1                   : out std_logic;
+      kb_io2                   : in  std_logic;
 
       -- Audio
-      main_pcm_audio_left    : out std_logic_vector(15 downto 0);
-      main_pcm_audio_right   : out std_logic_vector(15 downto 0);
+      main_pcm_audio_left      : out std_logic_vector(15 downto 0);
+      main_pcm_audio_right     : out std_logic_vector(15 downto 0);
 
       -- Game Boy BIOS
-      main_gbc_bios_addr     : out std_logic_vector(11 downto 0);
-      main_gbc_bios_data     : in  std_logic_vector(7 downto 0);
+      main_gbc_bios_addr       : out std_logic_vector(11 downto 0);
+      main_gbc_bios_data       : in  std_logic_vector(7 downto 0);
 
       -- Game Boy's LCD output converted to double buffered pixel data   
-      main_pixel_out_we      : out std_logic;
-      main_pixel_out_ptr     : out integer range 0 to 65535;
-      main_pixel_out_data    : out std_logic_vector(14 downto 0);
-
+      main_pixel_out_we        : out std_logic;
+      main_pixel_out_ptr       : out integer range 0 to 65535;
+      main_pixel_out_data      : out std_logic_vector(14 downto 0);
+      
+      -- double buffering information for being used by the display decoder:
+      --   main_double_buffer_o: information to which "page" the core is currently writing to:
+      --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+      --   main_double_buffer_ptr_o: lcd pointer into which the core is currently writing to       
+      main_double_buffer_o     : out std_logic;
+      main_double_buffer_ptr_o : out std_logic_vector(14 downto 0);
+      
       -- Cartridge flags (set by QNICE firmware after interpreting the cartridge data) 
-      main_cart_cgb_flag     : in  std_logic_vector(7 downto 0);
-      main_cart_sgb_flag     : in  std_logic_vector(7 downto 0);
-      main_cart_mbc_type     : in  std_logic_vector(7 downto 0);
-      main_cart_rom_size     : in  std_logic_vector(7 downto 0);
-      main_cart_ram_size     : in  std_logic_vector(7 downto 0);
-      main_cart_old_licensee : in  std_logic_vector(7 downto 0);
+      main_cart_cgb_flag       : in  std_logic_vector(7 downto 0);
+      main_cart_sgb_flag       : in  std_logic_vector(7 downto 0);
+      main_cart_mbc_type       : in  std_logic_vector(7 downto 0);
+      main_cart_rom_size       : in  std_logic_vector(7 downto 0);
+      main_cart_ram_size       : in  std_logic_vector(7 downto 0);
+      main_cart_old_licensee   : in  std_logic_vector(7 downto 0);
 
       -- MBC signals
-      main_cartrom_addr      : out std_logic_vector(22 downto 0);
-      main_cartrom_rd        : out std_logic;
-      main_cartrom_data      : in  std_logic_vector(7 downto 0);
-      main_cartram_addr      : out std_logic_vector(16 downto 0);
-      main_cartram_rd        : out std_logic;
-      main_cartram_wr        : out std_logic;
-      main_cartram_data_in   : out std_logic_vector(7 downto 0);
-      main_cartram_data_out  : in  std_logic_vector(7 downto 0);
+      main_cartrom_addr        : out std_logic_vector(22 downto 0);
+      main_cartrom_rd          : out std_logic;
+      main_cartrom_data        : in  std_logic_vector(7 downto 0);
+      main_cartram_addr        : out std_logic_vector(16 downto 0);
+      main_cartram_rd          : out std_logic;
+      main_cartram_wr          : out std_logic;
+      main_cartram_data_in     : out std_logic_vector(7 downto 0);
+      main_cartram_data_out    : in  std_logic_vector(7 downto 0);
 
       -- QNICE control signals (see also gbc.asm for more details)
-      main_qngbc_reset       : in  std_logic;
-      main_qngbc_pause       : in  std_logic;
-      main_qngbc_keyboard    : in  std_logic;
-      main_qngbc_color       : in  std_logic;
-      main_qngbc_joy_map     : in  std_logic_vector(1 downto 0);
-      main_qngbc_keyb_matrix : out std_logic_vector(15 downto 0);
+      main_qngbc_reset         : in  std_logic;
+      main_qngbc_pause         : in  std_logic;
+      main_qngbc_keyboard      : in  std_logic;
+      main_qngbc_color         : in  std_logic;
+      main_qngbc_joy_map       : in  std_logic_vector(1 downto 0);
+      main_qngbc_keyb_matrix   : out std_logic_vector(15 downto 0);
 
       -- Joysticks
-      joy_1_up_n             : in std_logic;
-      joy_1_down_n           : in std_logic;
-      joy_1_left_n           : in std_logic;
-      joy_1_right_n          : in std_logic;
-      joy_1_fire_n           : in std_logic;
+      joy_1_up_n               : in std_logic;
+      joy_1_down_n             : in std_logic;
+      joy_1_left_n             : in std_logic;
+      joy_1_right_n            : in std_logic;
+      joy_1_fire_n             : in std_logic;
 
-      joy_2_up_n             : in std_logic;
-      joy_2_down_n           : in std_logic;
-      joy_2_left_n           : in std_logic;
-      joy_2_right_n          : in std_logic;
-      joy_2_fire_n           : in std_logic
+      joy_2_up_n               : in std_logic;
+      joy_2_down_n             : in std_logic;
+      joy_2_left_n             : in std_logic;
+      joy_2_right_n            : in std_logic;
+      joy_2_fire_n             : in std_logic
    );
 end main;
 
@@ -291,7 +298,14 @@ begin
          -- LCD converted to 15-bit pixel data (that still needs to be decoded for being displayed on screen)         
          pixel_out_we_o             => main_pixel_out_we,
          pixel_out_ptr_o            => main_pixel_out_ptr,
-         pixel_out_data_o           => main_pixel_out_data
+         pixel_out_data_o           => main_pixel_out_data,
+
+         -- double buffering information for being used by the display decoder:
+         --   double_buffer_o: information to which "page" the core is currently writing to:
+         --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+         --   double_buffer_ptr_o: lcd row into which the core is currently writing to       
+         double_buffer_o            => main_double_buffer_o,
+         double_buffer_ptr_o        => main_double_buffer_ptr_o
       ); -- i_lcd_to_pixels : entity work.lcd_to_pixels
 
 

@@ -16,46 +16,53 @@ use work.qnice_tools.all;
 
 entity vga is
    generic  (
-      G_VGA_DX          : natural;  -- 720
-      G_VGA_DY          : natural;  -- 576
-      G_GB_DX           : natural;  -- 160
-      G_GB_DY           : natural;  -- 144
-      G_GB_TO_VGA_SCALE : natural;  -- 4 : 160x144 => 640x576
-      G_FONT_DX         : natural;  -- 16
-      G_FONT_DY         : natural   -- 16
+      G_VGA_DX               : natural;  -- 720
+      G_VGA_DY               : natural;  -- 576
+      G_GB_DX                : natural;  -- 160
+      G_GB_DY                : natural;  -- 144
+      G_GB_TO_VGA_SCALE      : natural;  -- 4 : 160x144 => 640x576
+      G_FONT_DX              : natural;  -- 16
+      G_FONT_DY              : natural   -- 16
    );
    port (
-      clk_i                : in  std_logic;
-      rstn_i               : in  std_logic;
+      clk_i                  : in  std_logic;
+      rstn_i                 : in  std_logic;
 
       -- OSM configuration from QNICE
-      vga_osm_cfg_enable_i : in  std_logic;
-      vga_osm_cfg_xy_i     : in  std_logic_vector(15 downto 0);
-      vga_osm_cfg_dxdy_i   : in  std_logic_vector(15 downto 0);
+      vga_osm_cfg_enable_i   : in  std_logic;
+      vga_osm_cfg_xy_i       : in  std_logic_vector(15 downto 0);
+      vga_osm_cfg_dxdy_i     : in  std_logic_vector(15 downto 0);
 
       -- OSM interface to VRAM (character RAM and attribute RAM)
-      vga_osm_vram_addr_o  : out std_logic_vector(15 downto 0);
-      vga_osm_vram_data_i  : in  std_logic_vector(7 downto 0);
-      vga_osm_vram_attr_i  : in  std_logic_vector(7 downto 0);
+      vga_osm_vram_addr_o    : out std_logic_vector(15 downto 0);
+      vga_osm_vram_data_i    : in  std_logic_vector(7 downto 0);
+      vga_osm_vram_attr_i    : in  std_logic_vector(7 downto 0);
 
       -- Rendering attributes
-      vga_color_i          : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
-      vga_color_mode_i     : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
+      vga_color_i            : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
+      vga_color_mode_i       : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
 
       -- Core interface to VRAM (15-bit Game Boy RGB that still needs to be processed)
-      vga_core_vram_addr_o : out std_logic_vector(15 downto 0);
-      vga_core_vram_data_i : in  std_logic_vector(14 downto 0);
+      vga_core_vram_addr_o   : out std_logic_vector(15 downto 0);
+      vga_core_vram_data_i   : in  std_logic_vector(14 downto 0);
+      
+      -- double buffering information for being used by the display decoder:
+      --   vga_core_dbl_buf_i: information to which "page" the core is currently writing to:
+      --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+      --   vga_core_dbl_buf_ptr_i: lcd pointer into which the core is currently writing to 
+      vga_core_dbl_buf_i     : in  std_logic;
+      vga_core_dbl_buf_ptr_i : in  std_logic_vector(14 downto 0);
 
       -- VGA / VDAC output
-      vga_red_o            : out std_logic_vector(7 downto 0);
-      vga_green_o          : out std_logic_vector(7 downto 0);
-      vga_blue_o           : out std_logic_vector(7 downto 0);
-      vga_hs_o             : out std_logic;
-      vga_vs_o             : out std_logic;
-      vga_de_o             : out std_logic;
-      vdac_clk_o           : out std_logic;
-      vdac_sync_n_o        : out std_logic;
-      vdac_blank_n_o       : out std_logic
+      vga_red_o              : out std_logic_vector(7 downto 0);
+      vga_green_o            : out std_logic_vector(7 downto 0);
+      vga_blue_o             : out std_logic_vector(7 downto 0);
+      vga_hs_o               : out std_logic;
+      vga_vs_o               : out std_logic;
+      vga_de_o               : out std_logic;
+      vdac_clk_o             : out std_logic;
+      vdac_sync_n_o          : out std_logic;
+      vdac_blank_n_o         : out std_logic
    );
 end vga;
 
@@ -146,29 +153,36 @@ begin
 
    i_vga_core : entity work.vga_core
       generic map (
-         G_VGA_DX             => G_VGA_DX,
-         G_VGA_DY             => G_VGA_DY,
-         G_GB_DX              => G_GB_DX,
-         G_GB_DY              => G_GB_DY,
-         G_GB_TO_VGA_SCALE    => G_GB_TO_VGA_SCALE
+         G_VGA_DX               => G_VGA_DX,
+         G_VGA_DY               => G_VGA_DY,
+         G_GB_DX                => G_GB_DX,
+         G_GB_DY                => G_GB_DY,
+         G_GB_TO_VGA_SCALE      => G_GB_TO_VGA_SCALE
       )
       port map (
          -- pixel clock and current position on screen relative to pixel clock      
-         clk_i                => clk_i,
-         vga_col_i            => vga_col,
-         vga_row_i            => vga_row,
+         clk_i                  => clk_i,
+         vga_col_i              => vga_col,
+         vga_row_i              => vga_row,
          
+         -- double buffering information for being used by the display decoder:
+         --   vga_core_dbl_buf_i: information to which "page" the core is currently writing to:
+         --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+         --   vga_core_dbl_buf_row_i: lcd row into which the core is currently writing to 
+         vga_core_dbl_buf_i     => vga_core_dbl_buf_i,
+         vga_core_dbl_buf_ptr_i => vga_core_dbl_buf_ptr_i, 
+                     
          -- 15-bit Game Boy RGB that will be converted
-         vga_core_vram_addr_o => vga_core_vram_addr_o,
-         vga_core_vram_data_i => vga_core_vram_data_i,
+         vga_core_vram_addr_o   => vga_core_vram_addr_o,
+         vga_core_vram_data_i   => vga_core_vram_data_i,
          
          -- Rendering attributes
-         vga_color_i          => vga_color_i,
-         vga_color_mode_i     => vga_color_mode_i,
+         vga_color_i            => vga_color_i,
+         vga_color_mode_i       => vga_color_mode_i,
                   
          -- 24-bit RGB that can be displayed on screen
-         vga_core_on_o        => vga_core_on_d,
-         vga_core_rgb_o       => vga_core_rgb_d
+         vga_core_on_o          => vga_core_on_d,
+         vga_core_rgb_o         => vga_core_rgb_d
       ); -- i_vga_core : entity work.vga_core
 
 

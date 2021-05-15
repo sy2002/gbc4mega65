@@ -136,7 +136,6 @@ signal main_rst            : std_logic;               -- Game Boy core main cloc
 signal vga_rst             : std_logic;               -- PAL mode 720 x 576 @ 50 Hz: 27.00 MHz
 signal qnice_rst           : std_logic;               -- QNICE main clock @ 50 MHz
 
-
 ---------------------------------------------------------------------------------------------
 -- main_clk
 ---------------------------------------------------------------------------------------------
@@ -156,8 +155,10 @@ signal main_pcm_cts             : std_logic_vector(19 downto 0); -- HDMI ACR CTS
 
 -- LCD interface
 signal main_pixel_out_we        : std_logic;
-signal main_pixel_out_ptr       : integer range 0 to 65535 := 0;
-signal main_pixel_out_data      : std_logic_vector(14 downto 0) := (others => '0');
+signal main_pixel_out_ptr       : integer range 0 to 65535;
+signal main_pixel_out_data      : std_logic_vector(14 downto 0);
+signal main_double_buffer       : std_logic;
+signal main_double_buffer_ptr   : std_logic_vector(14 downto 0);
 
 -- cartridge flags
 signal main_cart_cgb_flag       : std_logic_vector(7 downto 0);
@@ -186,7 +187,6 @@ signal main_qngbc_color         : std_logic;
 signal main_qngbc_joy_map       : std_logic_vector(1 downto 0);
 signal main_qngbc_color_mode    : std_logic;
 signal main_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
-
 
 ---------------------------------------------------------------------------------------------
 -- qnice_clk
@@ -232,7 +232,6 @@ signal qnice_vram_attr_data_out_i : std_logic_vector(7 downto 0);
 signal qnice_vram_we              : std_logic;
 signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
 
-
 ---------------------------------------------------------------------------------------------
 -- vga_clk
 ---------------------------------------------------------------------------------------------
@@ -243,6 +242,12 @@ signal vga_tmds               : slv_9_0_t(0 to 2);              -- parallel TMDS
 -- Core frame buffer
 signal vga_core_vram_addr     : std_logic_vector(15 downto 0);
 signal vga_core_vram_data     : std_logic_vector(14 downto 0);
+signal vga_core_dbl_buf       : std_logic;
+signal vga_core_dbl_buf_ptr   : std_logic_vector(14 downto 0);
+
+-- Color mode and color grading
+signal vga_qngbc_color        : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
+signal vga_qngbc_color_mode   : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
 
 -- On-Screen-Menu (OSM)
 signal vga_osm_cfg_enable     : std_logic;
@@ -251,10 +256,6 @@ signal vga_osm_cfg_dxdy       : std_logic_vector(15 downto 0);
 signal vga_osm_vram_addr      : std_logic_vector(15 downto 0);
 signal vga_osm_vram_data      : std_logic_vector(7 downto 0);
 signal vga_osm_vram_attr      : std_logic_vector(7 downto 0);
-
--- Color mode and color grading
-signal vga_qngbc_color        : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
-signal vga_qngbc_color_mode   : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
 
 -- constants necessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -265,7 +266,6 @@ constant c_dummy_2bit_0       : std_logic_vector(1 downto 0) := (others => '0');
 constant c_dummy_8bit_0       : std_logic_vector(7 downto 0) := (others => '0');
 constant c_dummy_64bit_0      : std_logic_vector(63 downto 0) := (others => '0');
 constant c_dummy_129bit_0     : std_logic_vector(128 downto 0) := (others => '0');
-
 
 begin
 
@@ -319,6 +319,13 @@ begin
          main_pixel_out_ptr     => main_pixel_out_ptr,
          main_pixel_out_data    => main_pixel_out_data,
          
+         -- double buffering information for being used by the display decoder:
+         --   main_double_buffer_o: information to which "page" the core is currently writing to:
+         --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+         --   main_double_buffer_ptr_o: lcd pointer into which the core is currently writing to       
+         main_double_buffer_o     => main_double_buffer,
+         main_double_buffer_ptr_o => main_double_buffer_ptr, 
+                  
          -- Cartridge flags (set by QNICE firmware after interpreting the cartridge data) 
          main_cart_cgb_flag     => main_cart_cgb_flag,
          main_cart_sgb_flag     => main_cart_sgb_flag,
@@ -480,7 +487,14 @@ begin
          -- Core interface to VRAM (15-bit Game Boy RGB that still needs to be processed)         
          vga_core_vram_addr_o => vga_core_vram_addr,
          vga_core_vram_data_i => vga_core_vram_data,
-         
+
+         -- double buffering information for being used by the display decoder:
+         --   vga_core_dbl_buf_i: information to which "page" the core is currently writing to:
+         --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+         --   vga_core_dbl_buf_ptr_i: lcd pointer into which the core is currently writing to 
+         vga_core_dbl_buf_i     => vga_core_dbl_buf,
+         vga_core_dbl_buf_ptr_i => vga_core_dbl_buf_ptr, 
+                           
          -- VGA / VDAC output         
          vga_red_o            => vga_red,
          vga_green_o          => vga_green,
@@ -660,8 +674,20 @@ begin
          dest_out(32)           => vga_osm_cfg_enable,
          dest_out(33)           => vga_qngbc_color,
          dest_out(34)           => vga_qngbc_color_mode
-      ); -- i_qnice2vga: xpm_cdc_single
-      
+      ); -- i_qnice2vga: xpm_cdc_array_single
+
+   i_main2vga: xpm_cdc_array_single
+      generic map (
+         WIDTH => 16
+      )
+      port map (
+         src_clk                => main_clk,
+         src_in(0)              => main_double_buffer,
+         src_in(15 downto 1)    => main_double_buffer_ptr,
+         dest_clk               => vga_clk,
+         dest_out(0)            => vga_core_dbl_buf,
+         dest_out(15 downto 1)  => vga_core_dbl_buf_ptr
+      ); -- i_main2vga: xpm_cdc_array_single
 
    -- BIOS ROM / BOOT ROM
    bios_rom : entity work.dualport_2clk_ram

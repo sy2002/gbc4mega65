@@ -7,28 +7,31 @@ use ieee.numeric_std.all;
 
 entity lcd_to_pixels is
    generic (
-      GB_DX              : natural;     -- Game Boy's X pixel resolution
-      GB_DY              : natural      -- ditto Y
+      GB_DX                : natural;     -- Game Boy's X pixel resolution
+      GB_DY                : natural      -- ditto Y
    );
    port (
-      clk_i              : in  std_logic;
-      sc_ce_i            : in  std_logic;
+      clk_i                : in  std_logic;
+      sc_ce_i              : in  std_logic;
       
       -- Game Boy LCD output
-      lcd_clkena_i       : in  std_logic;
-      lcd_data_i         : in  std_logic_vector(14 downto 0);
-      lcd_mode_i         : in  std_logic_vector(1 downto 0);
-      lcd_on_i           : in  std_logic;
-      lcd_vsync_i        : in  std_logic;
+      lcd_clkena_i         : in  std_logic;
+      lcd_data_i           : in  std_logic_vector(14 downto 0);
+      lcd_mode_i           : in  std_logic_vector(1 downto 0);
+      lcd_on_i             : in  std_logic;
+      lcd_vsync_i          : in  std_logic;
       
       -- LCD converted to 15-bit pixel data (that still needs to be decoded for being displayed on screen)
-      pixel_out_we_o     : out std_logic;
-      pixel_out_ptr_o    : out integer range 0 to 65535 := 0;
-      pixel_out_data_o   : out std_logic_vector(14 downto 0)
+      pixel_out_we_o       : out std_logic;
+      pixel_out_ptr_o      : out integer range 0 to 65535;
+      pixel_out_data_o     : out std_logic_vector(14 downto 0) := (others => '0');
       
       -- double buffering information for being used by the display decoder:
-      -- 0=use frame buffer addresses 0..32767, 1=use 32768..65.535
-      --double_buffer_o    : out std_logic
+      --   double_buffer_o: information to which "page" the core is currently writing to:
+      --   0 = page 0 = 0..32767, 1 = page 1 = 32768..65535
+      --   double_buffer_ptr_o: lcd row into which the core is currently writing to       
+      double_buffer_o      : out std_logic := '0';
+      double_buffer_ptr_o  : out std_logic_vector(14 downto 0)
    );
 end lcd_to_pixels;
 
@@ -43,9 +46,16 @@ architecture synthesis of lcd_to_pixels is
    signal lcd_r_blank_hcnt    : integer range 0 to GB_DX - 1 := 0;
    signal lcd_r_blank_vcnt    : integer range 0 to GB_DY - 1 := 0;
    signal lcd_r_blank_data    : std_logic_vector(14 downto 0) := (others => '0');
+   
+   signal pixel_out_ptr       : integer range 0 to 65535 := 0;
 
 begin
 
+   -- double_buffer_o = the topmost bit of pixel_out_ptr_o, so it decides if we are writing to
+   -- the address range 0..32767 or 32768..65535
+   pixel_out_ptr_o     <= to_integer(unsigned(double_buffer_o & std_logic_vector(to_unsigned(pixel_out_ptr, 15))));
+   double_buffer_ptr_o <= std_logic_vector(to_unsigned(pixel_out_ptr, 15));
+  
    lcd_to_pixels : process (clk_i)
       variable pixel_we                  : std_logic;
    begin
@@ -66,12 +76,15 @@ begin
          end if;
 
          if pixel_we = '1' then
-            pixel_out_ptr_o <= pixel_out_ptr_o + 1;
+            pixel_out_ptr <= pixel_out_ptr + 1;
          end if;
 
          lcd_r_old_off <= lcd_r_off;
          if (lcd_r_old_off xor lcd_r_off) = '1' then
-            pixel_out_ptr_o <= 0;
+            pixel_out_ptr <= 0;
+            if lcd_r_off = '1' then
+               double_buffer_o <= not double_buffer_o;               
+            end if;
          end if;
 
          lcd_r_old_on <= lcd_on_i;
@@ -90,7 +103,8 @@ begin
                lcd_r_blank_vcnt <= lcd_r_blank_vcnt + 1;
                if lcd_r_blank_vcnt = 153 then
                   lcd_r_blank_vcnt <= 0;
-                  pixel_out_ptr_o <= 0;
+                  pixel_out_ptr <= 0;
+                  double_buffer_o <= not double_buffer_o;
                end if;
             end if;
          end if;
