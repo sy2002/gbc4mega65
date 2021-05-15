@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#define RELEASE
+#undef RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -596,7 +596,7 @@ _GR_HELP_2      MOVE    GBC$CSR, R8
 ; Strings
 ; ----------------------------------------------------------------------------
 
-STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.8\nMiSTer port done by sy2002 & MJoergen in 2021\n\n"
+STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.8\nMiSTer port by sy2002 & MJoergen in 2021\n\n"
 
 STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
@@ -618,37 +618,36 @@ STR_LOADING     .DW CHR_FC_HE_LEFT
                 .DW CHR_FC_HE_RIGHT, 0
 
 STR_HELP        .ASCII_P "\n"
-                .ASCII_P " MEGA65               Game Boy\n"
+                .ASCII_P " MEGA65              Game Boy\n"
                 ; 196 = horizontal line in Anikki font
                 ; 32 = space, (13, 10) = \n
-                .DW 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 32, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 196, 13, 10
-                .ASCII_P " Cursor keys          Joypad\n"
-                .ASCII_P " Space                Start\n"
-                .ASCII_P " Enter                Select\n"
-                .ASCII_P " Left Shift           A\n"
-                .ASCII_P " MEGA65 key           B\n"
-                .ASCII_P " Help                 Options menu\n\n\n"
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 13, 10
+                .ASCII_P " Cursor keys         Joypad\n"
+                .ASCII_P " Space               Start\n"
+                .ASCII_P " Enter               Select\n"
+                .ASCII_P " Left Shift          A\n"
+                .ASCII_P " MEGA65 key          B\n"
+                .ASCII_P " Help                Options menu\n\n\n"
 
                 .ASCII_P " File Browser\n"
-                .DW 32, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 32, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
-                .DW 196, 196, 196, 196, 13, 10
-                .ASCII_P " Run/Stop             Enter/leave file browser\n"
-                .ASCII_P " Up/Down cursor key   Navigate one file up/down\n"
-                .ASCII_P " Left/Right cursor    One page forward/backward\n"
-                .ASCII_P " Enter                Start game/change folder\n"
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 13, 10
+                .ASCII_P " Run/Stop            Enter/leave browser\n"
+                .ASCII_P " Up/Down cursor key  One file up/down\n"
+                .ASCII_P " Left/Right cursor   One page fwd/backwd\n"
+                .ASCII_P " Enter               Play or change folder\n"
                 .ASCII_W "\n\n Press any of these keys to continue."
 
-WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files than\n"
+WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files\n"
+                .ASCII_P "than this core is able to load into memory.\n\n"
                 .ASCII_P "this core is able to load into memory.\n\n"
-                .ASCII_P "Please split the files into multiple folders.\n\n"
-                .ASCII_P "If you choose to continue by pressing SPACE,\n"
+                .ASCII_P "Split the files into multiple folders.\n\n"
+                .ASCII_P "If you choose to continue using SPACE,\n"
                 .ASCII_P "be aware that random files will be missing.\n\n"
                 .ASCII_W "Press SPACE to continue.\n"
 
@@ -1004,6 +1003,7 @@ SHOW_FRAME      RSUB    ENTER, 1
                 MOVE    GBC$OSM_COLS, R10       ; full screen size
                 MOVE    GBC$OSM_ROWS, R11
                 RSUB    PRINTFRAME, 1           ; show frame
+                HALT
                 RSUB    LEAVE, 1
                 RET
                 

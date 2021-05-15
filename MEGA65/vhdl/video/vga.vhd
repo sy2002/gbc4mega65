@@ -16,8 +16,8 @@ use work.qnice_tools.all;
 
 entity vga is
    generic  (
-      G_VGA_DX          : integer;  -- 800
-      G_VGA_DY          : integer;  -- 600
+      G_VGA_DX          : integer;  -- 720
+      G_VGA_DY          : integer;  -- 576
       G_GB_DX           : integer;  -- 160
       G_GB_DY           : integer;  -- 144
       G_GB_TO_VGA_SCALE : integer   -- 4 : 160x144 => 640x576
@@ -75,24 +75,24 @@ architecture synthesis of vga is
 
 begin
 
-   -- SVGA mode 800 x 600 @ 60 Hz
+   -- PAL mode 720 x 576 @ 50 Hz
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)
-   -- Timings taken from http://tinyvga.com/vga-timing/800x600@60Hz
+   -- Timings taken from TODO ADD TIMING SOURCE / EXPLANATION HOW IT IS CALCULATED
    vga_pixels_and_timing : entity work.vga_controller
       generic map
-      (
+      (      
          H_PIXELS  => G_VGA_DX,    -- horizontal display width in pixels
          V_PIXELS  => G_VGA_DY,    -- vertical display width in rows
 
-         H_PULSE   => 128,         -- horiztonal sync pulse width in pixels
-         H_BP      => 88,          -- horiztonal back porch width in pixels
-         H_FP      => 40,          -- horiztonal front porch width in pixels
-         H_POL     => '1',         -- horizontal sync pulse polarity (1 = positive, 0 = negative)
+         H_PULSE   => 64,          -- horiztonal sync pulse width in pixels
+         H_BP      => 68,          -- horiztonal back porch width in pixels
+         H_FP      => 12,          -- horiztonal front porch width in pixels
+         H_POL     => '0',         -- TODO EXPERIMENTAL: MIGHT AS WELL BE '1' INSTEAD OF '0' horizontal sync pulse polarity (1 = positive, 0 = negative)
 
-         V_PULSE   => 4,           -- vertical sync pulse width in rows
-         V_BP      => 23,          -- vertical back porch width in rows
-         V_FP      => 1,           -- vertical front porch width in rows
-         V_POL     => '1'          -- vertical sync pulse polarity (1 = positive, 0 = negative)
+         V_PULSE   => 5,           -- vertical sync pulse width in rows
+         V_BP      => 39,          -- vertical back porch width in rows
+         V_FP      => 5,           -- vertical front porch width in rows
+         V_POL     => '1'          -- TODO EXPERIMENTAL vertical sync pulse polarity (1 = positive, 0 = negative)
       )
       port map
       (

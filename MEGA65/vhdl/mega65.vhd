@@ -8,8 +8,9 @@
 -- the cartridge ROM and RAM. Have a look at m65_const.vhd to learn more.
 --
 -- Screen resolution:
--- VGA out runs at SVGA mode 800 x 600 @ 60 Hz. This is a compromise between
--- the optimal usage of screen real estate and compatibility to older CRTs
+-- PAL mode 720 x 576 @ 50 Hz. This is a compromise between the optimal usage of
+-- screen real estate, the compatibility to older CRTs and HDMI compatibility
+-- (according to HDMI 1.4b chapter 6.3)
 --
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
@@ -111,8 +112,8 @@ constant QNICE_CLK_SPEED   : integer := 50_000_000;
 -- rendering constants
 constant GB_DX             : integer := 160;          -- Game Boy's X pixel resolution
 constant GB_DY             : integer := 144;          -- ditto Y
-constant VGA_DX            : integer := 800;          -- SVGA mode 800 x 600 @ 60 Hz
-constant VGA_DY            : integer := 600;          -- ditto
+constant VGA_DX            : integer := 720;          -- PAL mode 720 x 576 @ 50 Hz
+constant VGA_DY            : integer := 576;          -- ditto
 constant GB_TO_VGA_SCALE   : integer := 4;            -- 160 x 144 => 4x => 640 x 576
 
 -- Constants for VGA output
@@ -125,13 +126,13 @@ constant VRAM_ADDR_WIDTH   : integer := f_log2(CHAR_MEM_SIZE);
 
 -- clocks
 signal main_clk            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
-signal vga_clk             : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
+signal vga_clk             : std_logic;               -- PAL mode 720 x 576 @ 50 Hz: 27.00 MHz
 signal vga_clk5            : std_logic;               -- Digital Video output: 200.00 MHz
 signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 MHz
 
 -- resets
 signal main_rst            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
-signal vga_rst             : std_logic;               -- SVGA mode 800 x 600 @ 60 Hz: 40.00 MHz
+signal vga_rst             : std_logic;               -- PAL mode 720 x 576 @ 50 Hz: 27.00 MHz
 signal qnice_rst           : std_logic;               -- QNICE main clock @ 50 MHz
 
 
@@ -265,7 +266,7 @@ begin
 
    -- MMCME2_ADV clock generators:
    --    Main clock:          33.554432 MHz
-   --    Pixelclock:          40 MHz
+   --    Pixelclock:          27 MHz
    --    QNICE co-processor:  50 MHz
    clk_gen : entity work.clk
       port map
@@ -276,7 +277,7 @@ begin
          main_rst_o   => main_rst,         -- Core's reset, synchronized
          qnice_clk_o  => qnice_clk,        -- QNICE's 50 MHz main clock
          qnice_rst_o  => qnice_rst,        -- QNICE's reset, synchronized
-         pixel_clk_o  => vga_clk,          -- VGA's 40.00 MHz pixelclock for SVGA mode 800 x 600 @ 60 Hz
+         pixel_clk_o  => vga_clk,          -- 27.00 MHz pixelclock for PAL mode 720 x 576 @ 50 Hz
          pixel_rst_o  => vga_rst,          -- VGA's reset, synchronized
          pixel_clk5_o => vga_clk5          -- VGA's 200.00 MHz pixelclock for Digital Video
       );

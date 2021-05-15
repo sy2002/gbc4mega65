@@ -4,8 +4,9 @@
 -- R3-Version: Top Module for synthesizing the whole machine
 --
 -- Screen resolution:
--- VGA out runs at SVGA mode 800 x 600 @ 60 Hz. This is a compromise between
--- the optimal usage of screen real estate and compatibility to older CRTs 
+-- PAL mode 720 x 576 @ 50 Hz. This is a compromise between the optimal usage of
+-- screen real estate, the compatibility to older CRTs and HDMI compatibility
+-- (according to HDMI 1.4b chapter 6.3)
 --
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3

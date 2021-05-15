@@ -38,7 +38,7 @@ Features
   looked on the LCD display of the original Game Boy Color hardware.
 * Support for both MEGA65 SD card slots
 * HDMI video and audio (on R3 machines only) and in parallel
-  VGA 800x600 @ 60 Hz and audio via 3.5mm audio jack (on all machines)
+  PAL 720x576p @ 50Hz over VGA and audio via 3.5mm audio jack (on all machines)
 
 Installation
 ------------
