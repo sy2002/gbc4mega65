@@ -38,9 +38,13 @@ entity vga is
       vga_osm_vram_data_i  : in  std_logic_vector(7 downto 0);
       vga_osm_vram_attr_i  : in  std_logic_vector(7 downto 0);
 
-      -- Core interface to VRAM (RGB colors)
-      vga_core_vram_addr_o : out std_logic_vector(14 downto 0);
-      vga_core_vram_data_i : in  std_logic_vector(23 downto 0);
+      -- Rendering attributes
+      vga_color_i          : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
+      vga_color_mode_i     : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
+
+      -- Core interface to VRAM (15-bit Game Boy RGB that still needs to be processed)
+      vga_core_vram_addr_o : out std_logic_vector(15 downto 0);
+      vga_core_vram_data_i : in  std_logic_vector(14 downto 0);
 
       -- VGA / VDAC output
       vga_red_o            : out std_logic_vector(7 downto 0);
@@ -149,11 +153,20 @@ begin
          G_GB_TO_VGA_SCALE    => G_GB_TO_VGA_SCALE
       )
       port map (
+         -- pixel clock and current position on screen relative to pixel clock      
          clk_i                => clk_i,
          vga_col_i            => vga_col,
          vga_row_i            => vga_row,
+         
+         -- 15-bit Game Boy RGB that will be converted
          vga_core_vram_addr_o => vga_core_vram_addr_o,
          vga_core_vram_data_i => vga_core_vram_data_i,
+         
+         -- Rendering attributes
+         vga_color_i          => vga_color_i,
+         vga_color_mode_i     => vga_color_mode_i,
+                  
+         -- 24-bit RGB that can be displayed on screen
          vga_core_on_o        => vga_core_on_d,
          vga_core_rgb_o       => vga_core_rgb_d
       ); -- i_vga_core : entity work.vga_core

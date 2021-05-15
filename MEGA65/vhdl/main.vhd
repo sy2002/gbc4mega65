@@ -25,12 +25,12 @@ entity main is
       main_gbc_bios_addr     : out std_logic_vector(11 downto 0);
       main_gbc_bios_data     : in  std_logic_vector(7 downto 0);
 
-      -- LCD screen
+      -- Game Boy's LCD output converted to double buffered pixel data   
       main_pixel_out_we      : out std_logic;
-      main_pixel_out_ptr     : out integer range 0 to (G_GB_DX * G_GB_DY) - 1 := 0;
-      main_pixel_out_data    : out std_logic_vector(23 downto 0) := (others => '0');
+      main_pixel_out_ptr     : out integer range 0 to 65535;
+      main_pixel_out_data    : out std_logic_vector(14 downto 0);
 
-      -- cartridge flags
+      -- Cartridge flags (set by QNICE firmware after interpreting the cartridge data) 
       main_cart_cgb_flag     : in  std_logic_vector(7 downto 0);
       main_cart_sgb_flag     : in  std_logic_vector(7 downto 0);
       main_cart_mbc_type     : in  std_logic_vector(7 downto 0);
@@ -54,7 +54,6 @@ entity main is
       main_qngbc_keyboard    : in  std_logic;
       main_qngbc_color       : in  std_logic;
       main_qngbc_joy_map     : in  std_logic_vector(1 downto 0);
-      main_qngbc_color_mode  : in  std_logic;
       main_qngbc_keyb_matrix : out std_logic_vector(15 downto 0);
 
       -- Joysticks
@@ -274,16 +273,22 @@ begin
    -- This process is heavily inspired and in part a 1-to-1 translation of portions of MiSTer's lcd.v
 
    i_lcd_to_pixels : entity work.lcd_to_pixels
+      generic map (
+         GB_DX                      => G_GB_DX,
+         GB_DY                      => G_GB_DY
+      )
       port map (
          clk_i                      => main_clk,
          sc_ce_i                    => main_sc_ce,
-         qngbc_color_i              => main_qngbc_color,
-         qngbc_color_mode_i         => main_qngbc_color_mode,
+         
+         -- Game Boy LCD output         
          lcd_clkena_i               => main_lcd_clkena,
          lcd_data_i                 => main_lcd_data,
          lcd_mode_i                 => main_lcd_mode,
          lcd_on_i                   => main_lcd_on,
          lcd_vsync_i                => main_lcd_vsync,
+         
+         -- LCD converted to 15-bit pixel data (that still needs to be decoded for being displayed on screen)         
          pixel_out_we_o             => main_pixel_out_we,
          pixel_out_ptr_o            => main_pixel_out_ptr,
          pixel_out_data_o           => main_pixel_out_data

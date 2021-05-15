@@ -156,8 +156,8 @@ signal main_pcm_cts             : std_logic_vector(19 downto 0); -- HDMI ACR CTS
 
 -- LCD interface
 signal main_pixel_out_we        : std_logic;
-signal main_pixel_out_ptr       : integer range 0 to (GB_DX * GB_DY) - 1 := 0;
-signal main_pixel_out_data      : std_logic_vector(23 downto 0) := (others => '0');
+signal main_pixel_out_ptr       : integer range 0 to 65535 := 0;
+signal main_pixel_out_data      : std_logic_vector(14 downto 0) := (others => '0');
 
 -- cartridge flags
 signal main_cart_cgb_flag       : std_logic_vector(7 downto 0);
@@ -237,30 +237,34 @@ signal qnice_vram_data_out_i      : std_logic_vector(7 downto 0);
 -- vga_clk
 ---------------------------------------------------------------------------------------------
 
-signal vga_de             : std_logic;
-signal vga_tmds           : slv_9_0_t(0 to 2);              -- parallel TMDS symbol stream x 3 channels
+signal vga_de                 : std_logic;
+signal vga_tmds               : slv_9_0_t(0 to 2);              -- parallel TMDS symbol stream x 3 channels
 
 -- Core frame buffer
-signal vga_core_vram_addr : std_logic_vector(14 downto 0);
-signal vga_core_vram_data : std_logic_vector(23 downto 0);
+signal vga_core_vram_addr     : std_logic_vector(15 downto 0);
+signal vga_core_vram_data     : std_logic_vector(14 downto 0);
 
 -- On-Screen-Menu (OSM)
-signal vga_osm_cfg_enable : std_logic;
-signal vga_osm_cfg_xy     : std_logic_vector(15 downto 0);
-signal vga_osm_cfg_dxdy   : std_logic_vector(15 downto 0);
-signal vga_osm_vram_addr  : std_logic_vector(15 downto 0);
-signal vga_osm_vram_data  : std_logic_vector(7 downto 0);
-signal vga_osm_vram_attr  : std_logic_vector(7 downto 0);
+signal vga_osm_cfg_enable     : std_logic;
+signal vga_osm_cfg_xy         : std_logic_vector(15 downto 0);
+signal vga_osm_cfg_dxdy       : std_logic_vector(15 downto 0);
+signal vga_osm_vram_addr      : std_logic_vector(15 downto 0);
+signal vga_osm_vram_data      : std_logic_vector(7 downto 0);
+signal vga_osm_vram_attr      : std_logic_vector(7 downto 0);
+
+-- Color mode and color grading
+signal vga_qngbc_color        : std_logic;      -- 0=classic Game Boy, 1=Game Boy Color
+signal vga_qngbc_color_mode   : std_logic;      -- 0=fully saturated colors, 1=LCD emulation
 
 -- constants necessary due to Verilog in VHDL embedding
 -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
-constant c_fast_boot      : std_logic := '0';
-constant c_joystick       : std_logic_vector(7 downto 0) := X"FF";
-constant c_dummy_0        : std_logic := '0';
-constant c_dummy_2bit_0   : std_logic_vector(1 downto 0) := (others => '0');
-constant c_dummy_8bit_0   : std_logic_vector(7 downto 0) := (others => '0');
-constant c_dummy_64bit_0  : std_logic_vector(63 downto 0) := (others => '0');
-constant c_dummy_129bit_0 : std_logic_vector(128 downto 0) := (others => '0');
+constant c_fast_boot          : std_logic := '0';
+constant c_joystick           : std_logic_vector(7 downto 0) := X"FF";
+constant c_dummy_0            : std_logic := '0';
+constant c_dummy_2bit_0       : std_logic_vector(1 downto 0) := (others => '0');
+constant c_dummy_8bit_0       : std_logic_vector(7 downto 0) := (others => '0');
+constant c_dummy_64bit_0      : std_logic_vector(63 downto 0) := (others => '0');
+constant c_dummy_129bit_0     : std_logic_vector(128 downto 0) := (others => '0');
 
 
 begin
@@ -296,22 +300,34 @@ begin
       port map (
          main_clk               => main_clk,
          reset_n                => not main_rst,
+         
+         -- MEGA65 smart keyboard controller
          kb_io0                 => kb_io0,
          kb_io1                 => kb_io1,
          kb_io2                 => kb_io2,
+         
+         -- Audio
          main_pcm_audio_left    => main_pcm_audio_left,
          main_pcm_audio_right   => main_pcm_audio_right,
+         
+         -- Game Boy BIOS
          main_gbc_bios_addr     => main_gbc_bios_addr,
          main_gbc_bios_data     => main_gbc_bios_data,
+         
+         -- Game Boy's LCD output converted to double buffered pixel data
          main_pixel_out_we      => main_pixel_out_we,
          main_pixel_out_ptr     => main_pixel_out_ptr,
          main_pixel_out_data    => main_pixel_out_data,
+         
+         -- Cartridge flags (set by QNICE firmware after interpreting the cartridge data) 
          main_cart_cgb_flag     => main_cart_cgb_flag,
          main_cart_sgb_flag     => main_cart_sgb_flag,
          main_cart_mbc_type     => main_cart_mbc_type,
          main_cart_rom_size     => main_cart_rom_size,
          main_cart_ram_size     => main_cart_ram_size,
          main_cart_old_licensee => main_cart_old_licensee,
+         
+         -- MBC signals
          main_cartrom_addr      => main_cartrom_addr,
          main_cartrom_rd        => main_cartrom_rd,
          main_cartrom_data      => main_cartrom_data,
@@ -320,18 +336,22 @@ begin
          main_cartram_wr        => main_cartram_wr,
          main_cartram_data_in   => main_cartram_data_in,
          main_cartram_data_out  => main_cartram_data_out,
+         
+         -- QNICE control signals (see also gbc.asm for more details)
          main_qngbc_reset       => main_qngbc_reset,
          main_qngbc_pause       => main_qngbc_pause,
          main_qngbc_keyboard    => main_qngbc_keyboard,
          main_qngbc_color       => main_qngbc_color,
          main_qngbc_joy_map     => main_qngbc_joy_map,
-         main_qngbc_color_mode  => main_qngbc_color_mode,
          main_qngbc_keyb_matrix => main_qngbc_keyb_matrix,
+         
+         -- Joysticks
          joy_1_up_n             => joy_1_up_n,
          joy_1_down_n           => joy_1_down_n,
          joy_1_left_n           => joy_1_left_n,
          joy_1_right_n          => joy_1_right_n,
          joy_1_fire_n           => joy_1_fire_n,
+         
          joy_2_up_n             => joy_2_up_n,
          joy_2_down_n           => joy_2_down_n,
          joy_2_left_n           => joy_2_left_n,
@@ -442,14 +462,26 @@ begin
       port map (
          clk_i                => vga_clk,     -- pixel clock at frequency of VGA mode being used
          rstn_i               => not vga_rst,
+         
+         -- OSM configuration from QNICE         
          vga_osm_cfg_enable_i => vga_osm_cfg_enable,
          vga_osm_cfg_xy_i     => vga_osm_cfg_xy,
          vga_osm_cfg_dxdy_i   => vga_osm_cfg_dxdy,
+         
+         -- OSM interface to VRAM (character RAM and attribute RAM)
          vga_osm_vram_addr_o  => vga_osm_vram_addr,
          vga_osm_vram_data_i  => vga_osm_vram_data,
          vga_osm_vram_attr_i  => vga_osm_vram_attr,
+
+         -- Rendering attributes
+         vga_color_i          => vga_qngbc_color,
+         vga_color_mode_i     => vga_qngbc_color_mode,
+         
+         -- Core interface to VRAM (15-bit Game Boy RGB that still needs to be processed)         
          vga_core_vram_addr_o => vga_core_vram_addr,
          vga_core_vram_data_i => vga_core_vram_data,
+         
+         -- VGA / VDAC output         
          vga_red_o            => vga_red,
          vga_green_o          => vga_green,
          vga_blue_o           => vga_blue,
@@ -613,17 +645,21 @@ begin
 
    i_qnice2vga: xpm_cdc_array_single
       generic map (
-         WIDTH => 33
+         WIDTH => 35
       )
       port map (
          src_clk                => qnice_clk,
          src_in(15 downto 0)    => qnice_osm_cfg_xy,
          src_in(31 downto 16)   => qnice_osm_cfg_dxdy,
          src_in(32)             => qnice_osm_cfg_enable,
+         src_in(33)             => qnice_qngbc_color,
+         src_in(34)             => qnice_qngbc_color_mode,
          dest_clk               => vga_clk,
          dest_out(15 downto 0)  => vga_osm_cfg_xy,
          dest_out(31 downto 16) => vga_osm_cfg_dxdy,
-         dest_out(32)           => vga_osm_cfg_enable
+         dest_out(32)           => vga_osm_cfg_enable,
+         dest_out(33)           => vga_qngbc_color,
+         dest_out(34)           => vga_qngbc_color_mode
       ); -- i_qnice2vga: xpm_cdc_single
       
 
@@ -702,14 +738,13 @@ begin
    core_frame_buffer : entity work.dualport_2clk_ram
       generic map
       (
-         ADDR_WIDTH   => 15,
-         MAXIMUM_SIZE => GB_DX * GB_DY, -- we do not need 2^15 x 24bit, but just (GB_DX * GB_DY) x 24bit
-         DATA_WIDTH   => 24
+         ADDR_WIDTH   => 16,
+         DATA_WIDTH   => 15
       )
       port map
       (
          clock_a      => main_clk,
-         address_a    => std_logic_vector(to_unsigned(main_pixel_out_ptr, 15)),
+         address_a    => std_logic_vector(to_unsigned(main_pixel_out_ptr, 16)),
          data_a       => main_pixel_out_data,
          wren_a       => main_pixel_out_we,
          q_a          => open,
