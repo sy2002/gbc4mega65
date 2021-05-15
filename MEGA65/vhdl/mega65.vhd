@@ -277,11 +277,10 @@ begin
          main_rst_o   => main_rst,         -- Core's reset, synchronized
          qnice_clk_o  => qnice_clk,        -- QNICE's 50 MHz main clock
          qnice_rst_o  => qnice_rst,        -- QNICE's reset, synchronized
-         pixel_clk_o  => vga_clk,          -- 27.00 MHz pixelclock for PAL mode 720 x 576 @ 50 Hz
+         pixel_clk_o  => vga_clk,          -- VGA's 27.00 MHz pixelclock for PAL mode 720 x 576 @ 50 Hz
          pixel_rst_o  => vga_rst,          -- VGA's reset, synchronized
-         pixel_clk5_o => vga_clk5          -- VGA's 200.00 MHz pixelclock for Digital Video
+         pixel_clk5_o => vga_clk5          -- VGA's 27 MHz x 5 = 135 MHz pixelclock for Digital Video
       );
-
 
    ---------------------------------------------------------------------------------------------
    -- main_clk
@@ -435,7 +434,9 @@ begin
          G_VGA_DY          => VGA_DY,
          G_GB_DX           => GB_DX,
          G_GB_DY           => GB_DY,
-         G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE
+         G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE,
+         G_FONT_DX         => FONT_DX,
+         G_FONT_DY         => FONT_DY
       )
       port map (
          clk_i                => vga_clk,     -- pixel clock at frequency of VGA mode being used
@@ -504,11 +505,11 @@ begin
       port map (
          select_44100 => '0',
          dvi          => '0',
-         vic          => std_logic_vector(to_unsigned(17,8)), -- CEA/CTA VIC 17=576p50 PAL, 2 = 480p60 NTSC
+         vic          => std_logic_vector(to_unsigned(17,8)), -- CEA/CTA VIC 17=576p50 PAL
          aspect       => "01",                                -- 01=4:3, 10=16:9
          pix_rep      => '0',                                 -- no pixel repetition
-         vs_pol       => '1',                                 -- 1=active high
-         hs_pol       => '1',
+         vs_pol       => '0',                                 -- TODO EXPERIMENTALLY SET BOTH TO "0" 1=active high
+         hs_pol       => '0',                                 -- TODO EXPERIMENTAL. VGA IS ALSO SET TO NEG/NEG
 
          vga_rst      => vga_rst,                             -- active high reset
          vga_clk      => vga_clk,                             -- VGA pixel clock

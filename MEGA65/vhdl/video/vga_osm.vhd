@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------------
 -- Game Boy Color for MEGA65 (gbc4mega65)
 --
--- VGA On-Screen-Memory interface.
+-- VGA On-Screen-Menu interface
 --
 -- This block provides a bridge between the VGA control block and the QNICE core.
 --
@@ -19,8 +19,10 @@ use work.qnice_tools.all;
 
 entity vga_osm is
    generic  (
-      G_VGA_DX : integer;
-      G_VGA_DY : integer
+      G_VGA_DX    : natural;
+      G_VGA_DY    : natural;
+      G_FONT_DX   : natural;
+      G_FONT_DY   : natural
    );
    port (
       clk_i                : in  std_logic;
@@ -43,10 +45,8 @@ end vga_osm;
 architecture synthesis of vga_osm is
 
    -- Constants for VGA output
-   constant FONT_DX           : integer := 16;
-   constant FONT_DY           : integer := 16;
-   constant CHARS_DX          : integer := G_VGA_DX / FONT_DX;
-   constant CHARS_DY          : integer := G_VGA_DY / FONT_DY;
+   constant CHARS_DX          : integer := G_VGA_DX / G_FONT_DX;
+   constant CHARS_DY          : integer := G_VGA_DY / G_FONT_DY;
 
    -- VGA signals
    signal vga_osm_x1          : integer range 0 to CHARS_DX - 1;
@@ -90,7 +90,7 @@ begin
    vga_osm_vram_addr_o <= std_logic_vector(to_unsigned(vga_y_div_16 * CHARS_DX + vga_x_div_16, 16));
 
    -- Read font data. (Almost) combinatorial read.
-   vga_osm_font_addr_d <= std_logic_vector(to_unsigned(to_integer(unsigned(vga_osm_vram_data_i)) * FONT_DY + vga_y_mod_16, 12));
+   vga_osm_font_addr_d <= std_logic_vector(to_unsigned(to_integer(unsigned(vga_osm_vram_data_i)) * G_FONT_DY + vga_y_mod_16, 12));
 
    -- 16x16 pixel font ROM
    -- This reads on the falling clock edge, and is therefore equivalent to a combinatorial read.

@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#undef RELEASE
+#define RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -654,9 +654,9 @@ WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files\n"
 WRN_CANNOTRUN   .ASCII_W "\n\n  Cannot run this cartridge !\n\n\n"
 WRN_SPACECNT    .ASCII_W "  Press SPACE to continue.\n"
 
-WRN_UNSUPPMBC   .ASCII_P "  This is either not a valid cartridge at all\n"
-                .ASCII_P "  or this cartridge uses a currently still\n"
-                .ASCII_W "  unsuported Memory Bank Controller (MBC).\n\n\n"
+WRN_UNSUPPMBC   .ASCII_P "This is either not a valid cartridge at all\n"
+                .ASCII_P "or this cartridge uses a currently still\n"
+                .ASCII_W "unsuported Memory Bank Controller (MBC).\n\n\n"
 
 WRN_TOOLARGE    .ASCII_P "  Cartridge ROM is too large.\n\n"
                 .ASCII_W "  Maximum supported ROM size: "             
@@ -664,14 +664,14 @@ WRN_TOOLARGE_3N .ASCII_W "\n\n\n"
 
 WRN_RAMSIZE     .ASCII_P "  Cartridge RAM is too large.\n\n"
                 .ASCII_W "  Maximum supported RAM size: "
-
-ERR_MNT         .ASCII_W "Error mounting device: SD Card.\nError code: "
-ERR_LOAD_ROM    .ASCII_W "Error loading ROM: Illegal file: File too long.\n"
+                          
+ERR_MNT         .ASCII_W "Error mounting device: SD Card.\nError code: "                          
+ERR_LOAD_ROM    .ASCII_W "Error loading ROM:\nIllegal file: File too long.\n"
 ERR_LOAD_CART   .ASCII_W "  ERROR!\n"
-ERR_BROWSE_UNKN .ASCII_W "SD Card: Unknown error while trying to browse.\n"
+ERR_BROWSE_UNKN .ASCII_W "SD Card: Unknown error (tried to browse).\n"
 ERR_FATAL       .ASCII_W "FATAL ERROR:\n\n"
 ERR_FATAL_STOP  .ASCII_W "Core stopped. Please reset the machine.\n"
-ERR_FATAL_ITER  .ASCII_W "Corrupt memory structure: Linked-list boundary.\n"
+ERR_FATAL_ITER  .ASCII_W "Corrupt memory structure:\nLinked-list boundary.\n"
 ERR_CODE        .ASCII_W "Error code: "
 
 ; ROM/BIOS file names and standard path
@@ -1003,7 +1003,6 @@ SHOW_FRAME      RSUB    ENTER, 1
                 MOVE    GBC$OSM_COLS, R10       ; full screen size
                 MOVE    GBC$OSM_ROWS, R11
                 RSUB    PRINTFRAME, 1           ; show frame
-                HALT
                 RSUB    LEAVE, 1
                 RET
                 

@@ -1,7 +1,7 @@
 ----------------------------------------------------------------------------------
 -- Game Boy Color for MEGA65 (gbc4mega65)
 --
--- VGA control block.
+-- VGA control block
 --
 -- This block overlays the On Screen Menu (OSM) on top of the Core output.
 --
@@ -16,11 +16,13 @@ use work.qnice_tools.all;
 
 entity vga is
    generic  (
-      G_VGA_DX          : integer;  -- 720
-      G_VGA_DY          : integer;  -- 576
-      G_GB_DX           : integer;  -- 160
-      G_GB_DY           : integer;  -- 144
-      G_GB_TO_VGA_SCALE : integer   -- 4 : 160x144 => 640x576
+      G_VGA_DX          : natural;  -- 720
+      G_VGA_DY          : natural;  -- 576
+      G_GB_DX           : natural;  -- 160
+      G_GB_DY           : natural;  -- 144
+      G_GB_TO_VGA_SCALE : natural;  -- 4 : 160x144 => 640x576
+      G_FONT_DX         : natural;  -- 16
+      G_FONT_DY         : natural   -- 16
    );
    port (
       clk_i                : in  std_logic;
@@ -92,7 +94,7 @@ begin
          V_PULSE   => 5,           -- vertical sync pulse width in rows
          V_BP      => 39,          -- vertical back porch width in rows
          V_FP      => 5,           -- vertical front porch width in rows
-         V_POL     => '1'          -- TODO EXPERIMENTAL vertical sync pulse polarity (1 = positive, 0 = negative)
+         V_POL     => '0'          -- TODO EXPERIMENTAL: MIGHT AS WELL BE '1' INSTEAD OF '0' vertical sync pulse polarity (1 = positive, 0 = negative)
       )
       port map
       (
@@ -109,13 +111,15 @@ begin
 
 
    -----------------------------------------------
-   -- Instantiate On-Screen-Memory generator
+   -- Instantiate On-Screen-Menu generator
    -----------------------------------------------
 
    i_vga_osm : entity work.vga_osm
       generic map (
-         G_VGA_DX => G_VGA_DX,
-         G_VGA_DY => G_VGA_DY
+         G_VGA_DX    => G_VGA_DX,
+         G_VGA_DY    => G_VGA_DY,
+         G_FONT_DX   => G_FONT_DX,
+         G_FONT_DY   => G_FONT_DY       
       )
       port map (
          clk_i                => clk_i,

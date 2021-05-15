@@ -9,10 +9,10 @@
 set_property -dict {PACKAGE_PIN V13 IOSTANDARD LVCMOS33} [get_ports CLK]
 create_clock -period 10.000 -name CLK [get_ports CLK]
 
-create_generated_clock -name gbmainclk [get_pins */clk_gen/i_mmcme2_adv/CLKOUT0]
-create_generated_clock -name qniceclk  [get_pins */clk_gen/i_mmcme2_adv/CLKOUT1]
-create_generated_clock -name pixelclk  [get_pins */clk_gen/i_mmcme2_adv/CLKOUT2]
-create_generated_clock -name pixelclk5 [get_pins */clk_gen/i_mmcme2_adv/CLKOUT3]
+create_generated_clock -name gbmainclk [get_pins */clk_gen/i_clk_gb_qnice/CLKOUT0]
+create_generated_clock -name qniceclk  [get_pins */clk_gen/i_clk_gb_qnice/CLKOUT1]
+create_generated_clock -name pixelclk  [get_pins */clk_gen/i_clk_pal_hdmi/CLKOUT0]
+create_generated_clock -name pixelclk5 [get_pins */clk_gen/i_clk_pal_hdmi/CLKOUT1]
 
 ## QNICE's EAE combinatorial division networks take longer than
 ## the regular clock period, so we specify a multicycle path

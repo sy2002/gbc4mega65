@@ -15,10 +15,10 @@ use IEEE.STD_LOGIC_1164.all;
 package env1_globals is
 
 -- Development and Debug mode: use the standard Monitor as ROM
-constant ROM_FILE             : string    := "../../QNICE/monitor/monitor.rom";
+--constant ROM_FILE             : string    := "../../QNICE/monitor/monitor.rom";
 
 -- Release mode: use the self-contained self-starting firmware
---constant ROM_FILE             : string    := "../QNICE/osm_rom.rom";
+constant ROM_FILE             : string    := "../QNICE/osm_rom.rom";
 
 -- size of lower register bank: needs to be 256 for standard QNICE
 -- depending on the ROM/firmware we ca reduce it to save FPGA resources
