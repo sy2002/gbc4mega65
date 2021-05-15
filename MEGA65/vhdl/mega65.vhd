@@ -106,8 +106,9 @@ constant GBC_ROM           : string := GBC_OSS_ROM;   -- use Open Source ROMs by
 constant DMG_ROM           : string := GBC_OSS_ROM;
 
 -- clock speeds
-constant GB_CLK_SPEED      : integer := 33_554_432;
-constant QNICE_CLK_SPEED   : integer := 50_000_000;
+constant GB_CLK_SPEED      : natural := 33_554_432;
+constant QNICE_CLK_SPEED   : natural := 50_000_000;
+constant PIXEL_CLK_SPEED   : natural := 27_000_000;
 
 -- rendering constants
 constant GB_DX             : integer := 160;          -- Game Boy's X pixel resolution
@@ -476,7 +477,7 @@ begin
    -- N and CTS values for HDMI Audio Clock Regeneration.
    -- depends on pixel clock and audio sample rate
    main_pcm_n   <= std_logic_vector(to_unsigned(6144,  main_pcm_n'length));    -- 48000*128/1000
-   main_pcm_cts <= std_logic_vector(to_unsigned(40000, main_pcm_cts'length));  -- vga_clk/1000
+   main_pcm_cts <= std_logic_vector(to_unsigned(PIXEL_CLK_SPEED / 1000, main_pcm_cts'length));  -- vga_clk/1000
 
    -- ACR packet rate should be 128fs/N = 1kHz
    p_main_pcm_acr : process (main_clk)
