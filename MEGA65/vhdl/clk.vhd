@@ -131,8 +131,8 @@ begin
       port map (
          -- Output clocks
          CLKFBOUT            => clkfb2_mmcm,
-         CLKOUT0             => pixel_clk_mmcm,
-         CLKOUT1             => pixel_clk5_mmcm,
+         CLKOUT0             => pixel_clk5_mmcm,
+         CLKOUT1             => pixel_clk_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb2,
          CLKIN1              => sys_clk_i,
