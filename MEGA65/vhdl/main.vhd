@@ -187,7 +187,7 @@ begin
          HDMA_on                 => main_HDMA_on,          -- output
 
          -- cheating/game code engine: not supported on MEGA65
-         gg_reset                => i_reset,               -- input
+         gg_reset                => main_qngbc_reset,      -- input
          gg_en                   => c_dummy_0,             -- input
          gg_code                 => c_dummy_129bit_0,      -- input
          gg_available            => open,                  -- output

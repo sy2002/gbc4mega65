@@ -7,10 +7,7 @@
 -- The different FPGA RAM sizes of R2 and R3 lead to different maximum sizes for
 -- the cartridge ROM and RAM. Have a look at m65_const.vhd to learn more.
 --
--- Screen resolution:
--- PAL mode 720 x 576 @ 50 Hz. This is a compromise between the optimal usage of
--- screen real estate, the compatibility to older CRTs and HDMI compatibility
--- (according to HDMI 1.4b chapter 6.3)
+-- Screen resolution: 1280x720 @ 60 Hz (720p @ 60 Hz)
 --
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
@@ -23,6 +20,7 @@ use work.qnice_tools.all;
 
 library work;
 use work.types_pkg.all;
+use work.video_modes_pkg.all;
 
 library xpm;
 use xpm.vcomponents.all;
@@ -108,14 +106,17 @@ constant DMG_ROM           : string := GBC_OSS_ROM;
 -- clock speeds
 constant GB_CLK_SPEED      : natural := 33_554_432;
 constant QNICE_CLK_SPEED   : natural := 50_000_000;
-constant PIXEL_CLK_SPEED   : natural := 27_000_000;
+constant PIXEL_CLK_SPEED   : natural := 74_250_000;
+
+-- video mode selection: 720p @ 60 Hz
+constant VIDEO_MODE        : video_modes_t := C_VGA_1280_720_60;
 
 -- rendering constants
-constant GB_DX             : integer := 160;          -- Game Boy's X pixel resolution
-constant GB_DY             : integer := 144;          -- ditto Y
-constant VGA_DX            : integer := 720;          -- PAL mode 720 x 576 @ 50 Hz
-constant VGA_DY            : integer := 576;          -- ditto
-constant GB_TO_VGA_SCALE   : integer := 4;            -- 160 x 144 => 4x => 640 x 576
+constant GB_DX             : integer := 160;                   -- Game Boy's X pixel resolution
+constant GB_DY             : integer := 144;                   -- ditto Y
+constant VGA_DX            : integer := VIDEO_MODE.H_PIXELS;   -- 1280
+constant VGA_DY            : integer := VIDEO_MODE.V_PIXELS;   -- 720
+constant GB_TO_VGA_SCALE   : integer := 4;                     -- 160 x 144 => 4x => 640 x 576
 
 -- Constants for VGA output
 constant FONT_DX           : integer := 16;
@@ -127,14 +128,14 @@ constant VRAM_ADDR_WIDTH   : integer := f_log2(CHAR_MEM_SIZE);
 
 -- clocks
 signal main_clk            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
-signal vga_clk             : std_logic;               -- PAL mode 720 x 576 @ 50 Hz: 27.00 MHz
-signal vga_clk5            : std_logic;               -- Digital Video output: 200.00 MHz
+signal vga_clk             : std_logic;               -- 720p @ 60 Hz: 74.25 MHz
+signal vga_clk5            : std_logic;               -- HDMI output: 371.25 MHz
 signal qnice_clk           : std_logic;               -- QNICE main clock @ 50 MHz
 
 -- resets
-signal main_rst            : std_logic;               -- Game Boy core main clock @ 33.554432 MHz
-signal vga_rst             : std_logic;               -- PAL mode 720 x 576 @ 50 Hz: 27.00 MHz
-signal qnice_rst           : std_logic;               -- QNICE main clock @ 50 MHz
+signal main_rst            : std_logic;
+signal vga_rst             : std_logic;
+signal qnice_rst           : std_logic;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk
@@ -271,7 +272,7 @@ begin
 
    -- MMCME2_ADV clock generators:
    --    Main clock:          33.554432 MHz
-   --    Pixelclock:          27 MHz
+   --    Pixelclock:          74.25 MHz
    --    QNICE co-processor:  50 MHz
    clk_gen : entity work.clk
       port map
@@ -282,9 +283,9 @@ begin
          main_rst_o   => main_rst,         -- Core's reset, synchronized
          qnice_clk_o  => qnice_clk,        -- QNICE's 50 MHz main clock
          qnice_rst_o  => qnice_rst,        -- QNICE's reset, synchronized
-         pixel_clk_o  => vga_clk,          -- VGA's 27.00 MHz pixelclock for PAL mode 720 x 576 @ 50 Hz
+         pixel_clk_o  => vga_clk,          -- VGA's 74.25 MHz pixelclock for 720p @ 60 Hz
          pixel_rst_o  => vga_rst,          -- VGA's reset, synchronized
-         pixel_clk5_o => vga_clk5          -- VGA's 27 MHz x 5 = 135 MHz pixelclock for Digital Video
+         pixel_clk5_o => vga_clk5          -- VGA's 74.25 MHz x 5 = 371.25 MHz pixelclock for HDMI
       );
 
    ---------------------------------------------------------------------------------------------
@@ -458,8 +459,7 @@ begin
 
    i_vga : entity work.vga
       generic map (
-         G_VGA_DX          => VGA_DX,
-         G_VGA_DY          => VGA_DY,
+         G_VIDEO_MODE      => VIDEO_MODE,
          G_GB_DX           => GB_DX,
          G_GB_DY           => GB_DY,
          G_GB_TO_VGA_SCALE => GB_TO_VGA_SCALE,
@@ -552,11 +552,11 @@ begin
       port map (
          select_44100 => '0',
          dvi          => '0',
-         vic          => std_logic_vector(to_unsigned(17,8)), -- CEA/CTA VIC 17=576p50 PAL
-         aspect       => "01",                                -- 01=4:3, 10=16:9
+         vic          => std_logic_vector(to_unsigned(4,8)),  -- CEA/CTA VIC 4=720p @ 60 Hz
+         aspect       => "10",                                -- 01=4:3, 10=16:9
          pix_rep      => '0',                                 -- no pixel repetition
-         vs_pol       => '0',                                 -- TODO EXPERIMENTALLY SET BOTH TO "0" 1=active high
-         hs_pol       => '0',                                 -- TODO EXPERIMENTAL. VGA IS ALSO SET TO NEG/NEG
+         vs_pol       => VIDEO_MODE.V_POL,                    -- horizontal polarity: negative
+         hs_pol       => VIDEO_MODE.H_POL,                    -- vertaical polarity: negative
 
          vga_rst      => vga_rst,                             -- active high reset
          vga_clk      => vga_clk,                             -- VGA pixel clock

@@ -19,6 +19,8 @@
 --     Initial Public Release
 --   Version 1.1 03/07/2018 Scott Larson
 --     Corrected two minor "off-by-one" errors
+--   Version 1.2 May 16, 2021 Michael Jørgensen
+--     Clean-up, adjusted to fit gbc4mega65 and MiSTer2MEGA coding style
 --    
 --------------------------------------------------------------------------------
 

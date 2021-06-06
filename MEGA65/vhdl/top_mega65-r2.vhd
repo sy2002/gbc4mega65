@@ -3,10 +3,7 @@
 --
 -- R2-Version: Top Module for synthesizing the whole machine
 --
--- Screen resolution:
--- PAL mode 720 x 576 @ 50 Hz. This is a compromise between the optimal usage of
--- screen real estate, the compatibility to older CRTs and HDMI compatibility
--- (according to HDMI 1.4b chapter 6.3)
+-- Screen resolution: 1280x720 @ 60 Hz (720p @ 60 Hz)
 --
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
