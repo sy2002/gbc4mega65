@@ -37,8 +37,8 @@ Features
 * Optional color grading to desaturate the colors, similarly to how they
   looked on the LCD display of the original Game Boy Color hardware.
 * Support for both MEGA65 SD card slots
-* HDMI video and audio (on R3 machines only) and in parallel
-  PAL 720x576p @ 50Hz over VGA and audio via 3.5mm audio jack (on all machines)
+* HDMI video and audio (720p @ 60 Hz, on R3 machines only) and in parallel
+  1280x720 @ 60Hz over VGA and audio via 3.5mm audio jack (on all machines)
 
 Installation
 ------------
@@ -66,7 +66,7 @@ Constraints of the current Beta version 0.8
 
 * MEGA65 R2 machines: Maximum cartridge size: 256kB
 * MEGA65 R3 machines: Maximum cartridge size: 1MB
-* Flickering in rare situations due to no double bufffering, no frame blending
+* Flickering in rare situations due to no frame blending
 * No savegames
 
 Getting started

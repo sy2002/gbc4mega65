@@ -107,7 +107,7 @@ begin
    -- generate 74.25 MHz for 720p @ 60 Hz and 5x74.25 MHz = 371.25 MHz for HDMI
    -- VCO frequency range for Artix 7 speed grade -1 : 600 MHz - 1200 MHz
    -- f_VCO = f_CLKIN * CLKFBOUT_MULT_F / DIVCLK_DIVIDE   
-   i_clk_pal_hdmi : MMCME2_ADV
+   i_clk_720p_hdmi : MMCME2_ADV
       generic map (
          BANDWIDTH            => "OPTIMIZED",
          CLKOUT4_CASCADE      => FALSE,

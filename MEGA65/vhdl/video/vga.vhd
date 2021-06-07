@@ -88,7 +88,7 @@ architecture synthesis of vga is
 
 begin
 
-   -- PAL mode 720 x 576 @ 50 Hz
+   -- 720p @ 60 Hz
    -- Component that produces VGA timings and outputs the currently active pixel coordinate (row, column)
    -- Timings taken from TODO ADD TIMING SOURCE / EXPLANATION HOW IT IS CALCULATED
    vga_pixels_and_timing : entity work.vga_controller

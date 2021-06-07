@@ -1,15 +1,18 @@
 ----------------------------------------------------------------------------------
 -- Game Boy Color for MEGA65 (gbc4mega65)
 --
--- VGA On-Screen-Menu interface
+-- VGA On-Screen-Menu (OSM)
 --
--- This block provides a bridge between the VGA control block and the QNICE core.
+-- The OSM is rendered using the font and is based on the the VRAM and
+-- VRAM attribute memory.
 --
--- This machine is based on Gameboy_MiSTer
--- MEGA65 port done by sy2002 and MJoergen in 2021 and licensed under GPL v3
+-- Attention: Right now this is hardcoded for a 16x16 font. 
 --
 -- The signals vga_osm_on_o and vga_osm_rgb_o are delayed one clock cycle after
 -- vga_col_i and vga_row_i.
+--
+-- This machine is based on Gameboy_MiSTer
+-- MEGA65 port done by sy2002 and MJoergen in 2021 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;
@@ -81,8 +84,9 @@ begin
       vga_osm_y2 <= vga_osm_y + to_integer(unsigned(vga_osm_cfg_dxdy_i(7 downto 0)));
    end process calc_boundaries;
 
-   vga_x_div_16 <= to_integer(to_unsigned(vga_col_i, 16)(9 downto 4));
-   vga_y_div_16 <= to_integer(to_unsigned(vga_row_i, 16)(9 downto 4));
+   -- hardcoded for 16x16 font since we are doing div 16 and mod 16
+   vga_x_div_16 <= to_integer(to_unsigned(vga_col_i, 16)(10 downto 4));
+   vga_y_div_16 <= to_integer(to_unsigned(vga_row_i, 16)(10 downto 4));
    vga_x_mod_16 <= to_integer(to_unsigned(vga_col_i, 16)(3 downto 0));
    vga_y_mod_16 <= to_integer(to_unsigned(vga_row_i, 16)(3 downto 0));
 

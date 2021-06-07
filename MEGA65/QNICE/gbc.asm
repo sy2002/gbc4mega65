@@ -61,8 +61,8 @@ GBC$CART_SEL        .EQU 0xFFE1
 GBC$OSM_XY          .EQU 0xFFE2 ; hi-byte = x-start coord, lo-byte = ditto y
 GBC$OSM_DXDY        .EQU 0xFFE3 ; hi-byte = dx, lo-byte = dy
 
-GBC$OSM_COLS        .EQU 45     ; columns (max chars per line)
-GBC$OSM_ROWS        .EQU 36     ; rows (max lines per screen)
+GBC$OSM_COLS        .EQU 80     ; columns (max chars per line)
+GBC$OSM_ROWS        .EQU 45     ; rows (max lines per screen)
 
 GBC$OPT_DX          .EQU 20     ; width of option menu
 GBC$OPT_DY          .EQU 20     ; height of option menu
