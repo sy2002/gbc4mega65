@@ -380,8 +380,8 @@ begin
    -- Additional gbc4mega65 specific MMIO:
    -- 0xB000..0xBFFF: Game Cartridge RAM: 4kb gliding window defined by 0xFFE1 multiplied by 4096
    -- 0xC000..0xCFFF: BIOS/BOOT "ROM RAM": 4kb
-   -- 0xD000..0xD7FF: Screen RAM, "ASCII" codes
-   -- 0xD800..0xDFFF: Attribute RAM for Screen RAM
+   -- 0xD000..0xDFFF: Screen RAM, "ASCII" codes
+   -- 0xE000..0xEFFF: Attribute RAM for Screen RAM
    -- 0xFFE0        : Game Boy control and status register
    -- 0xFFE1        : Selector for the gliding Cartridge RAM window (multiplied by 4096)
    -- 0xFFE2        : X and Y coordinate (in chars, hi/lo) where the OSM window will start
@@ -398,19 +398,19 @@ begin
    csr_en                     <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
    csr_we                     <= csr_en and cpu_data_dir and cpu_data_valid;
    csr_data_out               <= x"0" & "000" & gbc_color_mode & gbc_joy_map & gbc_color & gbc_joystick & gbc_keyboard & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
-   vram_en                    <= '1' when cpu_addr(15 downto 11) = x"D" & "0" else '0'; -- $D000 .. $D7FF
+   vram_en                    <= '1' when cpu_addr(15 downto 12) = x"D" else '0'; -- $D000 .. $DFFF
    vram_we                    <= vram_en and cpu_data_dir and cpu_data_valid;
    vram_data_out_16bit        <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
-   vram_attr_en               <= '1' when cpu_addr(15 downto 11) = x"D" & "1" else '0'; -- $D800 .. $DFFF
+   vram_attr_en               <= '1' when cpu_addr(15 downto 12) = x"E" else '0'; -- $E000 .. $EFFF
    vram_attr_we               <= vram_attr_en and cpu_data_dir and cpu_data_valid;
    vram_attr_data_out_16bit   <= x"00" & vram_attr_data_out_i when vram_attr_en = '1' and vram_attr_we = '0' else (others => '0');
    gbc_bios_addr              <= cpu_addr(11 downto 0);
-   gbc_bios_en                <= '1' when cpu_addr(15 downto 12) = x"C" else '0';
+   gbc_bios_en                <= '1' when cpu_addr(15 downto 12) = x"C" else '0'; -- $C000 .. $CFFF
    gbc_bios_we                <= gbc_bios_en and cpu_data_dir and cpu_data_valid;
    gbc_bios_data_in           <= cpu_data_out(7 downto 0);
    gbc_bios_data_out_16bit    <= x"00" & gbc_bios_data_out when gbc_bios_en = '1' and gbc_bios_we = '0' else (others => '0');
    gbc_cart_addr              <= std_logic_vector(to_unsigned(gbc_cart_sel, 11)) & cpu_addr(11 downto 0); -- up to 8 MB ROM size: 4096 x gbc_cart_sel + address in window
-   gbc_cart_en                <= '1' when cpu_addr(15 downto 12) = x"B" else '0';
+   gbc_cart_en                <= '1' when cpu_addr(15 downto 12) = x"B" else '0'; -- $B000 .. $BFFF
    gbc_cart_we                <= gbc_cart_en and cpu_data_dir and cpu_data_valid;
    gbc_cart_data_in           <= cpu_data_out(7 downto 0);
    gbc_cart_data_out_16bit    <= x"00" & gbc_cart_data_out when gbc_cart_en = '1' and gbc_cart_we = '0' else (others => '0');

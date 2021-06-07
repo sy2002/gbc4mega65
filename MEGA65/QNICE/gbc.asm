@@ -116,7 +116,7 @@ GBC$CF_OLDLIC_CHA   .EQU 0x014B
 MEM_CARTRIDGE_WIN   .EQU 0xB000 ; 4kb window defined by GBC$CART_SEL
 MEM_BIOS            .EQU 0xC000 ; GBC or GB BIOS
 MEM_VRAM            .EQU 0xD000 ; Video RAM: "ASCII" characters
-MEM_VRAM_ATTR       .EQU 0xD800 ; Video RAM: Attributes
+MEM_VRAM_ATTR       .EQU 0xE000 ; Video RAM: Attributes
 
 MEM_BIOS_MAXLEN     .EQU 0x1000 ; maximum length of BIOS
 MEM_CARTWIN_MAXLEN  .EQU 0x1000 ; length of cartridge window

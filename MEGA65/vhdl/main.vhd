@@ -79,12 +79,7 @@ entity main is
 end main;
 
 architecture synthesis of main is
-
-   -- ROM options
-   constant GBC_OSS_ROM       : string := "../../BootROMs/cgb_boot.rom";   -- Alternative Open Source GBC ROM
-
-   constant GBC_ROM           : string := GBC_OSS_ROM;   -- use Open Source ROMs by default
-
+   
    -- debounced signals for the reset button and the joysticks
    signal main_dbnce_reset_n       : std_logic;
    signal main_dbnce_joy1_up_n     : std_logic;
@@ -138,8 +133,6 @@ architecture synthesis of main is
    constant c_dummy_8bit_0    : std_logic_vector(7 downto 0) := (others => '0');
    constant c_dummy_64bit_0   : std_logic_vector(63 downto 0) := (others => '0');
    constant c_dummy_129bit_0  : std_logic_vector(128 downto 0) := (others => '0');
-
-   signal i_reset             : std_logic;
 
 begin
 
