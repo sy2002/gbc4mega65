@@ -112,7 +112,7 @@ $(TCL): Makefile
 	echo "read_verilog { $(VERILOG) }" >> $@
 	echo "read_xdc $(XDC)" >> $@
 	echo "set_property XPM_LIBRARIES {XPM_CDC} [current_project]" >> $@
-	echo "synth_design -top $(TOP) -part xc7a200tfbg484-1 -flatten_hierarchy none" >> $@
+	echo "synth_design -top $(TOP) -part xc7a200tfbg484-2 -flatten_hierarchy none" >> $@
 	echo "opt_design" >> $@
 	echo "place_design" >> $@
 	echo "phys_opt_design" >> $@

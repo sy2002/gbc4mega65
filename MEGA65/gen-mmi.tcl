@@ -89,7 +89,7 @@ foreach memInst $memSorted {
 puts $fp "      </AddressSpace>"
 puts $fp "   </Processor>"
 puts $fp "   <Config>"
-puts $fp "      <Option Name=\"Part\" Val=\"xc7a200tfbg484-1\"/>"
+puts $fp "      <Option Name=\"Part\" Val=\"xc7a200tfbg484-2\"/>"
 puts $fp "   </Config>"
 puts $fp "</MemInfo>"
 close $fp
