@@ -78,11 +78,10 @@ begin
       generic map
       (
          -- m65_const.vhd contains details and explanations
-         -- TODO REVERT BACK TO R3: R2 SETTINGS HERE ARE ONLY FOR SPEEDING UP SYNTHESIS/IMPLEMENTATION DURING DEVELOPMENT
-         CART_ROM_MAX   => CART_ROM_MAX_R2,  -- TODO REVERT BACK TO R3
-         CART_RAM_MAX   => CART_RAM_MAX_R2,  -- TODO REVERT BACK TO R3
-         SYS_ROM_MAX    => SYS_ROM_MAX_R2,   -- TODO REVERT BACK TO R3
-         SYS_RAM_MAX    => SYS_RAM_MAX_R2    -- TODO REVERT BACK TO R3
+         CART_ROM_MAX   => CART_ROM_MAX_R3,
+         CART_RAM_MAX   => CART_RAM_MAX_R3,
+         SYS_ROM_MAX    => SYS_ROM_MAX_R3,
+         SYS_RAM_MAX    => SYS_RAM_MAX_R3
       )
       port map
       (
