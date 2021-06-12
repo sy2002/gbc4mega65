@@ -16,9 +16,9 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use work.qnice_tools.all;
 
 library work;
+use work.qnice_tools.all;
 use work.types_pkg.all;
 use work.video_modes_pkg.all;
 
