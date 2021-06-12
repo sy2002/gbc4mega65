@@ -307,7 +307,7 @@ begin
          kb_io1                 => kb_io1,
          kb_io2                 => kb_io2,
          
-         -- Audio
+         -- Audio: Unsigned value that can be sampled
          main_pcm_audio_left    => main_pcm_audio_left,
          main_pcm_audio_right   => main_pcm_audio_right,
          
@@ -368,17 +368,19 @@ begin
       ); -- i_main : entity work.main is
 
    -- Convert the Game Boy's PCM output to pulse density modulation
-   -- TODO: Is this component configured correctly when it comes to clock speed, constants used within
-   -- the component, subtracting 32768 while converting to signed, etc.
    pcm2pdm : entity work.pcm_to_pdm
       port map
       (
          cpuclock                => main_clk,
+         
+         -- convert unsigned GBC output to signed because pcm_to_pdm expects signed  
          pcm_left                => signed(signed(main_pcm_audio_left) - 32768),
          pcm_right               => signed(signed(main_pcm_audio_right) - 32768),
+         
+         -- Pulse Density Modulation (PDM is supposed to sound better than PWM on MEGA65)
          pdm_left                => pwm_l,
          pdm_right               => pwm_r,
-         audio_mode              => '0'
+         audio_mode              => '0'         -- 0=PDM, 1=PWM
       ); -- pcm2pdm : entity work.pcm_to_pdm
 
 
@@ -571,7 +573,7 @@ begin
          pcm_rst      => main_rst,
          pcm_clk      => main_clk,
          pcm_clken    => main_pcm_clken,
-         pcm_l        => std_logic_vector(main_pcm_audio_left  xor X"8000"),
+         pcm_l        => std_logic_vector(main_pcm_audio_left  xor X"8000"), -- GBC audio is unsigned, PCM audio is signed
          pcm_r        => std_logic_vector(main_pcm_audio_right xor X"8000"),
          pcm_acr      => main_pcm_acr,
          pcm_n        => main_pcm_n,

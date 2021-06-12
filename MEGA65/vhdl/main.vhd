@@ -17,7 +17,7 @@ entity main is
       kb_io1                   : out std_logic;
       kb_io2                   : in  std_logic;
 
-      -- Audio
+      -- Audio: Unsigned value that can be sampled
       main_pcm_audio_left      : out std_logic_vector(15 downto 0);
       main_pcm_audio_right     : out std_logic_vector(15 downto 0);
 
@@ -162,7 +162,7 @@ begin
          gbc_bios_addr           => main_gbc_bios_addr,    -- output
          gbc_bios_do             => main_gbc_bios_data,    -- input
 
-         -- audio
+         -- audio: unsigned value that can be sampled
          audio_l                 => main_pcm_audio_left,   -- output
          audio_r                 => main_pcm_audio_right,  -- output
 
