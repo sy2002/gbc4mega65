@@ -116,7 +116,7 @@ constant GB_DX             : integer := 160;                   -- Game Boy's X p
 constant GB_DY             : integer := 144;                   -- ditto Y
 constant VGA_DX            : integer := VIDEO_MODE.H_PIXELS;   -- 1280
 constant VGA_DY            : integer := VIDEO_MODE.V_PIXELS;   -- 720
-constant GB_TO_VGA_SCALE   : integer := 4;                     -- 160 x 144 => 4x => 640 x 576
+constant GB_TO_VGA_SCALE   : integer := 5;                     -- 160 x 144 => 5x => 800 x 720
 
 -- Constants for VGA output
 constant FONT_DX           : integer := 16;

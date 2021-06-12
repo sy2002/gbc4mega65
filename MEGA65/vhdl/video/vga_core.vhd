@@ -6,6 +6,9 @@
 -- This block converts the 15-bit RGB of the Game Boy to 24-bit RGB
 -- that can be displayed on screen (includes color modes and color grading)
 --
+-- CAVEAT: Even though the component takes a scaling factor, the scaler is
+-- currently hardcoded to 5x
+--
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 and MJoergen in 2021 and licensed under GPL v3
 ----------------------------------------------------------------------------------
@@ -13,14 +16,15 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+use ieee.numeric_std_unsigned.all;
 
 entity vga_core is
    generic  (
-      G_VGA_DX               : natural;  -- 800
-      G_VGA_DY               : natural;  -- 600
+      G_VGA_DX               : natural;  -- 1280
+      G_VGA_DY               : natural;  -- 720
       G_GB_DX                : natural;  -- 160
       G_GB_DY                : natural;  -- 144
-      G_GB_TO_VGA_SCALE      : natural   -- 4 : 160x144 => 640x576
+      G_GB_TO_VGA_SCALE      : natural   -- 5 : 160x144 => 800x720
    );
    port (
       -- pixel clock and current position on screen relative to pixel clock
@@ -49,8 +53,15 @@ entity vga_core is
    );
 end vga_core;
 
-architecture synthesis of vga_core is
+architecture synthesis of vga_core is   
 
+   -- scaled width/height of the core's output and centered screen start positions 
+   constant width         : integer range 0 to G_VGA_DX := G_GB_DX * G_GB_TO_VGA_SCALE;
+   constant height        : integer range 0 to G_VGA_DY := G_GB_DY * G_GB_TO_VGA_SCALE;
+   constant start_x       : integer range 0 to G_VGA_DX - 1 := (G_VGA_DX / 2) - (width / 2);
+   constant start_y       : integer range 0 to G_VGA_DY - 1 := (G_VGA_DY / 2) - (height / 2);
+   
+   -- delayed signals
    signal vga_col_next    : integer range 0 to G_VGA_DX - 1;
    signal vga_row_next    : integer range 0 to G_VGA_DY - 1;
    signal vga_core_on     : std_logic;
@@ -61,25 +72,14 @@ architecture synthesis of vga_core is
 
 begin
 
-   -- Scaler: 160 x 144 => 4x => 640 x 576
-   -- Scaling by 4 is a convenient special case: We just need to use a SHR operation.
-   -- We are doing this by taking the bits "9 downto 2" from the current column and row.
-   -- This is a hardcoded and very fast operation.
+   -- Scaler: 160 x 144 => 5x => 800 x 720
    p_scaler : process (all)
-      variable src_x: std_logic_vector(9 downto 0);
-      variable src_y: std_logic_vector(9 downto 0);
-      variable dst_x: std_logic_vector(7 downto 0);
-      variable dst_y: std_logic_vector(7 downto 0);
       variable dst_x_i: integer range 0 to G_GB_DX - 1;
       variable dst_y_i: integer range 0 to G_GB_DY - 1;
       variable nextrow: integer range 0 to G_GB_DY - 1;
    begin
-      src_x   := std_logic_vector(to_unsigned(vga_col_i, 10));
-      src_y   := std_logic_vector(to_unsigned(vga_row_i, 10));
-      dst_x   := src_x(9 downto 2);
-      dst_y   := src_y(9 downto 2);
-      dst_x_i := to_integer(unsigned(dst_x));
-      dst_y_i := to_integer(unsigned(dst_y));
+      dst_x_i := (vga_col_i - start_x) / 5;
+      dst_y_i := (vga_row_i - start_y) / 5;
       nextrow := dst_y_i + 1;
 
       -- The dual port & dual clock RAM needs one clock cycle to provide the data. Therefore we need
@@ -115,8 +115,8 @@ begin
    vga_core_vram_addr_o <= double_buf_read & std_logic_vector(to_unsigned(vga_row_next * G_GB_DX + vga_col_next, 15));
 
    vga_core_on <= '1' when
-            vga_col_i >= 0 and vga_col_i < G_GB_DX * G_GB_TO_VGA_SCALE and
-            vga_row_i >= 0 and vga_row_i < G_GB_DY * G_GB_TO_VGA_SCALE
+            vga_col_i >= start_x and vga_col_i < start_x + width and
+            vga_row_i >= start_y and vga_row_i < start_y + height
          else '0';
 
    p_delay : process (clk_i)

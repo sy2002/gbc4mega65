@@ -6,13 +6,15 @@ Even though this release is called "beta" it is **super stable and should play 9
 ### What is new?
 
 * HDMI video and audio support (for MEGA65 R3 machines only)
-* Migrated the core's screen resolutin to the PAL 720x576p @ 50Hz standard for better HDMI compatibility (coming from SVGA 800x600 @ 60 Hz)
-* Smart support of both MEGA65 SD Card slots: If a card is inserted into the backside slot then this card is used, otherwise the card in the bottom/trapdoor slot is used
+* Migrated the core's screen resolution to the 720p @ 60Hz standard (1280x720 pixels) for better HDMI compatibility (coming from SVGA 800x600 @ 60 Hz)
+* Smoother display (less flickering/artifacts) due to double-buffering
+WIP Heavily improved the stability and robustness of the SD card reading
+WIP Smart support of both MEGA65 SD Card slots: If a card is inserted into the backside slot then this card is used, otherwise the card in the bottom/trapdoor slot is used
 
 ### Why is the release still called "beta"?
 
 * No HyperRAM: Cannot play games that have ROMs larger than 1 MB (MEGA65 R3 machine) or 256 kB (MEGA65 R2 machine)
-* Flickering in rare situations due to no double bufffering, no frame blending
+* Flickering in rare situations due to no frame blending
 * No savegames (i.e. no battery buffered cartrige RAM)
 
 Version 0.7 (beta) - May 3, 2021

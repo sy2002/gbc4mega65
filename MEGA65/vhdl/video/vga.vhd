@@ -20,7 +20,7 @@ entity vga is
       G_VIDEO_MODE           : video_modes_t;
       G_GB_DX                : natural;  -- 160
       G_GB_DY                : natural;  -- 144
-      G_GB_TO_VGA_SCALE      : natural;  -- 4 : 160x144 => 640x576
+      G_GB_TO_VGA_SCALE      : natural;  -- 5 : 160x144 => 800x720
       G_FONT_DX              : natural;  -- 16
       G_FONT_DY              : natural   -- 16
    );
