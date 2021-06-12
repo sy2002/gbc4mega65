@@ -779,7 +779,7 @@ LOAD_CART       INCRB
                 RSUB    _LC_BLINKLNS, 1
                 MOVE    R8, R5                  ; save R8 to be restored later
                 MOVE    CUR_X, R8               ; print "Loading ... " to ..
-                MOVE    17, @R8                 ; .. the bottom line
+                MOVE    33, @R8                 ; .. the bottom line
                 MOVE    CUR_Y, R8
                 MOVE    GBC$OSM_ROWS, @R8
                 SUB     1, @R8
