@@ -373,7 +373,13 @@ begin
       (
          cpuclock                => main_clk,
          
-         -- convert unsigned GBC output to signed because pcm_to_pdm expects signed  
+         -- convert unsigned GBC output to signed because pcm_to_pdm "expects signed"
+         -- in reality, pcm_to_pdm is working on unsigned data, which is why it sounds great,
+         -- because the Game Boy is also producing unsigned data
+         -- Caveat: pcm_to_pcm is just adding 32768 to the value that comes in, so we are
+         -- subtracting it beforehand. This is not really converting from unsigned to signed,
+         -- because the Game Boy's unsigned output is not centered around 0x8000 but fluctuates
+         -- depending on the amount of voices.
          pcm_left                => signed(signed(main_pcm_audio_left) - 32768),
          pcm_right               => signed(signed(main_pcm_audio_right) - 32768),
          
@@ -573,8 +579,13 @@ begin
          pcm_rst      => main_rst,
          pcm_clk      => main_clk,
          pcm_clken    => main_pcm_clken,
-         pcm_l        => std_logic_vector(main_pcm_audio_left  xor X"8000"), -- GBC audio is unsigned, PCM audio is signed
-         pcm_r        => std_logic_vector(main_pcm_audio_right xor X"8000"),
+         
+--         pcm_l        => std_logic_vector(main_pcm_audio_left  xor X"8000"), -- GBC audio is unsigned, PCM audio is signed
+--         pcm_r        => std_logic_vector(main_pcm_audio_right xor X"8000"),
+         
+         pcm_l        => std_logic_vector('0' & main_pcm_audio_left(15 downto 1)),
+         pcm_r        => std_logic_vector('0' & main_pcm_audio_right(15 downto 1)),
+         
          pcm_acr      => main_pcm_acr,
          pcm_n        => main_pcm_n,
          pcm_cts      => main_pcm_cts,
