@@ -9,6 +9,9 @@
 set_property -dict {PACKAGE_PIN V13 IOSTANDARD LVCMOS33} [get_ports CLK]
 create_clock -period 10.000 -name CLK [get_ports CLK]
 
+## Internal clock divider sdcardclk that creates the 25 MHz used by sd_spi.vhd
+create_generated_clock -name sdcardclk -source [get_pins */clk_gen/i_clk_gb_qnice/CLKOUT1] -divide_by 2 [get_pins MEGA65/QNICE_SOC/sd_card/Slow_Clock_25MHz_reg/Q]
+
 create_generated_clock -name gbmainclk [get_pins */clk_gen/i_clk_gb_qnice/CLKOUT0]
 create_generated_clock -name qniceclk  [get_pins */clk_gen/i_clk_gb_qnice/CLKOUT1]
 create_generated_clock -name pixelclk  [get_pins */clk_gen/i_clk_720p_hdmi/CLKOUT1]
