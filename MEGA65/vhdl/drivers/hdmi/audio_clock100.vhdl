@@ -34,7 +34,7 @@ entity audio_clock is
         rsti    : in    std_logic;          -- reset in
         clki    : in    std_logic;          -- reference clock in
         rsto    : out   std_logic;          -- reset out (from MMCM lock status)
-        clk     : inout   std_logic;          -- audio clock out (fs * ratio)
+        clk     : out   std_logic;          -- audio clock out (fs * ratio)
         clken   : out   std_logic           -- audio clock enable out (fs)
 
     );
@@ -42,11 +42,11 @@ end entity audio_clock;
 
 architecture synth of audio_clock is
 
-  signal locked   : std_logic;     -- MMCM lock status
-  signal clk_60 : stD_logic;       -- 60MHz intermediate clock
-  signal clk_u    : std_logic;     -- unbuffered output clock
-  signal clko_fb  : std_logic;     -- unbuffered feedback clock
-  signal clki_fb  : std_logic;    -- feedback clock
+  signal locked   : std_logic;      -- MMCM lock status
+  signal clk_60   : std_logic;      -- 60MHz intermediate clock
+  signal clk_u    : std_logic;      -- unbuffered output clock
+  signal clko_fb  : std_logic;      -- unbuffered feedback clock
+  signal clki_fb  : std_logic;      -- feedback clock
   signal count    : integer range 0 to ratio-1;
   signal clk12288_counter : unsigned(26 downto 0) := to_unsigned(0,27);
   
@@ -71,45 +71,24 @@ begin
         end if;
     end process;
 
-    MMCM: mmcme2_adv
+    i_clk: mmcme2_adv
     generic map(
         bandwidth               => "OPTIMIZED",
         clkfbout_mult_f         => 12.0, -- 100MHz x 12 = 1200 mhz
         clkfbout_phase          => 0.0,
         clkfbout_use_fine_ps    => false,
         divclk_divide           => 1,    -- keep 1200MHz
-        clkin1_period           => 20.0,
-        clkin2_period           => 0.0,
-        clkout0_divide_f        => 97.625, -- 1200 / 97.625MHz = 12.291933MHz.
-                                           -- Error = 3.933 KHz
-        clkout0_duty_cycle      => 0.5,
-        clkout0_phase           => 0.0,
-        clkout0_use_fine_ps     => false,
+        clkin1_period           => 10.0,
+--        clkin2_period           => 0.0,
+--        clkout0_divide_f        => 97.625, -- 1200 / 97.625MHz = 12.291933MHz.
+--                                           -- Error = 3.933 KHz
+--        clkout0_duty_cycle      => 0.5,
+--        clkout0_phase           => 0.0,
+--        clkout0_use_fine_ps     => false,
         clkout1_divide          => 20,      -- 1200 / 20 = 60 MHz
         clkout1_duty_cycle      => 0.5,
         clkout1_phase           => 0.0,
         clkout1_use_fine_ps     => false,
-        clkout2_divide          => 1,
-        clkout2_duty_cycle      => 0.5,
-        clkout2_phase           => 0.0,
-        clkout2_use_fine_ps     => false,
-        clkout3_divide          => 1,
-        clkout3_duty_cycle      => 0.5,
-        clkout3_phase           => 0.0,
-        clkout3_use_fine_ps     => false,
-        clkout4_cascade         => false,
-        clkout4_divide          => 1,
-        clkout4_duty_cycle      => 0.5,
-        clkout4_phase           => 0.0,
-        clkout4_use_fine_ps     => false,
-        clkout5_divide          => 1,
-        clkout5_duty_cycle      => 0.5,
-        clkout5_phase           => 0.0,
-        clkout5_use_fine_ps     => false,
-        clkout6_divide          => 1,
-        clkout6_duty_cycle      => 0.5,
-        clkout6_phase           => 0.0,
-        clkout6_use_fine_ps     => false,
         compensation            => "ZHOLD",
         is_clkinsel_inverted    => '0',
         is_psen_inverted        => '0',
@@ -139,13 +118,6 @@ begin
         clkout0b        => open,
         clkout1         => clk_60,
         clkout1b        => open,
-        clkout2         => open,
-        clkout2b        => open,
-        clkout3         => open,
-        clkout3b        => open,
-        clkout4         => open,
-        clkout5         => open,
-        clkout6         => open,
         dclk            => '0',
         daddr           => (others => '0'),
         den             => '0',
@@ -176,7 +148,7 @@ begin
     process(clk_60)
     begin 
       if rising_edge(clk_60) then
-        -- 12.228 MHz is our goal, and we clock at 60MHz
+        -- 12.288 MHz is our goal, and we clock at 60MHz
         -- So we want to add 0.2038 x 2 = 0.4076 of a
         -- half-clock counter every cycle.
         -- 27487791 / 2^26 = .409600005

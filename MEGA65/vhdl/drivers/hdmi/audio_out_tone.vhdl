@@ -13,7 +13,10 @@
 -- audio stream works on as many HDMI decvices as possible.
 --
 --
--- What I changed: Renamed from audio_out_test_one to audio_out_tone.
+-- What I changed:
+-- * Renamed from audio_out_test_one to audio_out_tone.
+-- * Removed unused generic fref
+-- * Changed inout ports into clear in or out ports
 
 
 --------------------------------------------------------------------------------
@@ -40,24 +43,20 @@ use ieee.numeric_std.all;
 library work;
 
 entity audio_out_tone is
-    generic (
-        fref        : real                                  -- reference clock frequency (MHz)
-    );
     port (
-
-      -- Allow switching between these to audio sample rates
-      select_44100 : in std_logic; 
+        -- Allow switching between these to audio sample rates
+        select_44100 : in std_logic; 
       
         ref_rst     : in    std_logic;                      -- reference clock reset
         ref_clk     : in    std_logic;                      -- reference clock (100MHz)
 
-        pcm_rst     : inout   std_logic;                      -- audio clock reset
-        pcm_clk     : inout   std_logic;                      -- audio clock (256Fs = 12.288MHz)
-        pcm_clken   : inout   std_logic;                      -- audio clock enable (Fs = 48kHz)
+        pcm_rst     : out   std_logic;                      -- audio clock reset
+        pcm_clk     : out   std_logic;                      -- audio clock (256Fs = 12.288MHz)
+        pcm_clken   : out   std_logic;                      -- audio clock enable (Fs = 48kHz)
 
-        audio_left_slow : in std_logic_vector(19 downto 0);
-        audio_right_slow : in std_logic_vector(19 downto 0);
-        sample_ready_toggle : inout std_logic;
+        audio_left_slow     : in std_logic_vector(15 downto 0);
+        audio_right_slow    : in std_logic_vector(15 downto 0);
+        sample_ready_toggle : in std_logic;
         
         pcm_l       : out   std_logic_vector(15 downto 0);  -- } synchronous to pcm_clk
         pcm_r       : out   std_logic_vector(15 downto 0)   -- } valid on pcm_clken
@@ -72,27 +71,23 @@ architecture synth of audio_out_tone is
 
 begin
 
-    CLOCK: entity work.audio_clock
-        generic map (
+    i_audio_clk : entity work.audio_clock
+        generic map (            
             fs      => 48.0,
             ratio   => 256
         )
       port map (
-        select_44100 => select_44100,
-            rsti    => ref_rst,
-            clki    => ref_clk,
-            rsto    => pcm_rst,
-            clk     => pcm_clk,
-            clken   => pcm_clken
+            select_44100 => select_44100,
+            rsti         => ref_rst,
+            clki         => ref_clk,
+            rsto         => pcm_rst,
+            clk          => pcm_clk,
+            clken        => pcm_clken
         );
 
-    process(pcm_rst,pcm_clk)
+    process(pcm_clk)
     begin
-        if pcm_rst = '1' then
-
-
-        elsif rising_edge(pcm_clk) then
-
+        if rising_edge(pcm_clk) then
           -- Receive samples via slow toggle clock from CPU clock domain
           if last_sample_ready_toggle /= sample_ready_toggle then
             sample_stable_cycles <= 0;
@@ -100,8 +95,8 @@ begin
           else
             sample_stable_cycles <= sample_stable_cycles + 1;
             if sample_stable_cycles = 8 then
-              pcm_l <= audio_left_slow(19 downto 4);
-              pcm_r <= audio_right_slow(19 downto 4);
+              pcm_l <= audio_left_slow;
+              pcm_r <= audio_right_slow;
             end if;
           end if;
           

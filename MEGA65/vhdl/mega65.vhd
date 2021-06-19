@@ -108,6 +108,9 @@ constant GB_CLK_SPEED      : natural := 33_554_432;
 constant QNICE_CLK_SPEED   : natural := 50_000_000;
 constant PIXEL_CLK_SPEED   : natural := 74_250_000;
 
+-- HDMI PCM sampling rate
+constant HDMI_PCM_SAMPLING : natural := 48_000;
+
 -- video mode selection: 720p @ 60 Hz
 constant VIDEO_MODE        : video_modes_t := C_VGA_1280_720_60;
 
@@ -148,11 +151,8 @@ signal main_gbc_bios_data       : std_logic_vector(7 downto 0);
 -- Audio
 signal main_pcm_audio_left      : std_logic_vector(15 downto 0);
 signal main_pcm_audio_right     : std_logic_vector(15 downto 0);
-signal main_pcm_clken           : std_logic;
-signal main_pcm_clken_count     : integer range 0 to 698;
-signal main_pcm_acr             : std_logic;                     -- HDMI ACR packet strobe (frequency = 128fs/N e.g. 1kHz)
-signal main_pcm_n               : std_logic_vector(19 downto 0); -- HDMI ACR N value
-signal main_pcm_cts             : std_logic_vector(19 downto 0); -- HDMI ACR CTS value
+signal main_sample_ready_toggle : std_logic := '0';
+
 
 -- LCD interface
 signal main_pixel_out_we        : std_logic;
@@ -188,6 +188,31 @@ signal main_qngbc_color         : std_logic;
 signal main_qngbc_joy_map       : std_logic_vector(1 downto 0);
 signal main_qngbc_color_mode    : std_logic;
 signal main_qngbc_keyb_matrix   : std_logic_vector(15 downto 0);
+
+---------------------------------------------------------------------------------------------
+-- pcm_clk
+---------------------------------------------------------------------------------------------
+
+constant pcm_acr_cnt_range       : integer := (HDMI_PCM_SAMPLING * 256) / 1000;
+constant pcm_audio_cnt_interval  : integer := (4 * GB_CLK_SPEED) / HDMI_PCM_SAMPLING;
+
+signal pcm_rst                   : std_logic;
+signal pcm_clk                   : std_logic;                     -- 256 * 48 kHz = 12.288 MHz
+signal pcm_clken                 : std_logic;                     -- 48 kHz (via clock divider)
+
+signal pcm_acr                   : std_logic;                     -- HDMI ACR packet strobe (frequency = 128fs/N e.g. 1kHz)
+signal pcm_n                     : std_logic_vector(19 downto 0); -- HDMI ACR N value
+signal pcm_cts                   : std_logic_vector(19 downto 0); -- HDMI ACR CTS value
+
+signal slow_pcm_audio_left       : std_logic_vector(15 downto 0);
+signal slow_pcm_audio_right      : std_logic_vector(15 downto 0);
+signal pcm4hdmi_left             : std_logic_vector(15 downto 0);
+signal pcm4hdmi_right            : std_logic_vector(15 downto 0);
+
+signal pcm_sample_ready_toggle   : std_logic := '0';
+
+signal pcm_audio_counter         : integer := 0;
+signal pcm_acr_counter           : integer range 0 to pcm_acr_cnt_range := 0;
 
 ---------------------------------------------------------------------------------------------
 -- qnice_clk
@@ -515,48 +540,76 @@ begin
          vdac_blank_n_o       => vdac_blank_n
       ); -- i_vga : entity work.vga
 
-   p_main_pcm_clken : process (main_clk)
-   begin
-      if rising_edge(main_clk) then
-         main_pcm_clken <= '0';
-         if main_pcm_clken_count = 0 then
-            main_pcm_clken_count <= 698;  -- 33554432 / 699 ~ 48000
-            main_pcm_clken <= '1';
-         else
-            main_pcm_clken_count <= main_pcm_clken_count - 1;
-         end if;
-      end if;
-   end process p_main_pcm_clken;
-
    -- N and CTS values for HDMI Audio Clock Regeneration.
    -- depends on pixel clock and audio sample rate
-   main_pcm_n   <= std_logic_vector(to_unsigned(6144,  main_pcm_n'length));    -- 48000*128/1000
-   main_pcm_cts <= std_logic_vector(to_unsigned(PIXEL_CLK_SPEED / 1000, main_pcm_cts'length));  -- vga_clk/1000
+   pcm_n   <= std_logic_vector(to_unsigned((HDMI_PCM_SAMPLING * 128) / 1000, pcm_n'length)); -- 6144 is correct according to HDMI spec.
+   pcm_cts <= std_logic_vector(to_unsigned(PIXEL_CLK_SPEED / 1000, pcm_cts'length));
 
    -- ACR packet rate should be 128fs/N = 1kHz
-   p_main_pcm_acr : process (main_clk)
-      variable count : integer range 0 to 47;
+   -- pcm_clk is at 12.288 MHz
+   p_pcm_acr : process (pcm_clk)
    begin
-      if rising_edge(main_clk) then
-         if main_pcm_clken = '1' then  -- 48 kHz
-            main_pcm_acr <= '0';
-            if count = 47 then
-               count := 0;
-               main_pcm_acr <= '1';    -- 1 kHz
-            else
-               count := count+1;                
-            end if;
-         end if;
-
-         if main_rst = '1' then
-            count := 0;
-            main_pcm_acr <= '0';
+      if rising_edge(pcm_clk) then
+         -- Generate 1KHz ACR pulse train from 12.288MHz
+         if pcm_acr_counter /= (pcm_acr_cnt_range - 1) then
+            pcm_acr_counter <= pcm_acr_counter + 1;
+            pcm_acr <= '0';
+         else
+            pcm_acr <= '1';
+            pcm_acr_counter <= 0;
          end if;
       end if;
-   end process p_main_pcm_acr;
-
-   i_vga_to_hdmi : entity work.vga_to_hdmi
+   end process;
+   
+   -- Kind-of Clock-domain-crossing mechanism 1:1 taken from Paul's MEGA65 code
+   -- The following comment is from Paul, too:
+   --    "We need to pass audio to 12.288 MHz clock domain.
+   --     Easiest way is to hold samples constant for 16 ticks, and
+   --     have a slow toggle
+   --     At 40.5MHz and 48KHz sample rate, we have a ratio of 843.75
+   --     Thus we need to calculate the remainder, so that we can get the
+   --     sample rate EXACTLY 48KHz.
+   --     Otherwise we end up using 844, which gives a sample rate of
+   --     40.5MHz / 844 = 47.986KHz, which might just be enough to throw
+   --     some monitors out, since it means that the CTS / N rates will
+   --     be wrong.
+   --     (Or am I just chasing my tail, because this is only used to set the
+   --     rate at which we LATCH the samples?)"
+   p_cdc_and_oversample : process(main_clk)
+   begin
+      if rising_edge(main_clk) then
+         if pcm_audio_counter < pcm_audio_cnt_interval then
+            pcm_audio_counter <= pcm_audio_counter + 4;
+         else
+            pcm_audio_counter <= pcm_audio_counter - pcm_audio_cnt_interval;
+            main_sample_ready_toggle <= not main_sample_ready_toggle;
+            slow_pcm_audio_left  <= main_pcm_audio_left;
+            slow_pcm_audio_right <= main_pcm_audio_right;
+         end if;
+      end if;
+   end process;   
+      
+   -- Feed audio into digital video feed
+   i_audio_tone: entity work.audio_out_tone
       port map (
+         select_44100         => '0',                    -- use 48 kHz
+         ref_rst              => not RESET_N,
+         ref_clk              => CLK,
+         pcm_rst              => pcm_rst,
+         pcm_clk              => pcm_clk,                -- 256 * 48 kHz = 12.288 MHz
+         pcm_clken            => pcm_clken,              -- 48 kHz
+   
+         audio_left_slow      => slow_pcm_audio_left,
+         audio_right_slow     => slow_pcm_audio_right,
+         sample_ready_toggle  => pcm_sample_ready_toggle,
+            
+         pcm_l(15 downto 0)   => pcm4hdmi_left,
+         pcm_r(15 downto 0)   => pcm4hdmi_right
+      );
+   
+   
+      i_vga_to_hdmi : entity work.vga_to_hdmi
+         port map (
          select_44100 => '0',
          dvi          => '0',
          vic          => std_logic_vector(to_unsigned(4,8)),  -- CEA/CTA VIC 4=720p @ 60 Hz
@@ -575,9 +628,9 @@ begin
          vga_b        => vga_blue,
 
          -- PCM audio
-         pcm_rst      => main_rst,
-         pcm_clk      => main_clk,
-         pcm_clken    => main_pcm_clken,
+         pcm_rst      => pcm_rst,
+         pcm_clk      => pcm_clk,                             -- 256 * 48 kHz = 12.288 MHz
+         pcm_clken    => pcm_clken,                           -- 48 kHz
                   
          -- GBC audio is unsigned, PCM audio is signed
          --
@@ -589,12 +642,12 @@ begin
          -- signed audio that we need here because the GBC audio is not centered around $8000 but its
          -- centering depends on how many voices are playing. That means that we are not hitting the
          -- AC zero line. We found this acceptable though, as we do not hear the effect.
-         pcm_l        => "0" & std_logic_vector(main_pcm_audio_left(15 downto 1)),
-         pcm_r        => "0" & std_logic_vector(main_pcm_audio_right(15 downto 1)),
+         pcm_l        => "0" & std_logic_vector(pcm4hdmi_left(15 downto 1)),
+         pcm_r        => "0" & std_logic_vector(pcm4hdmi_right(15 downto 1)),
          
-         pcm_acr      => main_pcm_acr,
-         pcm_n        => main_pcm_n,
-         pcm_cts      => main_pcm_cts,
+         pcm_acr      => pcm_acr,
+         pcm_n        => pcm_n,
+         pcm_cts      => pcm_cts,
 
          -- TMDS output (parallel)
          tmds         => vga_tmds
@@ -675,6 +728,17 @@ begin
          dest_clk               => qnice_clk,
          dest_out(15 downto 0)  => qnice_qngbc_keyb_matrix
       ); -- i_main2qnice: xpm_cdc_array_single
+      
+   i_main2pcm: xpm_cdc_array_single
+      generic map (
+         WIDTH => 1
+      )
+      port map (
+         src_clk                => main_clk,
+         src_in(0)              => main_sample_ready_toggle,
+         dest_clk               => pcm_clk,
+         dest_out(0)            => pcm_sample_ready_toggle
+      ); -- i_main2pcm: xpm_cdc_array_single      
 
    i_qnice2vga: xpm_cdc_array_single
       generic map (
