@@ -47,7 +47,7 @@ package video_modes_pkg is
       V_POL     => '0'        -- vertical sync pulse polarity (1 = positive, 0 = negative)
    );
 
-   -- Taken from section 4.3 in the document CEA-861-D
+   -- Taken from sections 4.3 and A.4 in the document CEA-861-D
    constant C_VGA_1280_720_60 : video_modes_t := (
       CLK_KHZ   => 74250,     -- 74.25 MHz
       H_PIXELS  => 1280,      -- horizontal display width in pixels
@@ -58,8 +58,8 @@ package video_modes_pkg is
       V_FP      =>    5,      -- vertical front porch width in rows
       V_PULSE   =>    5,      -- vertical sync pulse width in rows
       V_BP      =>   20,      -- vertical back porch width in rows
-      H_POL     => '0',       -- horizontal sync pulse polarity (1 = positive, 0 = negative)
-      V_POL     => '0'        -- vertical sync pulse polarity (1 = positive, 0 = negative)
+      H_POL     => '1',       -- horizontal sync pulse polarity (1 = positive, 0 = negative)
+      V_POL     => '1'        -- vertical sync pulse polarity (1 = positive, 0 = negative)
    );
 
 end package video_modes_pkg;

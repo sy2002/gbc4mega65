@@ -555,7 +555,6 @@ begin
       end if;
    end process p_main_pcm_acr;
 
-
    i_vga_to_hdmi : entity work.vga_to_hdmi
       port map (
          select_44100 => '0',
@@ -563,8 +562,8 @@ begin
          vic          => std_logic_vector(to_unsigned(4,8)),  -- CEA/CTA VIC 4=720p @ 60 Hz
          aspect       => "10",                                -- 01=4:3, 10=16:9
          pix_rep      => '0',                                 -- no pixel repetition
-         vs_pol       => VIDEO_MODE.V_POL,                    -- horizontal polarity: negative
-         hs_pol       => VIDEO_MODE.H_POL,                    -- vertaical polarity: negative
+         vs_pol       => VIDEO_MODE.V_POL,                    -- horizontal polarity: positive
+         hs_pol       => VIDEO_MODE.H_POL,                    -- vertaical polarity: positive
 
          vga_rst      => vga_rst,                             -- active high reset
          vga_clk      => vga_clk,                             -- VGA pixel clock
@@ -579,12 +578,19 @@ begin
          pcm_rst      => main_rst,
          pcm_clk      => main_clk,
          pcm_clken    => main_pcm_clken,
-         
---         pcm_l        => std_logic_vector(main_pcm_audio_left  xor X"8000"), -- GBC audio is unsigned, PCM audio is signed
---         pcm_r        => std_logic_vector(main_pcm_audio_right xor X"8000"),
-         
-         pcm_l        => std_logic_vector('0' & main_pcm_audio_left(15 downto 1)),
-         pcm_r        => std_logic_vector('0' & main_pcm_audio_right(15 downto 1)),
+                  
+         -- GBC audio is unsigned, PCM audio is signed
+         --
+         -- We are doing a shift right to avoid overdrive that was observed on some HDMI devices.
+         -- Warning: Doing an arithmetic shift right leads do very bad cracking noises, that can
+         -- be well heard in for example Dig Dug and Super Mario Land 1.
+         --
+         -- Unfortunatelly we do not know a high-quality way of converting the unsigned GBC audio to the
+         -- signed audio that we need here because the GBC audio is not centered around $8000 but its
+         -- centering depends on how many voices are playing. That means that we are not hitting the
+         -- AC zero line. We found this acceptable though, as we do not hear the effect.
+         pcm_l        => "0" & std_logic_vector(main_pcm_audio_left(15 downto 1)),
+         pcm_r        => "0" & std_logic_vector(main_pcm_audio_right(15 downto 1)),
          
          pcm_acr      => main_pcm_acr,
          pcm_n        => main_pcm_n,
