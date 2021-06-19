@@ -48,6 +48,11 @@ package video_modes_pkg is
    );
 
    -- Taken from sections 4.3 and A.4 in the document CEA-861-D
+   --
+   -- changed V_BP to 21, which solved this HDMI analyzer error:
+   --   "Number of HSYNC pulses from VSYNC active edge to Video Data Period should be 25 (VS_TO_VIDEO)
+   --    Error : VS_TO_VIDEO does not equal values for the selected video format(24)."
+   --    
    constant C_VGA_1280_720_60 : video_modes_t := (
       CLK_KHZ   => 74250,     -- 74.25 MHz
       H_PIXELS  => 1280,      -- horizontal display width in pixels
@@ -57,7 +62,7 @@ package video_modes_pkg is
       H_BP      =>  220,      -- horizontal back porch width in pixels
       V_FP      =>    5,      -- vertical front porch width in rows
       V_PULSE   =>    5,      -- vertical sync pulse width in rows
-      V_BP      =>   20,      -- vertical back porch width in rows
+      V_BP      =>   21,      -- vertical back porch width in rows
       H_POL     => '1',       -- horizontal sync pulse polarity (1 = positive, 0 = negative)
       V_POL     => '1'        -- vertical sync pulse polarity (1 = positive, 0 = negative)
    );
