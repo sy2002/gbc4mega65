@@ -603,8 +603,8 @@ begin
          audio_right_slow     => slow_pcm_audio_right,
          sample_ready_toggle  => pcm_sample_ready_toggle,
             
-         pcm_l(15 downto 0)   => pcm4hdmi_left,
-         pcm_r(15 downto 0)   => pcm4hdmi_right
+         pcm_l                => pcm4hdmi_left,
+         pcm_r                => pcm4hdmi_right
       );
    
    

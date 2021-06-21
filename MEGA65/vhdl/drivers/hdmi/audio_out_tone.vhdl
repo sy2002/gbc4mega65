@@ -60,7 +60,6 @@ entity audio_out_tone is
         
         pcm_l       : out   std_logic_vector(15 downto 0);  -- } synchronous to pcm_clk
         pcm_r       : out   std_logic_vector(15 downto 0)   -- } valid on pcm_clken
-
     );
 end entity audio_out_tone;
 
