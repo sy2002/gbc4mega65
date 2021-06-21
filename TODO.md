@@ -19,10 +19,12 @@ TODO until V1.0
 * Frame blending support
 * (Internal) Update documentation to explain double buffering and frame blend
 * (Internal) Enhance menu system to support checked/unchecked menu items
-* MBC robustness: upgrade to newest MiST version and refactor MBC
+* MBC robustness: upgrade to newest MiSTer version and refactor MBC
 * Improve SD card robustness: Check new SD card implementation
   and if better: Use it
-* More convenient download of ROM: Rename cgb_bios.bin to cgb_boot.bin
+* More convenient download of ROM: Instead of expecting cgb_bios.bin as a
+  filename for the GBC BIOS, use cgb_boot.bin. This way the user does not
+  need to rename it after downloading. (Maybe support both names.)
 * Save games on SD card for games whose cartridges had a battery buffered RAM
   (such as the Legend of Zelda Links Awakening or Super Mario Bros. Deluxe)
 * Work on current issue list on GitHub  
