@@ -64,3 +64,16 @@ Other than that and our own work, gbc4mega65 uses:
 
   * PSF font to C include file converter psftools-1.1.1 by John Elliott
     https://www.seasip.info/Unix/PSF/
+
+The following tools were invaluable for the development of gbc4mega65:
+----------------------------------------------------------------------
+
+  * Game Boy interactive test suite: 240p-test-mini by Damian Yerrick
+    https://github.com/pinobatch/240p-test-mini
+    
+  * 240p-test-mini is a port of 240p Test Suite by Artemio Urbina
+    https://github.com/ArtemioUrbina/240pTestSuite
+
+  * MBC tests (cartridge ROM/RAM) were performed using the tests from
+    Joonas Javanainen's mooneye-gb project
+    https://github.com/Gekkio/mooneye-gb/tree/master/tests
