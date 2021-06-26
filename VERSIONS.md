@@ -1,4 +1,4 @@
-Version 0.8 (beta) - June 26, 2021
+Version 0.8 (beta) - June 27, 2021
 ===================================
 
 Even though this release is called "beta" it is **super stable and should play 99% (or more) of all Game Boy and Game Boy Color games**, given that the cartridge ROM size of the game is **up to 1 MB** (on a MEGA65 R3 machine, otherwise up to 256 kB).
