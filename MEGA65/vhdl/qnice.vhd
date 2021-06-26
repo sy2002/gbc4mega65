@@ -30,10 +30,19 @@ port (
    UART_RXD          : in std_logic;                  -- receive data, 115.200 baud, 8-N-1, rxd, txd only; rts/cts are not available
    UART_TXD          : out std_logic;                 -- send data, ditto
    
+   -- SD Card (internal on bottom)
    SD_RESET          : out std_logic;
    SD_CLK            : out std_logic;
    SD_MOSI           : out std_logic;
    SD_MISO           : in std_logic;
+   SD_CD             : in std_logic;
+
+   -- SD Card (external on back)
+   SD2_RESET         : out std_logic;
+   SD2_CLK           : out std_logic;
+   SD2_MOSI          : out std_logic;
+   SD2_MISO          : in std_logic;
+   SD2_CD            : in std_logic;
 
    osm_xy               : out std_logic_vector(15 downto 0);
    osm_dxdy             : out std_logic_vector(15 downto 0);
@@ -93,6 +102,13 @@ signal reset_ctl                  : std_logic;
 signal reset_pre_pore             : std_logic;
 signal reset_post_pore            : std_logic;
 
+-- SD Card multiplexing: SD_* signals are the bottom tray, SD2*_ signals are the back slot
+signal sd_mux_reset_ctrl          : std_logic;                       -- reset QNICE's controller
+signal sd_mux_reset_card          : std_logic;                       -- reset SD card
+signal sd_mux_clk                 : std_logic;
+signal sd_mux_mosi                : std_logic;
+signal sd_mux_miso                : std_logic;
+
 -- QNICE standard MMIO signals
 signal rom_en                     : std_logic;
 signal rom_data_out               : std_logic_vector(15 downto 0);
@@ -114,6 +130,13 @@ signal sd_en                      : std_logic;
 signal sd_we                      : std_logic;
 signal sd_reg                     : std_logic_vector(2 downto 0);
 signal sd_data_out                : std_logic_vector(15 downto 0);
+
+-- MEGA65 SD card specific MMIO signals (see gbc.asm)
+signal sd_mode                    : std_logic;
+signal sd_inuse_rd                : std_logic;                        -- read currently active sd
+signal sd_inuse_wr                : std_logic;                        -- force new active sd
+signal sd_cd_int                  : std_logic;
+signal sd_cd_ext                  : std_logic;
 
 -- GBC specific MMIO signals
 signal csr_en                     : std_logic;                        -- $FFE0
@@ -163,6 +186,15 @@ signal reg_maxramrom_data_out     : std_logic_vector(15 downto 0);
 signal gbc_cart_sel               : integer range 0 to 2047;
 
 begin
+
+--   -- Multiplex the two SD cards into one interface
+--   sd_mux_miso <= SD2_MISO     when SD2_CD = '0' else SD_MISO;  -- External present
+--   SD2_RESET   <= sd_mux_reset when SD2_CD = '0' else '1';      -- External present
+--   SD2_CLK     <= sd_mux_clk   when SD2_CD = '0' else '0';      -- External present
+--   SD2_MOSI    <= sd_mux_mosi  when SD2_CD = '0' else '1';      -- External present
+--   SD_RESET    <= sd_mux_reset when SD2_CD = '1' else '1';      -- External not present, use internal
+--   SD_CLK      <= sd_mux_clk   when SD2_CD = '1' else '0';      -- External not present, use internal
+--   SD_MOSI     <= sd_mux_mosi  when SD2_CD = '1' else '1';      -- External not present, use internal
 
    vram_addr     <= cpu_addr;
    vram_data_out <= cpu_data_out;
@@ -277,22 +309,59 @@ begin
          data_in              => cpu_data_out,
          data_out             => eae_data_out
       );
-
-   -- SD Card
+                  
+   -- Smart SD card multiplexer: handles the two different SD Card slots of the MEGA65 (see also gbc.asm)       
+   i_sdmux : entity work.sdmux
+      port map
+      (
+         -- QNICE system interface
+         sysclk50Mhz_i        => CLK50,
+         sysreset_i           => reset_ctl,
+         
+         -- Configuration lines to control the behavior of the multiplexer
+         mode_i               => sd_mode,
+         active_o             => sd_inuse_rd,
+         force_i              => sd_inuse_wr,
+         detected_int_o       => sd_cd_int,
+         detected_ext_o       => sd_cd_ext,
+                  
+         -- interface to bottom tray's SD card
+         sd_tray_detect_i     => SD_CD,
+         sd_tray_reset_o      => SD_RESET,
+         sd_tray_clk_o        => SD_CLK,
+         sd_tray_mosi_o       => SD_MOSI,
+         sd_tray_miso_i       => SD_MISO,
+         
+         -- interface to the SD card in the back slot
+         sd_back_detect_i     => SD2_CD,
+         sd_back_reset_o      => SD2_RESET,
+         sd_back_clk_o        => SD2_CLK,
+         sd_back_mosi_o       => SD2_MOSI,
+         sd_back_miso_i       => SD2_MISO,
+         
+         -- interface to the QNICE SD card controller
+         ctrl_reset_o         => sd_mux_reset_ctrl, 
+         ctrl_sd_reset_i      => sd_mux_reset_card,
+         ctrl_sd_clk_i        => sd_mux_clk,
+         ctrl_sd_mosi_i       => sd_mux_mosi,
+         ctrl_sd_miso_o       => sd_mux_miso
+      );
+   
+   -- SD Card: connect QNICE SD Card logic to the smart multiplexer
    sd_card : entity work.sdcard
       port map
       (
          clk                  => CLK50,
-         reset                => reset_ctl,
+         reset                => sd_mux_reset_ctrl,
          en                   => sd_en,
          we                   => sd_we,
          reg                  => sd_reg,
          data_in              => cpu_data_out,
          data_out             => sd_data_out,
-         sd_reset             => SD_RESET,
-         sd_clk               => SD_CLK,
-         sd_mosi              => SD_MOSI,
-         sd_miso              => SD_MISO
+         sd_reset             => sd_mux_reset_card,
+         sd_clk               => sd_mux_clk,
+         sd_mosi              => sd_mux_mosi,
+         sd_miso              => sd_mux_miso
       );
     
     -- Standard QNICE-FPGA MMIO controller  
@@ -396,8 +465,20 @@ begin
    -- 0xFFEB        : Codes of the highest supported RAM and ROM amounts
    ram_en                     <= ram_en_maybe and not vram_en and not vram_attr_en and not gbc_bios_en and not gbc_cart_en;  -- exclude gbc specific MMIO areas
    csr_en                     <= '1' when cpu_addr(15 downto 0) = x"FFE0" else '0';
-   csr_we                     <= csr_en and cpu_data_dir and cpu_data_valid;
-   csr_data_out               <= x"0" & "000" & gbc_color_mode & gbc_joy_map & gbc_color & gbc_joystick & gbc_keyboard & gbc_osm & gbc_pause & gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
+   csr_we                     <= csr_en and cpu_data_dir and cpu_data_valid;   
+   csr_data_out               <=                  "000" & -- see gbc.asm for details about the mapping of the bits
+                                 /* bit 12 */     sd_cd_ext &
+                                 /* bit 11 */     sd_cd_int &
+                                 /* bit 10 */     sd_inuse_rd &
+                                 /* bit 9 */      sd_mode & 
+                                 /* bit 8 */      gbc_color_mode &
+                                 /* bits 6..7 */  gbc_joy_map &
+                                 /* bit 5 */      gbc_color &
+                                 /* bit 4 */      gbc_joystick &
+                                 /* bit 3 */      gbc_keyboard &
+                                 /* bit 2 */      gbc_osm &
+                                 /* bit 1 */      gbc_pause &
+                                 /* bit 0 */      gbc_reset when csr_en = '1' and csr_we = '0' else (others => '0');
    vram_en                    <= '1' when cpu_addr(15 downto 12) = x"D" else '0'; -- $D000 .. $DFFF
    vram_we                    <= vram_en and cpu_data_dir and cpu_data_valid;
    vram_data_out_16bit        <= x"00" & vram_data_out_i when vram_en = '1' and vram_we = '0' else (others => '0');
@@ -464,8 +545,12 @@ begin
             gbc_color      <= '1';  -- Default: Game Boy Color, even for Game Boy Classic games
             gbc_joy_map    <= "00"; -- Default: Standard Joystick, Fire Button=A
             gbc_color_mode <= '0';  -- Default: Fully saturated colors (raw RGB output)
-            osm_xy    <= x"0000";
-            osm_dxdy  <= std_logic_vector(to_unsigned(CHARS_DX * 256 + CHARS_DY, 16));
+
+            sd_mode        <= '0';  -- Default: Auto select SD card
+            sd_inuse_wr    <= '0';  -- Default: internal card (bottom tray)
+           
+            osm_xy         <= x"0000";
+            osm_dxdy       <= std_logic_vector(to_unsigned(CHARS_DX * 256 + CHARS_DY, 16));                        
          else
             -- CSR register
             if csr_we = '1' then
@@ -477,6 +562,9 @@ begin
                gbc_color      <= cpu_data_out(5);
                gbc_joy_map    <= cpu_data_out(7 downto 6);
                gbc_color_mode <= cpu_data_out(8);
+
+               sd_mode        <= cpu_data_out(9);
+               sd_inuse_wr    <= cpu_data_out(10);                              
             end if;
             
             -- cartridge window selector

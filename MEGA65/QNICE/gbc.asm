@@ -23,6 +23,13 @@ GBC$CSR             .EQU 0xFFE0
     ;                               10 = Up=A, Fire=B
     ;                               11 = Up=B, Fire=A
     ; Bit      8: Color mode: 0=Fuly Saturated (Raw RGB), 1=LCD Emulation
+    ; Bit      9: SD Card mode: 0=Auto: SD card switches between the internal
+    ;             card (bottom tray) and the external card (back slot)
+    ;             automatically: External has higher precedence
+    ; Bit     10: SD card in use: Read: Find out which SD card is currently
+    ;             in use. Write: If bit 9=1 you can write, otherwise
+    ;             the write operation will be ignored. 0=internal, 1=external
+    ; Bit  11-12: 1=SD card detected: Bit 11=internal, bit 12=external
 
 GBC$CSR_RESET       .EQU 0x0001
 GBC$CSR_UN_RESET    .EQU 0xFFFE
@@ -36,6 +43,11 @@ GBC$CSR_JOYSTICK    .EQU 0x0010
 GBC$CSR_UN_JOY      .EQU 0xFFEF
 GBC$CSR_GBC         .EQU 0x0020
 GBC$CSR_UN_GBC      .EQU 0xFFDF
+
+GBC$CSR_SD_MODE     .EQU 0x0200
+GBC$CSR_SD_INUSE    .EQU 0x0400
+GBC$CSR_SD_CD_INT   .EQU 0x0800
+GBC$CSR_SD_CD_EXT   .EQU 0x1000
 
 ; constants used to directly transfer the menu selection to the right spot
 ; inside the CSR bitpattern

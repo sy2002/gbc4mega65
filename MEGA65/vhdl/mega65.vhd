@@ -64,11 +64,19 @@ port (
    kb_io1         : out std_logic;                 -- data output to keyboard
    kb_io2         : in std_logic;                  -- data input from keyboard
 
-   -- SD Card
+   -- SD Card (internal on bottom)
    SD_RESET       : out std_logic;
    SD_CLK         : out std_logic;
    SD_MOSI        : out std_logic;
    SD_MISO        : in std_logic;
+   SD_CD          : in std_logic;
+
+   -- SD Card (external on back)
+   SD2_RESET      : out std_logic;
+   SD2_CLK        : out std_logic;
+   SD2_MOSI       : out std_logic;
+   SD2_MISO       : in std_logic;
+   SD2_CD         : in std_logic;
 
    -- 3.5mm analog audio jack
    pwm_l          : out std_logic;
@@ -438,11 +446,19 @@ begin
          UART_RXD                => UART_RXD,         -- receive data      -- input
          UART_TXD                => UART_TXD,         -- send data         -- output
 
-         -- SD Card
+         -- SD Card (internal on bottom)
          SD_RESET                => SD_RESET,                              -- output
          SD_CLK                  => SD_CLK,                                -- output
          SD_MOSI                 => SD_MOSI,                               -- output
          SD_MISO                 => SD_MISO,                               -- input
+         SD_CD                   => SD_CD,                                 -- input
+
+         -- SD Card (external on back)
+         SD2_RESET               => SD2_RESET,                              -- output
+         SD2_CLK                 => SD2_CLK,                                -- output
+         SD2_MOSI                => SD2_MOSI,                               -- output
+         SD2_MISO                => SD2_MISO,                               -- input
+         SD2_CD                  => SD2_CD,                                 -- input
 
          gbc_osm                 => qnice_osm_cfg_enable,                  -- output
          osm_xy                  => qnice_osm_cfg_xy,                      -- output
