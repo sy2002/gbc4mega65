@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#define RELEASE
+#undef RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -71,7 +71,9 @@ INIT_FIRMWARE   AND     0x00FF, SR              ; activate register bank 0
 #include "constraints.asm"
 
                 ; initialize system
-START_FIRMWARE  MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
+START_FIRMWARE  MOVE    FB_SKIP_HELP, R8        ; do not skip the help screen
+                MOVE    0, @R8
+RESTART_FIRMWRE MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 MOVE    0, @R8
                 MOVE    FILEHANDLE, R8          ; ditto file handle
                 MOVE    0, @R8
@@ -117,6 +119,30 @@ OPTM_INITLOOP   MOVE    @R8++, @R9++
                 OR      GBC$CSR_GBC, R9         ; default: Game Boy Color mode
                 RSUB    RESETGB_WELCOME, 1
 
+                ; find out, which SD card is currently in use:
+                ; SD_ACTIVE: 0=internal / 1=external
+                MOVE    GBC$CSR, R8
+                MOVE    @R8, R8
+                AND     GBC$CSR_SD_INUSE, R8
+                MOVE    SD_ACTIVE, R9                
+                MOVE    R8, @R9
+
+                ; if no help screen is shown then at least show an information
+                ; that the SD card is being read to bridge the waiting
+                MOVE    FB_SKIP_HELP, R8
+                MOVE    @R8, R8
+                RBRA    WAITFORSD, Z
+                MOVE    STR_SD_CHANGE, R8
+                RSUB    PRINTSTR, 1
+                MOVE    SD_ACTIVE, R8
+                MOVE    @R8, R8
+                RBRA    SH_EXT, !Z
+                MOVE    STR_SD_INT, R8
+                RBRA    SH_PRINT, 1
+SH_EXT          MOVE    STR_SD_EXT, R8
+SH_PRINT        RSUB    PRINTSTR, 1
+                RSUB    PRINTCRLF, 1
+
                 ; Workaround that stabilizes the SD card handling: After a
                 ; reset or a power-on: Wait a while. This is obviously neither
                 ; a great nor a robust solution, but it increases the amount
@@ -124,7 +150,7 @@ OPTM_INITLOOP   MOVE    @R8++, @R9++
                 ; an SD card gets, the longer the initial startup sequence
                 ; seems to last.
                 ; TODO: Refactor/tackle the SD card topic on the QNICE level
-                RSUB    WAIT1SEC, 1
+WAITFORSD       RSUB    WAIT1SEC, 1
                 RSUB    WAIT1SEC, 1
 
                 ; Mount SD card and load original ROMs, if available.
@@ -143,6 +169,9 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 RSUB    LOAD_ROM, 1
 
                 ; Print help screen
+                MOVE    FB_SKIP_HELP, R8
+                MOVE    @R8, R8
+                RBRA    PREP_STACK, !Z
                 RSUB    HELP_SCREEN, 1
 
                 ; The file browser remembers the cursor position of all
@@ -151,7 +180,7 @@ MOUNT_OK        MOVE    FN_GBC_ROM, R8          ; full path to ROM
                 ; We assume to be two levels deep at the beginning. This is
                 ; why we push two 0 on the stack and remove one of them, in
                 ; case we revert back to the root folder.
-                MOVE    0, @--SP
+PREP_STACK      MOVE    0, @--SP
                 MOVE    0, @--SP
 
                 ; load sorted directory list into memory
@@ -253,10 +282,33 @@ SELECT_LOOP     MOVE    R4, R8                  ; invert currently sel. line
                 ; keyboard (MEGA65 keyboard) as well as from the UART
 INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 RSUB    KEYB_GETKEY, 1
-                CMP     0, R8                   ; no key?
-                RBRA    INPUT_LOOP, Z           ; then back to non-block. rd.
+                CMP     0, R8                   ; has a key been pressed?
+                RBRA    _IL_KEYPRESSED, !Z      ; yes: handle key press
 
-                CMP     KEY_CUR_UP, R8          ; cursor up: prev file
+                ; check, if the SD card changed in the meantime
+                MOVE    GBC$CSR, R8
+                MOVE    @R8, R8
+                AND     GBC$CSR_SD_INUSE, R8
+                MOVE    SD_ACTIVE, R9
+                MOVE    @R9, R9
+                CMP     R8, R9
+                RBRA    INPUT_LOOP, Z           ; SD card did not change
+
+                ; SD card changed: initialize stack pointer because we use
+                ; the stack for remembering subdirectories and then reset
+                ; the firmware to re-mount and re-read the SD card
+#ifdef RELEASE                
+                MOVE    VAR$STACK_START, SP
+#else
+                ; in DEBUG mode, we accept the stack leak, because we do
+                ; not have the address of the stack handy
+#endif
+                MOVE    FB_SKIP_HELP, R8
+                MOVE    1, @R8
+                RBRA    RESTART_FIRMWRE, 1
+
+                ; handle keypress
+_IL_KEYPRESSED  CMP     KEY_CUR_UP, R8          ; cursor up: prev file
                 RBRA    IL_CUR_UP, Z
                 CMP     KEY_CUR_DOWN, R8        ; cursor down: next file
                 RBRA    IL_CUR_DOWN, Z
@@ -596,7 +648,7 @@ _GR_HELP_2      MOVE    GBC$CSR, R8
 ; Strings
 ; ----------------------------------------------------------------------------
 
-STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.8 [WIP]\nMiSTer port done by sy2002 and MJoergen in 2021\n\n"
+STR_TITLE       .ASCII_W "Game Boy Color for MEGA65 Version 0.8\nMiSTer port done by sy2002 and MJoergen in 2021\n\n"
 
 STR_ROM_FF      .ASCII_W " found. Using this ROM.\n\n"
 STR_ROM_FNF     .ASCII_W " NOT FOUND!\n\nWill use built-in open source ROM instead.\n\n"
@@ -625,6 +677,7 @@ STR_HELP        .ASCII_P "\n"
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 13, 10
                 .ASCII_P " Cursor keys         Joypad\n"
                 .ASCII_P " Space               Start\n"
@@ -638,12 +691,21 @@ STR_HELP        .ASCII_P "\n"
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
+                .DW 196, 196, 196, 196, 196, 196, 196, 196, 196, 196, 196,
                 .DW 196, 196, 196, 196, 13, 10
                 .ASCII_P " Run/Stop             Enter/leave file browser\n"
                 .ASCII_P " Up/Down cursor key   Navigate one file up/down\n"
                 .ASCII_P " Left/Right cursor    One page forward/backward\n"
                 .ASCII_P " Enter                Start game/change folder\n"
-                .ASCII_W "\n\n Press any of these keys to continue."
+                .ASCII_P " F1                   Use internal SD card (bottom tray)\n"
+                .ASCII_W " F3                   Use external SD card (back slot)\n\n"
+
+STR_SD          .ASCII_W "\n Currently used SD card: "
+STR_SD_INT      .ASCII_W "Internal\n"
+STR_SD_EXT      .ASCII_W "External\n"
+STR_SD_CHANGE   .ASCII_W "Reading SD card: "
+
+STR_ANYKEY      .ASCII_W "\n\n Press any of these keys to continue."
 
 WRN_MAXFILES    .ASCII_P "Warning: This directory contains more files than\n"
                 .ASCII_P "this core is able to load into memory.\n\n"
@@ -1371,10 +1433,23 @@ _FATAL_END      RSUB    PRINTCRLF, 1
 
 HELP_SCREEN     RSUB    ENTER, 1
 
-                MOVE    STR_HELP, R8
+                MOVE    STR_HELP, R8            ; print help screen
                 RSUB    PRINTSTRSCR, 1
 
-_HS_IL          RSUB    KEYB_SCAN, 1
+                MOVE    STR_SD, R8              ; print active SD card 
+                RSUB    PRINTSTR, 1
+                MOVE    SD_ACTIVE, R8
+                MOVE    @R8, R8
+                RBRA    _HS_1, !Z               ; 0=internal / 1=external
+                MOVE    STR_SD_INT, R8
+                RBRA    _HS_2, 1
+_HS_1           MOVE    STR_SD_EXT, R8
+_HS_2           RSUB    PRINTSTR, 1
+
+                MOVE    STR_ANYKEY, R8          ; print key press message
+                RSUB    PRINTSTRSCR, 1
+
+_HS_IL          RSUB    KEYB_SCAN, 1            ; wait for any valid key
                 RSUB    KEYB_GETKEY, 1
                 CMP     0, R8                   ; no key?
                 RBRA    _HS_IL, Z               ; then back to non-block. rd.
@@ -1624,6 +1699,7 @@ OPTM_SELECTED   .BLOCK 1                        ; last options menu selection
 OPT_MENU_CURSEL .BLOCK OPT_MENU_SIZE            ; current options menu state
 
 ; device- and file handling
+SD_ACTIVE       .BLOCK 1                        ; SD card: 0=int./1=ext.
 SD_DEVHANDLE    .BLOCK FAT32$DEV_STRUCT_SIZE    ; SD card device handle
 FILEHANDLE      .BLOCK FAT32$FDH_STRUCT_SIZE    ; File handle
 
@@ -1635,10 +1711,11 @@ INNER_X         .BLOCK 1                        ; first x-coord within frame
 ; general status
 GAME_RUNNING    .BLOCK 1                        ; 1 = game loaded and running
 
-; file browser persistent status: currently displayed head of linked list
-FB_HEAD         .BLOCK 1
-FB_ITEMS_COUNT  .BLOCK 1
-FB_ITEMS_SHOWN  .BLOCK 1
+; file browser persistent status
+FB_HEAD         .BLOCK 1                        ; lnkd list: curr. disp. head
+FB_ITEMS_COUNT  .BLOCK 1                        ; overall amount of items
+FB_ITEMS_SHOWN  .BLOCK 1                        ; # of dir. items shown so far
+FB_SKIP_HELP    .BLOCK 1                        ; 1=skip the help screen
 
 ; variables needed by sub-routines
 LCBLKLN_STATUS  .BLOCK 1
