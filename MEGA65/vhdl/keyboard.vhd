@@ -159,7 +159,9 @@ begin
             when 15     => key_a        := key_status_n;       -- Left Shift  => A
             when 61     => key_b        := key_status_n;       -- Mega key    => B
             when 63     => matrix(2)(0) <= key_status_n;       -- Run/Stop    => File browser
-            when 67     => matrix(2)(1) <= key_status_n;       -- Help        => Options menu  
+            when 67     => matrix(2)(1) <= key_status_n;       -- Help        => Options menu
+            when 4      => matrix(2)(2) <= key_status_n;       -- F1          => Use internal SD card
+            when 5      => matrix(2)(3) <= key_status_n;       -- F3          => Use external SD card
             when others => null;
          end case;
          

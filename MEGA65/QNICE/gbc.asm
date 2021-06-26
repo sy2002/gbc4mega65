@@ -45,7 +45,9 @@ GBC$CSR_GBC         .EQU 0x0020
 GBC$CSR_UN_GBC      .EQU 0xFFDF
 
 GBC$CSR_SD_MODE     .EQU 0x0200
+GBC$CSR_SD_MODE_0   .EQU 0xFDFF
 GBC$CSR_SD_INUSE    .EQU 0x0400
+GBC$CSR_SD_INUSE_0  .EQU 0xFBFF
 GBC$CSR_SD_CD_INT   .EQU 0x0800
 GBC$CSR_SD_CD_EXT   .EQU 0x1000
 
@@ -96,6 +98,8 @@ KEY_LSHIFT          .EQU 0x0010
 KEY_MEGA            .EQU 0x0020
 KEY_RUNSTOP         .EQU 0x0100
 KEY_HELP            .EQU 0x0200
+KEY_F1              .EQU 0x0400
+KEY_F3              .EQU 0x0800
 
 ; ----------------------------------------------------------------------------
 ; MMIO Cartridge flags

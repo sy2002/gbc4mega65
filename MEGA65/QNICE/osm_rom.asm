@@ -16,7 +16,7 @@
 ; debug mode so that the firmware runs in RAM and can be changed/loaded using
 ; the standard QNICE Monitor mechanisms such as "M/L" or QTransfer.
 
-#undef RELEASE
+#define RELEASE
 
 #include "../../QNICE/dist_kit/sysdef.asm"
 
@@ -73,6 +73,9 @@ INIT_FIRMWARE   AND     0x00FF, SR              ; activate register bank 0
                 ; initialize system
 START_FIRMWARE  MOVE    FB_SKIP_HELP, R8        ; do not skip the help screen
                 MOVE    0, @R8
+                MOVE    GBC$CSR, R8             ; initialize ctrl & status reg
+                MOVE    0, @R8
+
 RESTART_FIRMWRE MOVE    SD_DEVHANDLE, R8        ; invalidate device handle
                 MOVE    0, @R8
                 MOVE    FILEHANDLE, R8          ; ditto file handle
@@ -112,7 +115,8 @@ OPTM_INITLOOP   MOVE    @R8++, @R9++
                 ; reset gameboy, set visibility parameters and
                 ; print the frame and the welcome message
                 MOVE    1, R8                   ; show welcome message
-                XOR     R9, R9
+                MOVE    GBC$CSR, R9
+                MOVE    @R9, R9
                 OR      GBC$CSR_RESET, R9       ; put machine in reset state
                 OR      GBC$CSR_KEYBOARD, R9    ; activate keyboard
                 OR      GBC$CSR_JOYSTICK, R9    ; activate joystick
@@ -120,7 +124,7 @@ OPTM_INITLOOP   MOVE    @R8++, @R9++
                 RSUB    RESETGB_WELCOME, 1
 
                 ; find out, which SD card is currently in use:
-                ; SD_ACTIVE: 0=internal / 1=external
+                ; SD_ACTIVE: 0=internal / >0 external
                 MOVE    GBC$CSR, R8
                 MOVE    @R8, R8
                 AND     GBC$CSR_SD_INUSE, R8
@@ -290,20 +294,22 @@ INPUT_LOOP      RSUB    KEYB_SCAN, 1
                 MOVE    @R8, R8
                 AND     GBC$CSR_SD_INUSE, R8
                 MOVE    SD_ACTIVE, R9
-                MOVE    @R9, R9
-                CMP     R8, R9
+                CMP     R8, @R9
                 RBRA    INPUT_LOOP, Z           ; SD card did not change
 
                 ; SD card changed: initialize stack pointer because we use
                 ; the stack for remembering subdirectories and then reset
                 ; the firmware to re-mount and re-read the SD card
+                MOVE    GBC$CSR, R8             ; reset to auto/smart sd mode
+                AND     GBC$CSR_SD_MODE_0, @R8
+SD_CHANGED            
 #ifdef RELEASE                
                 MOVE    VAR$STACK_START, SP
 #else
                 ; in DEBUG mode, we accept the stack leak, because we do
                 ; not have the address of the stack handy
 #endif
-                MOVE    FB_SKIP_HELP, R8
+                MOVE    FB_SKIP_HELP, R8        ; do not show the help screen
                 MOVE    1, @R8
                 RBRA    RESTART_FIRMWRE, 1
 
@@ -320,7 +326,30 @@ _IL_KEYPRESSED  CMP     KEY_CUR_UP, R8          ; cursor up: prev file
                 RBRA    IL_KEY_RETURN, Z
                 CMP     KEY_RUNSTOP, R8         ; Run/Stop key
                 RBRA    IL_KEY_RUNSTOP, Z
+                CMP     KEY_F1, R8              ; F1 key: internal SD card
+                RBRA    IL_KEY_F1_F3, Z
+                CMP     KEY_F3, R8              ; F3 key: external SD card
+                RBRA    IL_KEY_F1_F3, Z
                 RBRA    INPUT_LOOP, 1           ; unknown key
+
+                ; F1 or F3 has been pressed: Change SD card
+IL_KEY_F1_F3    MOVE    0, R9                   ; R9 = chosen SD card, 0=int
+                CMP     KEY_F3, R8
+                RBRA    IL_SD_INT, !Z           ; not F3: skip
+                MOVE    GBC$CSR_SD_INUSE, R9    ; R9 = external SD card
+IL_SD_INT       MOVE    SD_ACTIVE, R10          ; curr. active equ. keypress?
+                CMP     @R10, R9
+                RBRA    INPUT_LOOP, Z           ; yes: ignore keypress
+
+                MOVE    GBC$CSR, R9             ; switch sd mode to manual
+                OR      GBC$CSR_SD_MODE, @R9
+                CMP     KEY_F3, R8              ; F3: switch to external
+                RBRA    IL_SD_INT2, !Z
+                OR      GBC$CSR_SD_INUSE, @R9
+                RBRA    SD_CHANGED, 1
+
+IL_SD_INT2      AND     GBC$CSR_SD_INUSE_0, @R9 ; F1: switch to internal
+                RBRA    SD_CHANGED, 1
 
                 ; RUN/STOP has been pressed
                 ; Exit file browser, if game is running
@@ -1440,7 +1469,7 @@ HELP_SCREEN     RSUB    ENTER, 1
                 RSUB    PRINTSTR, 1
                 MOVE    SD_ACTIVE, R8
                 MOVE    @R8, R8
-                RBRA    _HS_1, !Z               ; 0=internal / 1=external
+                RBRA    _HS_1, !Z               ; 0=internal / >0 external
                 MOVE    STR_SD_INT, R8
                 RBRA    _HS_2, 1
 _HS_1           MOVE    STR_SD_EXT, R8
@@ -1477,7 +1506,7 @@ _W1S_L2         SUB     1, R1
                 SUB     1, R0
                 RBRA    _W1S_L1, !Z
                 DECRB
-                RET       
+                RET    
 
 ; ----------------------------------------------------------------------------
 ; Options Menu
@@ -1745,7 +1774,7 @@ HEAP            .BLOCK 1
 ; calculate the address). To see, if there is enough room for the stack
 ; given the HEAP_SIZE do this calculation: Add 11.264 words to HEAP which
 ; is currently 0x8157 and subtract the result from 0xAFE0. This yields
-; currently a stack size of 649 words, which is sufficient for this program.
+; currently a stack size of 647 words, which is sufficient for this program.
 
                 .ORG    0xAFE0                  ; TODO: automate calculation
 #include "monitor_vars.asm"
