@@ -161,14 +161,15 @@ SD Cards
 SD cards need to be formatted with FAT32. If you have a folder called `/gbc`,
 then the file browser will switch to this folder by default.
 
-Both SD card slot of the MEGA65 are supported. The back slot ("external")
+Both SD card slots of the MEGA65 are supported. The back slot ("external")
 has precedence over the bottom tray slot ("internal"). That means:
 
-* If during startup/reset a SD card is inserted into the external slot, then
+* If during startup/reset an SD card is inserted into the external slot, then
   this SD card will be chosen.
-* If, while the file browser is open and the internal slot is active, a
+* If, while the file browser is open and the internal slot is active, an
   SD card is inserted into the external slot, then the file browser switches
   to the external slot. If the card is removed from the external slot, the
-  file browser switches back.
-* Use <kbd>F1</kbd> to switch to the internal card while the file browser is
-  open and use <kbd>F3</kbd> to switch to the external card.
+  file browser switches back to the internal slot.
+
+Use <kbd>F1</kbd> to switch to the internal card while the file browser is
+open and use <kbd>F3</kbd> to switch to the external card.
