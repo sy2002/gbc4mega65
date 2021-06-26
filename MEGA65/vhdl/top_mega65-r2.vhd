@@ -40,11 +40,19 @@ port (
    kb_io1         : out std_logic;                 -- data output to keyboard
    kb_io2         : in std_logic;                  -- data input from keyboard   
    
-   -- SD Card
+   -- SD Card (internal on bottom)
    SD_RESET       : out std_logic;
    SD_CLK         : out std_logic;
    SD_MOSI        : out std_logic;
    SD_MISO        : in std_logic;
+   SD_CD          : in std_logic;
+
+   -- SD Card (external on back)
+   SD2_RESET      : out std_logic;
+   SD2_CLK        : out std_logic;
+   SD2_MOSI       : out std_logic;
+   SD2_MISO       : in std_logic;
+   SD2_CD         : in std_logic;
    
    -- 3.5mm analog audio jack
    pwm_l          : out std_logic;
@@ -137,11 +145,19 @@ begin
          kb_io1         => kb_io1,
          kb_io2         => kb_io2,   
          
-         -- SD Card
+         -- SD Card (internal on bottom)
          SD_RESET       => SD_RESET,
          SD_CLK         => SD_CLK,
          SD_MOSI        => SD_MOSI,
          SD_MISO        => SD_MISO,
+         SD_CD          => SD_CD,
+
+         -- SD Card (external on back)
+         SD2_RESET      => SD2_RESET,
+         SD2_CLK        => SD2_CLK,
+         SD2_MOSI       => SD2_MOSI,
+         SD2_MISO       => SD2_MISO,
+         SD2_CD         => SD2_CD,
          
          -- 3.5mm analog audio jack
          pwm_l          => pwm_l,
