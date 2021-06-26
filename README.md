@@ -7,8 +7,6 @@ Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
 
 Learn more about where to [download and how to get started](#Installation).
 
-**WARNING: Beta version 0.8 - See constraints below**
-
 ![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg)
 
 This core is based on the
@@ -156,3 +154,21 @@ in Grouchland" to see the difference:
 You can see how the rather bright yellow color of the house and the pavement
 turns into an orange/brown tone and how Elmo himself turns from a clear red
 into a ruby color. Also the sky, the tree and the fence are adjusted.
+
+SD Cards
+--------
+
+SD cards need to be formatted with FAT32. If you have a folder called `/gbc`,
+then the file browser will switch to this folder by default.
+
+Both SD card slot of the MEGA65 are supported. The back slot ("external")
+has precedence over the bottom tray slot ("internal"). That means:
+
+* If during startup/reset a SD card is inserted into the external slot, then
+  this SD card will be chosen.
+* If, while the file browser is open and the internal slot is active, a
+  SD card is inserted into the external slot, then the file browser switches
+  to the external slot. If the card is removed from the external slot, the
+  file browser switches back.
+* Use <kbd>F1</kbd> to switch to the internal card while the file browser is
+  open and use <kbd>F3</kbd> to switch to the external card.

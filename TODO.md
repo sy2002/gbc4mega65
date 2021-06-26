@@ -1,10 +1,8 @@
 Roadmap / TODOs until V1.0
 ==========================
 
-WIP V0.8
+WIP V0.9
 --------
-
-* Smart support of both MEGA65 SD Card slots: If a card is inserted into the backside slot then this card is used, otherwise the card in the bottom/trapdoor slot is used
 
 Done in V0.9 (reminder for release notes)
 -----------------------------------------

@@ -1,4 +1,4 @@
-Version 0.8 (beta) - MONTH DD, 2021
+Version 0.8 (beta) - June 26, 2021
 ===================================
 
 Even though this release is called "beta" it is **super stable and should play 99% (or more) of all Game Boy and Game Boy Color games**, given that the cartridge ROM size of the game is **up to 1 MB** (on a MEGA65 R3 machine, otherwise up to 256 kB).
@@ -9,7 +9,8 @@ Even though this release is called "beta" it is **super stable and should play 9
 * Migrated the core's screen resolution to the 720p @ 60Hz standard (1280x720 pixels) for better HDMI compatibility (coming from SVGA 800x600 @ 60 Hz)
 * Smoother display (less flickering/artifacts) due to double-buffering
 * Improved the stability and robustness of the SD card reading
-WIP Smart support of both MEGA65 SD Card slots: If a card is inserted into the backside slot then this card is used, otherwise the card in the bottom/trapdoor slot is used
+* Smart support of both MEGA65 SD Card slots: If a card is inserted into the backside ("external") slot then this card is used, otherwise the card in the bottom/trapdoor ("internal") slot is used.
+  Moreover, you can switch to the internal SD card in the file browser using F1 and to the external SD card using F3.
 
 ### Why is the release still called "beta"?
 
