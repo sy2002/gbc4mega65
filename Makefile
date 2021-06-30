@@ -13,7 +13,7 @@ MEGA65/QNICE/osm_rom.rom:	QNICE/c/qnice/qniceconv
 
 gbc.bit:	MEGA65/QNICE/osm_rom.rom
 	mkdir -p bin
-	$(VIVADO) -mode batch -source MEGA65/MEGA65-R3_impl.tcl MEGA65/MEGA65-R3.xpr
+	$(VIVADO) -mode batch -source MEGA65/mega65r3_impl.tcl MEGA65/MEGA65-R3.xpr
 
 clean:
 	rm -fr QNICE/tools
