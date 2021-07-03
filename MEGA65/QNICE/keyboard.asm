@@ -1,10 +1,10 @@
 ; ****************************************************************************
 ; Game Boy Color for MEGA65 (gbc4mega65)
 ;
-; Keyboard controller
+; Keyboard controller (expects high-active keys in the QNICE register)
 ;
 ; The basic idea is: A key first has to be released until it can be counted
-; as pressed.
+; as pressed again.
 ;
 ; gbc4mega65 machine is based on Gameboy_MiSTer
 ; MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
@@ -43,7 +43,7 @@ KEYB_SCAN       INCRB
                 MOVE    KEYB_PRESSED, R1        ; R1 points to PRESSED
                 MOVE    KEYB_NEWKEYS, R2        ; R2 points to NEWKEYS
 
-                ; new keys are keys that have not been pressed since last scan
+                ; keys need to be released first to count as new keys again
                 NOT     @R1, R3
                 AND     R0, R3
                 OR      R3, @R2

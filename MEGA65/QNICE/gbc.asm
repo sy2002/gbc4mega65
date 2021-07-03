@@ -85,7 +85,7 @@ GBC$OPT_DY          .EQU 20     ; height of option menu
 ; Keyboard matrix (read-only)
 ; ----------------------------------------------------------------------------
 
-GBC$KEYMATRIX       .EQU 0xFFE4
+GBC$KEYMATRIX       .EQU 0xFFE4 ; high-active
 
 ; AND-masks for keys
 KEY_CUR_UP          .EQU 0x0004
