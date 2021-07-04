@@ -10,6 +10,7 @@ Done in V0.9 (reminder for release notes)
 TODO until V1.0
 ---------------
 
+* Bugfix: Filebrowser: Do not allow to switch to a card slot that has no card.
 * HyperRAM support for ROMs up to 8 MB on both machine types R2 and R3
 * Support OpenEmu's Classic color schemes "Grayscale" (already supported),
   "Greenscale" and "Pocket": https://github.com/OpenEmu/Gambatte-Core/blob/master/GBGameCore.mm#L574
