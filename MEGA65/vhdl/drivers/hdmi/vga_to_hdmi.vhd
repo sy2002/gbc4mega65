@@ -253,7 +253,7 @@ architecture synth of vga_to_hdmi is
             2 => x"00",     -- *PART CONSTANT* C(1:0),M(1:0),R(3:0)
             3 => x"80",     -- ITC,EC(2:0),Q(1:0),SC(1:0)
             4 => x"00",     -- *NOT CONSTANT* VIC
-            5 => x"70",     -- *PART CONSTANT* YQ(1:0),CN(1:0),PR(3:0)
+            5 => x"30",     -- *PART CONSTANT* YQ(1:0),CN(1:0),PR(3:0)
             others => x"00" -- zero
         );
 
