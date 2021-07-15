@@ -249,7 +249,7 @@ architecture synth of vga_to_hdmi is
     constant hb_3 : u8(0 to 2) := ( x"82", x"02", x"0D" );
     constant pb_3 : u8(0 to 27) := (
             0 => x"00",     -- *NOT CONSTANT* checksum
-            1 => x"12",     -- RSVD,Y(1:0),A0,B(1:0),S(1:0)
+            1 => x"02",     -- RSVD,Y(1:0),A0,B(1:0),S(1:0)
             2 => x"00",     -- *PART CONSTANT* C(1:0),M(1:0),R(3:0)
             3 => x"80",     -- ITC,EC(2:0),Q(1:0),SC(1:0)
             4 => x"00",     -- *NOT CONSTANT* VIC
@@ -363,7 +363,6 @@ begin
         end function xor_v;
 
     begin
-      
         if pcm_rst = '1' then
 
             iec_count   <= 0;
@@ -482,7 +481,6 @@ begin
         dest_pulse => vga_acr
         );
     
-
     SYNC : xpm_cdc_array_single
         generic map (
             DEST_SYNC_FF    => 2,
@@ -731,8 +729,6 @@ begin
                     pb(3)(5)(3 downto 0)
                 );
             pb(3)(2)(5 downto 4) <= unsigned(aspect_s);
-            pb(3)(2)(3) <= '1';
-            pb(3)(2)(1 downto 0) <= unsigned(aspect_s);
             pb(3)(4) <= unsigned(vic_s);
             pb(3)(5)(0) <= pix_rep_s;
             pb(3)(6 to 27) <= pb_3(6 to 27);
@@ -780,7 +776,7 @@ begin
                             if data_req /= "000000" then
                                 s1_period <= DATA_PRE; s1_enc <= ENC_DVI; s1_ctl <= CTL_PRE_DATA;
                                 s1_pcount <= (others => '0'); s1_dcount <= (others => '0');
-                                for i in 0 to (PACKET_TYPES-1) loop -- prioritize
+                                for i in 0 to PACKET_TYPES-1 loop -- prioritize
                                     p := i;
                                     exit when data_req(p) = '1';
                                 end loop;
@@ -832,7 +828,7 @@ begin
                         then -- do another data packet
                             s1_pcount <= (others => '0');
                             s1_dcount <= s1_dcount+1;
-                            for i in 0 to (PACKET_TYPES-1) loop -- prioritize
+                            for i in 0 to PACKET_TYPES-1 loop -- prioritize
                                 p := i;
                                 exit when data_req(p) = '1';
                             end loop;
