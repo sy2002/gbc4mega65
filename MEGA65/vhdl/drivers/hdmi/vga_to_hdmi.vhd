@@ -34,7 +34,7 @@ entity vga_to_hdmi is
       
         dvi         : in    std_logic;                     -- DVI mode disables all HDMI enhancements e.g. audio
         vic         : in    std_logic_vector(7 downto 0);  -- CEA/CTA VIC
-        aspect      : in    std_logic_vector(1 downto 0);  -- for aspect ratio signalling in AVI InfoFrames (NOT USED)
+        aspect      : in    std_logic_vector(1 downto 0);  -- for aspect ratio signalling in AVI InfoFrames
         pix_rep     : in    std_logic;                     -- signals pixel repetition (SD interlaced modes)
         vs_pol      : in    std_logic;                     -- vertical sync output polarity   } 1 = active high
         hs_pol      : in    std_logic;                     -- horizontal sync output polarity } 
@@ -249,8 +249,8 @@ architecture synth of vga_to_hdmi is
     constant hb_3 : u8(0 to 2) := ( x"82", x"02", x"0D" );
     constant pb_3 : u8(0 to 27) := (
             0 => x"00",     -- *NOT CONSTANT* checksum
-            1 => x"02",     -- RSVD,Y(1:0),A0,B(1:0),S(1:0)
-            2 => x"00",     -- *CONSTANT* C(1:0),M(1:0),R(3:0)
+            1 => x"12",     -- RSVD,Y(1:0),A0,B(1:0),S(1:0)
+            2 => x"08",     -- *PART CONSTANT* C(1:0),M(1:0),R(3:0)
             3 => x"80",     -- ITC,EC(2:0),Q(1:0),SC(1:0)
             4 => x"00",     -- *NOT CONSTANT* VIC
             5 => x"30",     -- *PART CONSTANT* YQ(1:0),CN(1:0),PR(3:0)
@@ -728,6 +728,7 @@ begin
                     pb(3)(4) +
                     pb(3)(5)(3 downto 0)
                 );
+            pb(3)(2)(5 downto 4) <= unsigned(aspect_s);
             pb(3)(4) <= unsigned(vic_s);
             pb(3)(5)(0) <= pix_rep_s;
             pb(3)(6 to 27) <= pb_3(6 to 27);
