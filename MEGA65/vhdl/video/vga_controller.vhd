@@ -1,28 +1,13 @@
---------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+-- Game Boy Color for MEGA65 (gbc4mega65)
 --
---   FileName:         vga_controller.vhd
---   Dependencies:     none
---   Design Software:  Quartus II 64-bit Version 12.1 Build 177 SJ Full Version
+-- VGA timing generator
 --
---   HDL CODE IS PROVIDED "AS IS."  DIGI-KEY EXPRESSLY DISCLAIMS ANY
---   WARRANTY OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
---   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
---   PARTICULAR PURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL DIGI-KEY
---   BE LIABLE FOR ANY INCIDENTAL, SPECIAL, INDIRECT OR CONSEQUENTIAL
---   DAMAGES, LOST PROFITS OR LOST DATA, HARM TO YOUR EQUIPMENT, COST OF
---   PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY OR SERVICES, ANY CLAIMS
---   BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF),
---   ANY CLAIMS FOR INDEMNITY OR CONTRIBUTION, OR OTHER SIMILAR COSTS.
+-- This is just a wrapper of Adam Barnes' module.
 --
---   Version History
---   Version 1.0 05/10/2013 Scott Larson
---     Initial Public Release
---   Version 1.1 03/07/2018 Scott Larson
---     Corrected two minor "off-by-one" errors
---   Version 1.2 May 16, 2021 Michael Jørgensen
---     Clean-up, adjusted to fit gbc4mega65 and MiSTer2MEGA coding style
---    
---------------------------------------------------------------------------------
+-- This machine is based on Gameboy_MiSTer
+-- MEGA65 port done by sy2002 and MJoergen in 2021 and licensed under GPL v3
+----------------------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
@@ -52,82 +37,39 @@ entity vga_controller is
 end vga_controller;
 
 architecture synthesis of vga_controller is
-   signal h_period     : natural range 0 to 2047;  -- total number of pixel clocks in a row
-   signal v_period     : natural range 0 to 2047;  -- total number of rows in column
-   signal h_sync_first : natural range 0 to 2047;
-   signal h_sync_last  : natural range 0 to 2047;
-   signal v_sync_first : natural range 0 to 2047;
-   signal v_sync_last  : natural range 0 to 2047;
+
 begin
-   h_period     <= h_pulse + h_bp + h_pixels + h_fp;  -- total number of pixel clocks in a row
-   v_period     <= v_pulse + v_bp + v_pixels + v_fp;  -- total number of rows in column
-   h_sync_first <= h_pixels + h_fp;
-   h_sync_last  <= h_pixels + h_fp + h_pulse - 1;
-   v_sync_first <= v_pixels + v_fp;
-   v_sync_last  <= v_pixels + v_fp + v_pulse - 1;
 
-   n_blank <= '1';  -- no direct blanking
-   n_sync  <= '0';  -- no sync on green
-   
-   process (pixel_clk)
-      variable h_count : natural range 0 to 2047 := 0;  -- horizontal counter (counts the columns)
-      variable v_count : natural range 0 to 2047 := 0;  -- vertical counter (counts the rows)
-   begin
-   
-      if rising_edge(pixel_clk) then
+   -- TODO: SINCE THIS IS FOR NOW JUST AN EXPERIMENT, ALL TIMING PARAMETERS ARE HARDCODED
+   -- AND NOT TAKEN FROM video_modes_pkg . THIS NEEDS TO BE CHANGED.
+   generator : entity work.video_out_timing
+      port map (
+         rst       => not reset_n,         -- reset
+         clk       => pixel_clk,           -- pixel clock
 
-         -- counters
-         if h_count < h_period - 1 then     -- horizontal counter (pixels)
-            h_count := h_count + 1;
-         else
-            h_count := 0;
-            if v_count < v_period - 1 then  -- veritcal counter (rows)
-               v_count := v_count + 1;
-            else
-               v_count := 0;
-            end if;
-         end if;
-
-         -- horizontal sync signal
-         if h_count >= h_sync_first and h_count <= h_sync_last then
-            h_sync <= h_pol;           -- assert horizontal sync pulse
-         else
-            h_sync <= not h_pol;       -- deassert horizontal sync pulse
-         end if;
+         -- Input: Timing parameters for the video mode at hand
+         -- TODO: SEE ABOVE / CHANGE HARDCODED TIMING
+         pix_rep   => '0',                 -- pixel repetition; 0 = none/x1, 1 = x2
+         interlace => '0',: in    std_logic;
+         v_tot     => -- 1..2048 (must be odd if interlaced)
+         v_act     => -- 1..2048 (should be even)
+         v_sync    => -- 1..7
+         v_bp      => -- 1`..31
+         h_tot     => -- 1..4096
+         h_act     => -- 1..2048 (must be even)
+         h_sync    => -- 1..127
+         h_bp      => -- 0..255
+         align     => -- alignment delay
          
-         -- vertical sync signal
-         if v_count >= v_sync_first and v_count <= v_sync_last then
-            v_sync <= v_pol;           -- assert vertical sync pulse
-         else
-            v_sync <= not v_pol;       -- deassert vertical sync pulse
-         end if;
-         
-         -- set pixel coordinates
-         if h_count < h_pixels then    -- horizontal display time
-            column <= h_count;         -- set horizontal pixel coordinate
-         end if;
-         if v_count < v_pixels then    -- vertical display time
-            row <= v_count;            -- set vertical pixel coordinate
-         end if;
+         -- Output: Sync and blanking signals, field ID, beam position
+         f         => -- field ID
+         vs        => -- vertical sync
+         hs        => -- horizontal sync
+         vblank    => -- vertical blank
+         hblank    => -- horizontal blank
+         ax        => -- visible area X (signed)
+         ay        => -- visible area Y (signed)      
+      );
 
-         -- set display enable output
-         if h_count < h_pixels and v_count < v_pixels then     -- display time
-            disp_ena <= '1';                                   -- enable display
-         else                                                  -- blanking time
-            disp_ena <= '0';                                   -- disable display
-         end if;
-
-         if reset_n = '0' then      -- reset asserted
-            h_count := 0;           -- reset horizontal counter
-            v_count := 0;           -- reset vertical counter
-            h_sync   <= not h_pol;  -- deassert horizontal sync
-            v_sync   <= not v_pol;  -- deassert vertical sync
-            disp_ena <= '0';        -- disable display
-            column   <= 0;          -- reset column pixel coordinate
-            row      <= 0;          -- reset row pixel coordinate
-         end if;
-      end if;
-   end process;
 
 end architecture synthesis;
-
