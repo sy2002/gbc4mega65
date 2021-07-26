@@ -1,31 +1,17 @@
---------------------------------------------------------------------------------
+----------------------------------------------------------------------------------
+-- Game Boy Color for MEGA65 (gbc4mega65)
 --
---   FileName:         vga_controller.vhd
---   Dependencies:     none
---   Design Software:  Quartus II 64-bit Version 12.1 Build 177 SJ Full Version
+-- VGA timing generator
 --
---   HDL CODE IS PROVIDED "AS IS."  DIGI-KEY EXPRESSLY DISCLAIMS ANY
---   WARRANTY OF ANY KIND, WHETHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
---   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
---   PARTICULAR PURPOSE, OR NON-INFRINGEMENT. IN NO EVENT SHALL DIGI-KEY
---   BE LIABLE FOR ANY INCIDENTAL, SPECIAL, INDIRECT OR CONSEQUENTIAL
---   DAMAGES, LOST PROFITS OR LOST DATA, HARM TO YOUR EQUIPMENT, COST OF
---   PROCUREMENT OF SUBSTITUTE GOODS, TECHNOLOGY OR SERVICES, ANY CLAIMS
---   BY THIRD PARTIES (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF),
---   ANY CLAIMS FOR INDEMNITY OR CONTRIBUTION, OR OTHER SIMILAR COSTS.
+-- This is just a wrapper of Adam Barnes' module.
 --
---   Version History
---   Version 1.0 05/10/2013 Scott Larson
---     Initial Public Release
---   Version 1.1 03/07/2018 Scott Larson
---     Corrected two minor "off-by-one" errors
---   Version 1.2 May 16, 2021 Michael Jørgensen
---     Clean-up, adjusted to fit gbc4mega65 and MiSTer2MEGA coding style
---    
---------------------------------------------------------------------------------
+-- This machine is based on Gameboy_MiSTer
+-- MEGA65 port done by sy2002 and MJoergen in 2021 and licensed under GPL v3
+----------------------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity vga_controller is
    port (
@@ -52,82 +38,70 @@ entity vga_controller is
 end vga_controller;
 
 architecture synthesis of vga_controller is
-   signal h_period     : natural range 0 to 2047;  -- total number of pixel clocks in a row
-   signal v_period     : natural range 0 to 2047;  -- total number of rows in column
-   signal h_sync_first : natural range 0 to 2047;
-   signal h_sync_last  : natural range 0 to 2047;
-   signal v_sync_first : natural range 0 to 2047;
-   signal v_sync_last  : natural range 0 to 2047;
+
+constant DEFAULT_COL : integer := 0;
+constant DEFAULT_ROW : integer := 0;
+
+signal ax            : std_logic_vector(11 downto 0);
+signal ay            : std_logic_vector(11 downto 0);
+signal vblank        : std_logic;
+signal hblank        : std_logic;
+
 begin
-   h_period     <= h_pulse + h_bp + h_pixels + h_fp;  -- total number of pixel clocks in a row
-   v_period     <= v_pulse + v_bp + v_pixels + v_fp;  -- total number of rows in column
-   h_sync_first <= h_pixels + h_fp;
-   h_sync_last  <= h_pixels + h_fp + h_pulse - 1;
-   v_sync_first <= v_pixels + v_fp;
-   v_sync_last  <= v_pixels + v_fp + v_pulse - 1;
 
-   n_blank <= '1';  -- no direct blanking
-   n_sync  <= '0';  -- no sync on green
-   
-   process (pixel_clk)
-      variable h_count : natural range 0 to 2047 := 0;  -- horizontal counter (counts the columns)
-      variable v_count : natural range 0 to 2047 := 0;  -- vertical counter (counts the rows)
-   begin
-   
-      if rising_edge(pixel_clk) then
+   -- TODO: SINCE THIS IS FOR NOW JUST AN EXPERIMENT, ALL TIMING PARAMETERS ARE HARDCODED
+   -- AND NOT TAKEN FROM video_modes_pkg . THIS NEEDS TO BE CHANGED.
+   generator : entity work.video_out_timing
+      port map (
+         rst       => not reset_n,         -- reset
+         clk       => pixel_clk,           -- pixel clock
 
-         -- counters
-         if h_count < h_period - 1 then     -- horizontal counter (pixels)
-            h_count := h_count + 1;
-         else
-            h_count := 0;
-            if v_count < v_period - 1 then  -- veritcal counter (rows)
-               v_count := v_count + 1;
-            else
-               v_count := 0;
-            end if;
-         end if;
-
-         -- horizontal sync signal
-         if h_count >= h_sync_first and h_count <= h_sync_last then
-            h_sync <= h_pol;           -- assert horizontal sync pulse
-         else
-            h_sync <= not h_pol;       -- deassert horizontal sync pulse
-         end if;
+         -- Input: Timing parameters for the video mode at hand
+         -- TODO: SEE ABOVE / CHANGE HARDCODED TIMING
+         --            name        => "1280x720p60     ",
+         --            dmt         => false,
+         --            id          => 4,
+         --            clk_sel     => CLK_SEL_74M25,
+         --            pix_rep     => 0,
+         --            aspect      => ASPECT_16_9,
+         --            interlace   => FALSE,
+         --            v_tot       => 750,
+         --            v_act       => 720,
+         --            v_sync      => 5,
+         --            v_bp        => 20,
+         --            h_tot       => 1650,
+         --            h_act       => 1280,
+         --            h_sync      => 40,
+         --            h_bp        => 220,
+         --            vs_pol      => '1',
+         --            hs_pol      => '1'         
+         pix_rep   => '0',                 -- pixel repetition; 0 = none/x1, 1 = x2
+         interlace => '0',
+         v_tot     => std_logic_vector(to_unsigned(750, 11)),
+         v_act     => std_logic_vector(to_unsigned(720, 11)),
+         v_sync    => std_logic_vector(to_unsigned(5, 3)),
+         v_bp      => std_logic_vector(to_unsigned(20, 6)),
+         h_tot     => std_logic_vector(to_unsigned(1650, 12)),
+         h_act     => std_logic_vector(to_unsigned(1280, 11)),
+         h_sync    => std_logic_vector(to_unsigned(40, 7)),
+         h_bp      => std_logic_vector(to_unsigned(220, 8)),
+         align     => (others => '0'),                  
          
-         -- vertical sync signal
-         if v_count >= v_sync_first and v_count <= v_sync_last then
-            v_sync <= v_pol;           -- assert vertical sync pulse
-         else
-            v_sync <= not v_pol;       -- deassert vertical sync pulse
-         end if;
-         
-         -- set pixel coordinates
-         if h_count < h_pixels then    -- horizontal display time
-            column <= h_count;         -- set horizontal pixel coordinate
-         end if;
-         if v_count < v_pixels then    -- vertical display time
-            row <= v_count;            -- set vertical pixel coordinate
-         end if;
-
-         -- set display enable output
-         if h_count < h_pixels and v_count < v_pixels then     -- display time
-            disp_ena <= '1';                                   -- enable display
-         else                                                  -- blanking time
-            disp_ena <= '0';                                   -- disable display
-         end if;
-
-         if reset_n = '0' then      -- reset asserted
-            h_count := 0;           -- reset horizontal counter
-            v_count := 0;           -- reset vertical counter
-            h_sync   <= not h_pol;  -- deassert horizontal sync
-            v_sync   <= not v_pol;  -- deassert vertical sync
-            disp_ena <= '0';        -- disable display
-            column   <= 0;          -- reset column pixel coordinate
-            row      <= 0;          -- reset row pixel coordinate
-         end if;
-      end if;
-   end process;
+         -- Output: Sync and blanking signals, field ID, beam position
+         f         => open,      -- field ID
+         vs        => v_sync,    -- vertical sync
+         hs        => h_sync,    -- horizontal sync
+         vblank    => vblank,    -- vertical blank
+         hblank    => hblank,    -- horizontal blank
+         ax        => ax,        -- visible area X (signed)
+         ay        => ay         -- visible area Y (signed)      
+      );
+      
+      
+   disp_ena  <= not (vblank or hblank);
+   column    <= to_integer(signed(ax)) when disp_ena = '1' else DEFAULT_COL;
+   row       <= to_integer(signed(ay)) when disp_ena = '1' else DEFAULT_ROW;
+   n_blank   <= not disp_ena;
+   n_sync    <= not (h_sync or v_sync);      
 
 end architecture synthesis;
-

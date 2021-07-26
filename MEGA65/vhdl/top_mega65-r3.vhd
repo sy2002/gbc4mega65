@@ -86,10 +86,11 @@ begin
       generic map
       (
          -- m65_const.vhd contains details and explanations
-         CART_ROM_MAX   => CART_ROM_MAX_R3,
-         CART_RAM_MAX   => CART_RAM_MAX_R3,
-         SYS_ROM_MAX    => SYS_ROM_MAX_R3,
-         SYS_RAM_MAX    => SYS_RAM_MAX_R3
+         -- DEBUG / ROLL-BACK
+         CART_ROM_MAX   => CART_ROM_MAX_R2,  -- DEBUG / ROLL-BACK
+         CART_RAM_MAX   => CART_RAM_MAX_R2,  -- DEBUG / ROLL-BACK
+         SYS_ROM_MAX    => SYS_ROM_MAX_R2,   -- DEBUG / ROLL-BACK
+         SYS_RAM_MAX    => SYS_RAM_MAX_R2    -- DEBUG / ROLL-BACK
       )
       port map
       (
