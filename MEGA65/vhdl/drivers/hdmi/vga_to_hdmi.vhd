@@ -728,7 +728,7 @@ begin
                     pb(3)(4) +
                     pb(3)(5)(3 downto 0)
                 );
-            pb(3)(2)(5 downto 4) <= unsigned(aspect_s);
+            -- pb(3)(2)(5 downto 4) <= unsigned(aspect_s); -- leave M(1:0) at 00
             pb(3)(4) <= unsigned(vic_s);
             pb(3)(5)(0) <= pix_rep_s;
             pb(3)(6 to 27) <= pb_3(6 to 27);
