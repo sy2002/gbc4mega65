@@ -1,3 +1,8 @@
+Reminder for next version:
+==========================
+
+* HDMI: Increased compatibility and robustness
+
 Version 0.8 (beta) - June 27, 2021
 ===================================
 
