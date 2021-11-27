@@ -15,6 +15,14 @@
 -- https://www.gnu.org/licenses/.                                             --
 --------------------------------------------------------------------------------
 
+-- MEGA65 version that is based on commit 3bf5cde209ab030df0ad09c653ac76e63a48f7c9
+-- of https://github.com/amb5l/tyto_project/ (master branch) that fixes (among other things):
+--           https://github.com/amb5l/tyto_project/issues/1         
+--           https://github.com/amb5l/tyto_project/issues/5
+-- This MEGA65 version also has a slightly different interface ("select_44100"
+-- vs "pcm_fs") and it does inject "MEGA65" as "Vendor" and "Product" into the
+-- Source Product Descriptor
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -227,8 +235,6 @@ architecture synth of vga_to_hdmi is
     constant hb_1 : u8(0 to 2) := ( x"01", x"00", x"00" );
 
     -- packet type 2: audio infoframe packet
-    -- Fix field values based on HDMI test 7-31 results with N5998A protocol
-    -- analyser
     constant hb_2 : u8(0 to 2) := ( x"84", x"01", x"0A" );
     constant pb_2 : u8(0 to 27) := (
             0  => x"70", -- checksum 84+01+0A+01+CKS = 00
@@ -249,8 +255,8 @@ architecture synth of vga_to_hdmi is
     constant hb_3 : u8(0 to 2) := ( x"82", x"02", x"0D" );
     constant pb_3 : u8(0 to 27) := (
             0 => x"00",     -- *NOT CONSTANT* checksum
-            1 => x"12",     -- RSVD,Y(1:0),A0,B(1:0),S(1:0)
-            2 => x"08",     -- *PART CONSTANT* C(1:0),M(1:0),R(3:0)
+            1 => x"02",     -- RSVD,Y(1:0),A0,B(1:0),S(1:0)
+            2 => x"00",     -- *PART CONSTANT* C(1:0),M(1:0),R(3:0)
             3 => x"80",     -- ITC,EC(2:0),Q(1:0),SC(1:0)
             4 => x"00",     -- *NOT CONSTANT* VIC
             5 => x"30",     -- *PART CONSTANT* YQ(1:0),CN(1:0),PR(3:0)
@@ -433,17 +439,9 @@ begin
         )
         port map (
             src_clk  => pcm_clk,
-            src_in(56)   => iec_sync,
-            src_in(55)  => iec_rp,
-            src_in(54) => iec_rc,
-            src_in(53) => iec_ru,
-            src_in(52) => iec_rv,
-            src_in(51 downto 28) => iec_r,
-            src_in(27) => iec_lp,
-            src_in(26) => iec_lc,
-            src_in(25) => iec_lu,
-            src_in(24) => iec_lv,
-            src_in(23 downto 0) => iec_l,
+            src_in   => iec_sync &
+                        iec_rp & iec_rc & iec_ru & iec_rv & iec_r &
+                        iec_lp & iec_lc & iec_lu & iec_lv & iec_l,
             src_send => iec_req,
             src_rcv  => iec_ack,
             dest_clk => vga_clk,
@@ -728,7 +726,9 @@ begin
                     pb(3)(4) +
                     pb(3)(5)(3 downto 0)
                 );
-            -- pb(3)(2)(5 downto 4) <= unsigned(aspect_s); -- leave M(1:0) at 00
+            pb(3)(2)(5 downto 4) <= unsigned(aspect_s);
+            -- pb(3)(2)(3) <= '1';
+            -- pb(3)(2)(1 downto 0) <= unsigned(aspect_s);
             pb(3)(4) <= unsigned(vic_s);
             pb(3)(5)(0) <= pix_rep_s;
             pb(3)(6 to 27) <= pb_3(6 to 27);
