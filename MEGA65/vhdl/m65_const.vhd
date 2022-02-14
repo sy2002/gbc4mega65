@@ -20,7 +20,10 @@ constant CART_RAM_MAX_R2   : integer :=   32 * 1024;
 constant CART_ROM_MAX_R3   : integer := 1024 * 1024;
 constant CART_RAM_MAX_R3   : integer :=  128 * 1024;
 
--- modes according to https://gbdev.io/pandocs/#_0148-rom-size and https://gbdev.io/pandocs/#_0149-ram-size
+-- Make sure that the "modes" below are consistent with the maximum sizes
+-- of ROM and RAM defined by the constants above:
+-- 	ROM: https://gbdev.io/pandocs/The_Cartridge_Header.html#0148---rom-size
+--  RAM: https://gbdev.io/pandocs/The_Cartridge_Header.html#0149---ram-size
 constant SYS_ROM_MAX_R2    : integer := 3; -- 256 kB
 constant SYS_RAM_MAX_R2    : integer := 3; -- 32 kB 
 constant SYS_ROM_MAX_R3    : integer := 5; -- 1 MB
