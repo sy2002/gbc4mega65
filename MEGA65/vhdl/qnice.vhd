@@ -18,9 +18,9 @@ entity QNICE is
 generic (
    CHARS_DX          : integer;
    CHARS_DY          : integer;
-   MAX_ROM           : integer;                       -- highest supported ROM size code from https://gbdev.io/pandocs/#_0148-rom-size
+   MAX_ROM           : integer;                       -- highest supported ROM size code from https://gbdev.io/pandocs/The_Cartridge_Header.html#0148---rom-size
                                                       -- but ignoring the $5x values
-   MAX_RAM           : integer                        -- highest supported RAM size code from https://gbdev.io/pandocs/#_0149-ram-size
+   MAX_RAM           : integer                        -- highest supported RAM size code from https://gbdev.io/pandocs/The_Cartridge_Header.html#0149---ram-size
 );
 port (
    -- QNICE MEGA65 hardware interface

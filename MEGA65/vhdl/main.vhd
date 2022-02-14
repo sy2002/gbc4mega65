@@ -377,7 +377,7 @@ begin
    main_joypad_data <= main_joypad_data_i when main_qngbc_keyboard = '1' else (others => '1');
 
    -- Cartridge header flags
-   -- Infos taken from: https://gbdev.io/pandocs/#the-cartridge-header and from MiSTer's mbc.sv
+   -- Infos taken from: https://gbdev.io/pandocs/The_Cartridge_Header.html and from MiSTer's mbc.sv
    main_isGBC_Game <= true when main_cart_cgb_flag = x"80" or main_cart_cgb_flag = x"C0" else false;
    main_isSGB_Game <= true when main_cart_sgb_flag = x"03" and main_cart_old_licensee = x"33" else false;
 

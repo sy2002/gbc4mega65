@@ -5,7 +5,7 @@
 --
 -- Can be directly connected to the MiSTer Game Boy's core because it stores
 -- the key presses in a matrix just like documented here:
--- https://gbdev.io/pandocs/#ff00-p1-joyp-joypad-r-w
+-- https://gbdev.io/pandocs/Joypad_Input.html
 --
 -- This machine is based on Gameboy_MiSTer
 -- MEGA65 port done by sy2002 in 2021 and licensed under GPL v3
