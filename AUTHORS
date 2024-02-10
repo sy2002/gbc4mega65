@@ -1,41 +1,45 @@
-YOUR PROJECT NAME for MEGA65 aka GITHUB REPO SHORT NAME
-=======================================================
+Gameboy Color for MEGA65 aka gbc4mega65
+=======================================
 
-done in YEAR by YOUR NAME
+done in 2021 and 2024 by
+    * sy2002     github.com/sy2002     www.sy2002.de
+    * MJoergen   github.com/MJoergen
 
-YOUR WEBSITE
-YOUR GITHUB SITE
+gbc4mega65 is licensed under the terms of GNU/GPL v3, for more information please read the file LICENSE
+Parts of gbc4mega65 are licensed under other Free-software licenses as described in the source code
 
-REPO SHORT NAME is licensed under the terms of GNU/GPL v3, for more information please read the file LICENSE
-Parts of REPO SHORT NAME are licensed under other Free-software licenses as described in the source code
+Special thanks to Robert Peip for his invaluable support.
 
-GITHUB REPO SHORT NAME:
------------------------
+gbc4mega65:
+-----------
 
-  GITHUB REPO SHORT NAME is a port of MISTER'S REPO SHORT NAME
+  gbc4mega65 is a port of Gameboy_MiSTer
       done by the MiSTer Development Team
-      Original GitHub Repository: https://github.com/MiSTer-devel/MISTER-REPO-LINK
+      Original GitHub Repository: https://github.com/MiSTer-devel/Gameboy_MiSTer
       Significant contributors:
-      * NAME THE MAIN
-      * CONTRIBUTORS
-      * ON MiSTer's SIDE
+      * brNX
+      * sorgelig
+      * paulb-nl
+      * Kitrinx
+      * RobertPeip
 
-  MISTER'S REPO SHORT NAME is a port of MiST's MiST NAME/OTHER SOURCE IN CASE MiSTer ported it from MIST/OTHER SOURCE
+  Gameboy_MiSTer is a port of MiST's Game Boy core
       done by the MiST Development Team
-      Original GitHub Repository: https://github.com/mist-devel/MIST-REPO-LINK OR OTHER SOURCE
+      Original GitHub Repository: https://github.com/mist-devel/gameboy
       Significant contributors:
-      * NAME THE MAIN
-      * CONTRIBUTORS
-      * ON MiST's SIDE (OR OTHER SOURCE)
+      * Till Harbaum (original creator)
+      * gyurco
 
-  LIST SOME MORE SIGNIFICANT / MAIN AUTHERS OF SUBMODULES
-  HAVE A LOOK AT THIS EXAMPLE HOW TO: https://github.com/sy2002/gbc4mega65/blob/master/AUTHORS
+  The Z80 processor is based on T80
+      done by Daniel Wallner
+      improved by MikeJ, Sean Riddle, TobiFlex, RobertPeip, sorgelig, paulb-nl, brNX
+      
+  Open Source Game Boy and Game Boy Color ROMs
+      done by the SameBoy Development Team
+      Original GitHub Repository https://github.com/LIJI32/SameBoy
 
-Other than that and my own work, REPO SHORT NAME uses:
-------------------------------------------------------
-
-DO NOT FORGET TO CREDIT EVERYTHING YOU USE FROM OTHER PEOPLE HERE
-THE FOLLOWING LIST NEEDS ALWAYS TO BE PART OF YOUR LIST:
+Other than that and our own work, gbc4mega65 uses:
+--------------------------------------------------
   
   * MiSTer2MEGA65 by The MiSTer2MEGA65 Development Team
     https://github.com/sy2002/MiSTer2MEGA65
@@ -46,13 +50,10 @@ THE FOLLOWING LIST NEEDS ALWAYS TO BE PART OF YOUR LIST:
   * Various MEGA65 drivers taken from the MEGA65 VHDL source by Paul Gardner-Stephen
     https://github.com/MEGA65/mega65-core
 
-  * VGA Timing Generator, done by Scott Larson
-    https://www.digikey.com/eewiki/pages/viewpage.action?pageId=15925278
-
-  * VGA to HDMI converter IP core, done by Adam Barnes
+  * HDMI IP core, done by Adam Barnes
     https://github.com/amb5l/tyto2
 
-  * AVALON SCALER used for scaling to 720p for HDMI, done by temlib.org
+  * AVALON SCALER used for scaling on HDMI, done by temlib.org
     http://temlib.org/site/?page_id=10
 
   * HyperRAM controller, done by MJoergen
@@ -69,3 +70,19 @@ THE FOLLOWING LIST NEEDS ALWAYS TO BE PART OF YOUR LIST:
 
   * PSF font to C include file converter psftools-1.1.1 by John Elliott
     https://www.seasip.info/Unix/PSF/
+
+The following infos and tools were invaluable for the development of gbc4mega65:
+--------------------------------------------------------------------------------
+
+  * Pan Docs by The gbdev Pan Docs Community
+    https://gbdev.io/pandocs/
+
+  * Game Boy interactive test suite: 240p-test-mini by Damian Yerrick
+    https://github.com/pinobatch/240p-test-mini
+    
+  * 240p-test-mini is a port of 240p Test Suite by Artemio Urbina
+    https://github.com/ArtemioUrbina/240pTestSuite
+
+  * MBC tests (cartridge ROM/RAM) were performed using the tests from
+    Joonas Javanainen's mooneye-gb project
+    https://github.com/Gekkio/mooneye-test-suite
