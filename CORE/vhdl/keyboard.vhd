@@ -1,24 +1,14 @@
----------------------------------------------------------------------------------------------------------
--- MiSTer2MEGA65 Framework  
+----------------------------------------------------------------------------------
+-- Game Boy Color for MEGA65 (gbc4mega65)
 --
--- Custom keyboard controller for your core
+-- MEGA65 keyboard controller
 --
--- Runs in the clock domain of the core.
+-- Can be directly connected to the MiSTer Game Boy's core because it stores
+-- the key presses in a matrix just like documented here:
+-- https://gbdev.io/pandocs/Joypad_Input.html
 --
--- This is how MiSTer2MEGA65 provides access to the MEGA65 keyboard: 
---
--- Each core is treating the keyboard in a different way: Some need low-active "matrices", some
--- might need small high-active keyboard memories, etc. This is why the MiSTer2MEGA65 framework
--- lets you define literally everything and only provides a minimal abstraction layer to the keyboard.
--- You need to adjust this module to your needs.
---
--- MiSTer2MEGA65 provides a very simple and generic interface to the MEGA65 keyboard:
--- kb_key_num_i is running through the key numbers 0 to 79 with a frequency of 1 kHz, i.e. the whole
--- keyboard is scanned 1000 times per second. kb_key_pressed_n_i is already debounced and signals
--- low active, if a certain key is being pressed right now.
--- 
--- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
----------------------------------------------------------------------------------------------------------
+-- done by sy2002 in 2021 and 2024 and licensed under GPL v3
+----------------------------------------------------------------------------------
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -32,9 +22,24 @@ entity keyboard is
       key_num_i            : in integer range 0 to 79;   -- cycles through all MEGA65 keys
       key_pressed_n_i      : in std_logic;               -- low active: debounced feedback: is kb_key_num_i pressed right now?
                
-      -- @TODO: Create the kind of keyboard output that your core needs
-      -- "example_n_o" is a low active register and used by the demo core
-      example_n_o          : out std_logic_vector(79 downto 0)
+      -- joystick input with variable mapping
+      -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+      -- mapping: 00 = Standard, Fire=A
+      --          01 = Standard, Fire=B
+      --          10 = Up=A, Fire=B
+      --          11 = Up=B, Fire=A
+      -- make sure that this mapping is consistent with gbc.asm
+      joystick    : in std_logic_vector(4 downto 0);
+      joy_map     : in std_logic_vector(1 downto 0);
+         
+      -- interface to the GBC's internal logic (low active)
+      -- joypad:   
+      -- Bit 3 - P13 Input Down  or Start
+      -- Bit 2 - P12 Input Up    or Select
+      -- Bit 1 - P11 Input Left  or Button B
+      -- Bit 0 - P10 Input Right or Button A   
+      p54         : in std_logic_vector(1 downto 0);  -- "01" selects buttons and "10" selects direction keys
+      joypad      : out std_logic_vector(3 downto 0)
    );
 end keyboard;
 
@@ -119,17 +124,100 @@ constant m65_up_crsr       : integer := 73;  -- cursor up
 constant m65_left_crsr     : integer := 74;  -- cursor left
 constant m65_restore       : integer := 75;
 
-signal key_pressed_n : std_logic_vector(79 downto 0);
+-- Game Boy's keyboard matrix: low active matrix with 2 rows and 4 columns
+-- Refer to "doc/assets/spectrum_keyboard_ports.png" to learn how it works
+-- One more column was added to support additional keys used by QNICE
+type matrix_reg_t is array(0 to 1) of std_logic_vector(3 downto 0);
+signal matrix : matrix_reg_t := (others => "1111");  -- low active, i.e. "1111" means "no key pressed"
+
+-- mapped joystick that can be connected with Game Boy's input matrix:
+-- bit order (low active)
+--    0 = up
+--    1 = down
+--    2 = left
+--    3 = right
+--    4 = A
+--    5 = B
+signal   joystick_m        : std_logic_vector(5 downto 0);
+constant JM_UP             : integer := 0;
+constant JM_DOWN           : integer := 1;
+constant JM_RIGHT          : integer := 2;
+constant JM_LEFT           : integer := 3;
+constant JM_A              : integer := 4;
+constant JM_B              : integer := 5;
 
 begin
 
-   example_n_o <= key_pressed_n;
-   
-   keyboard_state : process(clk_main_i)
+   -- fill the matrix registers that will be read by the Game Boy
+   -- since we just need very few keys, we are not using a nice matrix table like zxuno4mega65;
+   -- instead it is just a mere case structure
+   write_matrix : process(clk_main_i)
+   variable key_up, key_down, key_left, key_right, key_a, key_b : std_logic := '1';
    begin
       if rising_edge(clk_main_i) then
-         key_pressed_n(key_num_i) <= key_pressed_n_i;
+         case key_num_i is
+            when m65_horz_crsr   => key_right    := key_pressed_n_i;       -- cursor right
+            when m65_vert_crsr   => key_down     := key_pressed_n_i;       -- cursor down
+            when m65_up_crsr     => key_up       := key_pressed_n_i;       -- cursor up
+            when m65_left_crsr   => key_left     := key_pressed_n_i;       -- cursor left
+            when m65_return      => matrix(1)(2) <= key_pressed_n_i;       -- Return      => Select
+            when m65_space       => matrix(1)(3) <= key_pressed_n_i;       -- Space       => Start
+            when m65_left_shift  => key_a        := key_pressed_n_i;       -- Left Shift  => A
+            when m65_mega        => key_b        := key_pressed_n_i;       -- Mega key    => B
+            when others => null;
+         end case;
+         
+         matrix(0)(0) <= key_right and joystick_m(JM_RIGHT);
+         matrix(0)(3) <= key_down  and joystick_m(JM_DOWN);
+         matrix(0)(2) <= key_up    and joystick_m(JM_UP);
+         matrix(0)(1) <= key_left  and joystick_m(JM_LEFT);
+         matrix(1)(0) <= key_a     and joystick_m(JM_A);
+         matrix(1)(1) <= key_b     and joystick_m(JM_B);
       end if;
+   end process;
+   
+   -- perform joystick mapping
+   map_joystick : process(joystick, joy_map)
+   begin
+      -- joystick input vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+      joystick_m(JM_LEFT)  <= joystick(1);
+      joystick_m(JM_RIGHT) <= joystick(0);
+      joystick_m(JM_UP)    <= joystick(3);      
+      joystick_m(JM_DOWN)  <= joystick(2);
+      
+      -- low active; make sure this mapping is consistent to gbc.asm      
+      case joy_map is
+         -- 00 = Standard, Fire=A      
+         when "00" =>
+            joystick_m(JM_A)  <= joystick(4);
+            joystick_m(JM_B)  <= '1';
+            
+         -- 01 = Standard, Fire=B
+         when "01" =>
+            joystick_m(JM_A)  <= '1';
+            joystick_m(JM_B)  <= joystick(4);
+            
+         -- 10 = Up=A, Fire=B
+         when "10" =>   
+            joystick_m(JM_A)  <= joystick(3);
+            joystick_m(JM_B)  <= joystick(4);
+            
+         -- 11 = Up=B, Fire=A
+         when "11" =>
+            joystick_m(JM_A)  <= joystick(4);
+            joystick_m(JM_B)  <= joystick(3);            
+      end case;
+   end process;
+      
+   -- return matrix to Game Boy
+   read_matrix : process(p54, matrix)
+   begin
+      case p54 is
+         when "01"   => joypad <= matrix(1);
+         when "10"   => joypad <= matrix(0);
+         when others => joypad <= "1111";
+      end case;
    end process;
 
 end beh;
+

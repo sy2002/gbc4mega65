@@ -68,43 +68,213 @@ end entity main;
 
 architecture synthesis of main is
 
--- @TODO: Remove these demo core signals
-signal keyboard_n          : std_logic_vector(79 downto 0);
+signal reset                  : std_logic;
+
+-- speed control
+signal sc_ce                  : std_logic;
+signal sc_ce_2x               : std_logic;
+
+-- cartridge signals
+signal ext_bus_addr           : std_logic_vector(14 downto 0);
+signal ext_bus_a15            : std_logic;
+signal cart_rd                : std_logic;
+signal cart_wr                : std_logic;
+signal cart_do                : std_logic_vector(7 downto 0);
+signal cart_di                : std_logic_vector(7 downto 0);
+signal cart_oe                : std_logic;
+signal nCS                    : std_logic;
+
+-- Signed audio from the Game Boy
+signal gb_audio_l_signed      : std_logic_vector(15 downto 0);
+signal gb_audio_r_signed      : std_logic_vector(15 downto 0);
+
+-- ROM loading signals
+signal rom_cgb_load           : std_logic;
+signal rom_dmg_load           : std_logic;
+signal rom_sgb_load           : std_logic;
+signal rom_wr                 : std_logic;
+signal rom_addr               : std_logic;
+signal rom_data               : std_logic;
+
+-- LCD interface
+signal lcd_clkena             : std_logic;
+signal lcd_data               : std_logic_vector(14 downto 0);
+signal lcd_mode               : std_logic_vector(1 downto 0);
+signal lcd_on                 : std_logic;
+signal lcd_vsync              : std_logic;
+
+-- joypad: p54 selects matrix entry and data contains either
+-- the direction keys or the other buttons
+signal joypad_p54             : std_logic_vector(1 downto 0);
+signal joypad_data            : std_logic_vector(3 downto 0);
+
+-- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+signal m65_joystick           : std_logic_vector(4 downto 0);
+
+-- @TODO research
+signal speed                  : std_logic;
+signal DMA_on                 : std_logic;
+
+-- constants necessary due to Verilog in VHDL embedding
+-- otherwise, when wiring constants directly to the entity, then Vivado throws an error
+constant c_fast_boot          : std_logic := '0';
+constant c_joystick           : std_logic_vector(7 downto 0) := X"FF";
+constant c_dummy_0            : std_logic := '0';
+constant c_dummy_2bit_0       : std_logic_vector(1 downto 0) := (others => '0');
+constant c_dummy_8bit_0       : std_logic_vector(7 downto 0) := (others => '0');
+constant c_dummy_64bit_0      : std_logic_vector(63 downto 0) := (others => '0');
+constant c_dummy_129bit_0     : std_logic_vector(128 downto 0) := (others => '0');
 
 begin
 
-   -- @TODO: Add the actual MiSTer core here
-   -- The demo core's purpose is to show a test image and to make sure, that the MiSTer2MEGA65 framework
-   -- can be synthesized and run stand-alone without an actual MiSTer core being there, yet
-   i_democore : entity work.democore
-      port map (
-         clk_main_i           => clk_main_i,
+   reset          <= reset_soft_i or reset_hard_i;
+   
+   audio_left_o   <= signed(gb_audio_l_signed);
+   audio_right_o  <= signed(gb_audio_r_signed);
 
-         reset_i              => reset_soft_i or reset_hard_i,       -- long and short press of reset button mean the same
-         pause_i              => pause_i,
+   i_gameboy : entity work.gb
+      port map
+      (
+         reset                   => reset,                 -- input
 
-         ball_col_rgb_i       => x"EE4020",                          -- ball color (RGB): orange
-         paddle_speed_i       => x"1",                               -- paddle speed is about 50 pixels / sec (due to 50 Hz)
+         clk_sys                 => clk_main_i,            -- input
+         ce                      => sc_ce,                 -- input
+         ce_2x                   => sc_ce_2x,              -- input
 
-         keyboard_n_i         => keyboard_n,                         -- move the paddle with the cursor left/right keys...
-         joy_up_n_i           => joy_1_up_n_i,                       -- ... or move the paddle with a joystick in port #1
-         joy_down_n_i         => joy_1_down_n_i,
-         joy_left_n_i         => joy_1_left_n_i,
-         joy_right_n_i        => joy_1_right_n_i,
-         joy_fire_n_i         => joy_1_fire_n_i,
+         joystick                => c_joystick,            -- input
+         
+         isGBC                   => c_dummy_0,             -- input     @TODO
+         real_cgb_boot           => c_dummy_0,             -- input     @TODO
+	      isSGB                   => c_dummy_0,             -- input     @TODO
+         boot_gba_en             => c_dummy_0,             -- input     @TODO
+         fast_boot_en            => c_dummy_0,             -- input     @TODO
+         megaduck                => c_dummy_0,             -- input     @TODO         
 
-         vga_ce_o             => video_ce_o,
-         vga_red_o            => video_red_o,
-         vga_green_o          => video_green_o,
-         vga_blue_o           => video_blue_o,
-         vga_vs_o             => video_vs_o,
-         vga_hs_o             => video_hs_o,
-         vga_hblank_o         => video_hblank_o,
-         vga_vblank_o         => video_vblank_o,
+         -- Cartridge interface
+         ext_bus_addr            => ext_bus_addr,          -- output
+         ext_bus_a15             => ext_bus_a15,           -- output
+         cart_rd                 => cart_rd,               -- output
+         cart_wr                 => cart_wr,               -- output
+         cart_di                 => cart_di,               -- input
+         cart_do                 => cart_do,               -- output
+         cart_oe                 => cart_oe,               -- output
+         nCS                     => nCS,                   -- output
 
-         audio_left_o         => audio_left_o,
-         audio_right_o        => audio_right_o
-      ); -- i_democore
+         -- ROM loading signals
+	      cgb_boot_download       => rom_cgb_load,          -- input
+	      dmg_boot_download       => rom_dmg_load,          -- input
+	      sgb_boot_download       => rom_sgb_load,          -- input
+	      ioctl_wr                => rom_wr,                -- input
+	      ioctl_addr              => rom_addr,              -- input
+	      ioctl_dout              => rom_data,              -- input
+
+         -- audio: unsigned value that can be sampled
+         audio_l                 => gb_audio_l_signed,     -- output
+         audio_r                 => gb_audio_r_signed,     -- output
+
+         -- lcd interface
+         lcd_clkena              => lcd_clkena,            -- output
+         lcd_data                => lcd_data,              -- output
+         lcd_mode                => lcd_mode,              -- output
+         lcd_on                  => lcd_on,                -- output
+         lcd_vsync               => lcd_vsync,             -- output
+
+         -- Game Boy's joypad and buttons
+         joy_p54                 => joypad_p54,            -- output
+         joy_din                 => joypad_data,           -- input
+
+         speed                   => speed,  --GBC          -- output    @TODO
+         DMA_on                  => DMA_on,                -- output    @TODO 
+         
+         -- cheating/game code engine: not supported on MEGA65
+         gg_reset                => reset,                 -- input
+         gg_en                   => c_dummy_0,             -- input
+         gg_code                 => c_dummy_129bit_0,      -- input
+         gg_available            => open,                  -- output
+
+         -- serial port: not supported on MEGA65
+         sc_int_clock2           => open,                  -- output
+         serial_clk_in           => c_dummy_0,             -- input
+         serial_clk_out          => open,                  -- output
+         serial_data_in          => c_dummy_0,             -- input
+         serial_data_out         => open,                  -- output
+
+         -- MiSTer's save states & rewind feature: not supported on MEGA65
+         increaseSSHeaderCount   => c_dummy_0,             -- input
+         cart_ram_size           => c_dummy_8bit_0,        -- input
+         save_state              => c_dummy_0,             -- input
+         load_state              => c_dummy_0,             -- input
+         savestate_number        => c_dummy_2bit_0,        -- input
+         sleep_savestate         => open,                  -- output
+         SaveStateExt_Din        => open,                  -- output
+         SaveStateExt_Adr        => open,                  -- output
+         SaveStateExt_wren       => open,                  -- output
+         SaveStateExt_rst        => open,                  -- output
+         SaveStateExt_Dout       => c_dummy_64bit_0,       -- input
+         SaveStateExt_load       => open,                  -- output
+         Savestate_CRAMAddr      => open,                  -- output
+         Savestate_CRAMRWrEn     => open,                  -- output
+         Savestate_CRAMWriteData => open,                  -- output
+         Savestate_CRAMReadData  => c_dummy_8bit_0,        -- input
+         SAVE_out_Din            => open,                  -- output
+         SAVE_out_Dout           => c_dummy_64bit_0,       -- input
+         SAVE_out_Adr            => open,                  -- output
+         SAVE_out_rnw            => open,                  -- output
+         SAVE_out_ena            => open,                  -- output
+         SAVE_out_done           => c_dummy_0,             -- input
+         rewind_on               => c_dummy_0,             -- input
+         rewind_active           => c_dummy_0              -- input
+      );
+
+   -- Speed control is mainly a clock divider and it also manages pause/resume/fast-forward/etc.
+   i_gb_clk_ctrl : entity work.speedcontrol
+      port map
+      (
+         clk_sys                 => clk_main_i,
+         pause                   => pause_i,
+         speedup                 => '0',
+         DMA_on                  => DMA_on,
+         cart_act                => cart_rd or cart_wr,
+         ce                      => sc_ce,
+         ce_2x                   => sc_ce_2x,
+         refresh                 => open,
+         ff_on                   => open
+      );
+      
+   -- MEGA65 keyboard and joystick controller
+   -- m65_joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+   i_gamectrl : entity work.keyboard
+      port map
+      (
+         -- M2M framework interface
+         clk_main_i              => clk_main_i,         
+         key_num_i               => kb_key_num_i,
+         key_pressed_n_i         => kb_key_pressed_n_i,
+
+         -- MEGA65 joystick input with variable mapping
+         -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+         -- mapping: 00 = Standard, Fire=A
+         --          01 = Standard, Fire=B
+         --          10 = Up=A, Fire=B
+         --          11 = Up=B, Fire=A
+         joystick                => m65_joystick,
+         joy_map                 => "00",                -- @TODO
+
+         -- interface to the GBC's internal logic (low active)
+         -- joypad:   
+         -- Bit 3 - P13 Input Down  or Start
+         -- Bit 2 - P12 Input Up    or Select
+         -- Bit 1 - P11 Input Left  or Button B
+         -- Bit 0 - P10 Input Right or Button A   
+         p54                     => joypad_p54, -- "01" selects buttons and "10" selects direction keys
+         joypad                  => joypad_data
+      );
+
+   m65_joystick <= (joy_1_fire_n_i  and joy_2_fire_n_i)  &
+                   (joy_1_up_n_i    and joy_2_up_n_i)    &
+                   (joy_1_down_n_i  and joy_2_down_n_i)  &
+                   (joy_1_left_n_i  and joy_2_left_n_i)  &
+                   (joy_1_right_n_i and joy_2_right_n_i);     
 
    -- On video_ce_o and video_ce_ovl_o: You have an important @TODO when porting a core:
    -- video_ce_o: You need to make sure that video_ce_o divides clk_main_i such that it transforms clk_main_i
@@ -116,27 +286,6 @@ begin
    -- video_retro15kHz_o: '1', if the output from the core (post-scandoubler) in the retro 15 kHz analog RGB mode.
    --             Hint: Scandoubler off does not automatically mean retro 15 kHz on.
    video_ce_ovl_o <= video_ce_o;
-
-   -- @TODO: Keyboard mapping and keyboard behavior
-   -- Each core is treating the keyboard in a different way: Some need low-active "matrices", some
-   -- might need small high-active keyboard memories, etc. This is why the MiSTer2MEGA65 framework
-   -- lets you define literally everything and only provides a minimal abstraction layer to the keyboard.
-   -- You need to adjust keyboard.vhd to your needs
-   i_keyboard : entity work.keyboard
-      port map (
-         clk_main_i           => clk_main_i,
-
-         -- Interface to the MEGA65 keyboard
-         key_num_i            => kb_key_num_i,
-         key_pressed_n_i      => kb_key_pressed_n_i,
-
-         -- @TODO: Create the kind of keyboard output that your core needs
-         -- "example_n_o" is a low active register and used by the demo core:
-         --    bit 0: Space
-         --    bit 1: Return
-         --    bit 2: Run/Stop
-         example_n_o          => keyboard_n
-      ); -- i_keyboard
 
 end architecture synthesis;
 
