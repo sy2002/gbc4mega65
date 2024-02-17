@@ -42,8 +42,8 @@ constant QNICE_FIRMWARE           : string  := QNICE_FIRMWARE_M2M;
 
 -- The MiSTer main expects 8x the clock speed of the original Game Boy:
 -- 8 x 4.194304 MHz = 33.554432 MHz
--- We are only able to approximate this value and we chose 33.507853 MHz 
-constant CORE_CLK_SPEED       : natural := 33_507_853;
+-- We are only able to approximate this value and we chose 33.548387 MHz 
+constant CORE_CLK_SPEED       : natural := 33_548_387;
 
 -- System clock speed (crystal that is driving the FPGA) and QNICE clock speed
 -- !!! Do not touch !!!

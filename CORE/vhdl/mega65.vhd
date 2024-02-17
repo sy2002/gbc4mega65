@@ -314,14 +314,14 @@ begin
    clk_gen : entity work.clk
       port map (
          sys_clk_i         => CLK,             -- expects 100 MHz
-         main_clk_o        => main_clk,        -- CORE's 54 MHz clock
-         main_rst_o        => main_rst         -- CORE's reset, synchronized
+         main_clk_o        => main_clk,        -- CORE's 33.548387 MHz clock (equals video clock divided by 2)
+         main_rst_o        => main_rst,        -- CORE's reset, synchronized
+         video_clk_o       => video_clk_o,     -- video clock running at 67.096774 MHz
+         video_rst_o       => video_rst_o      -- video's reset, synchronized         
       ); -- clk_gen
 
    main_clk_o  <= main_clk;
-   main_rst_o  <= main_rst;
-   video_clk_o <= main_clk;
-   video_rst_o <= main_rst;
+   main_rst_o  <= main_rst;    
 
    ---------------------------------------------------------------------------------------------
    -- main_clk (MiSTer core's clock)
@@ -331,6 +331,10 @@ begin
    -- We switch it to blue when a long reset is detected and as long as the user keeps pressing the preset button
    main_power_led_o     <= '1';
    main_power_led_col_o <= x"0000FF" when main_reset_m2m_i else x"00FF00";
+   
+   -- The Game Boy does not need the drive led
+   main_drive_led_o     <= '0';
+   main_drive_led_col_o <= x"00FF00";  -- 24-bit RGB value for the led   
 
    -- main.vhd contains the actual MiSTer core
    i_main : entity work.main
@@ -487,13 +491,6 @@ begin
    -- main.vhd. We advise to delete this before starting to port a core and re-adding
    -- it later (and at the right place), if and when needed.
    ---------------------------------------------------------------------------------------
-
-   -- @TODO:
-   -- a) In case that this is handled in main.vhd, you need to add the appropriate ports to i_main
-   -- b) You might want to change the drive led's color (just like the C64 core does) as long as
-   --    the cache is dirty (i.e. as long as the write process is not finished, yet)
-   main_drive_led_o     <= '0';
-   main_drive_led_col_o <= x"00FF00";  -- 24-bit RGB value for the led
 
    i_vdrives : entity work.vdrives
       generic map (
