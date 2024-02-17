@@ -131,7 +131,7 @@ begin
    
    audio_left_o   <= signed(gb_audio_l_signed);
    audio_right_o  <= signed(gb_audio_r_signed);
-
+  
    i_gameboy : entity work.gb
       port map
       (
@@ -286,6 +286,25 @@ begin
    -- video_retro15kHz_o: '1', if the output from the core (post-scandoubler) in the retro 15 kHz analog RGB mode.
    --             Hint: Scandoubler off does not automatically mean retro 15 kHz on.
    video_ce_ovl_o <= video_ce_o;
+   
+   -------------------------------------------------------------------------------------------------
+   -- TEMPORARY HARDCODED TETRIS CARTRIDGE MODELED AS A SIMPLE ROM 
+   -------------------------------------------------------------------------------------------------
+
+   itemp_cart : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH  => 16,
+         DATA_WIDTH  => 8,
+         ROM_PRELOAD => true,
+         ROM_FILE    => "../../rom/tetris.rom"
+      )
+      port map (
+         clock_a     => clk_main_i,
+         address_a   => ext_bus_a15 & ext_bus_addr,
+         data_a      => cart_di,
+         wren_a      => cart_wr,
+         q_a         => cart_do
+     );
 
 end architecture synthesis;
 
