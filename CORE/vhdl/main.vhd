@@ -331,6 +331,7 @@ begin
          hs                      => video_hs,              -- output
          vs                      => video_vs,              -- output
          hbl                     => video_hblank_o,        -- output
+         vbl                     => video_vblank_o,        -- output
          r                       => video_red_o,           -- output
          g                       => video_green_o,         -- output
          b                       => video_blue_o,          -- output

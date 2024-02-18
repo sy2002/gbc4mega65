@@ -73,8 +73,8 @@ begin
       port map (
          -- Output clocks
          CLKFBOUT            => clkfb_mmcm,
-         CLKOUT0             => main_clk_mmcm,
-         CLKOUT1             => video_clk_mmcm,
+         CLKOUT0             => video_clk_mmcm,
+         CLKOUT1             => main_clk_mmcm,
          -- Input clock control
          CLKFBIN             => clkfb,
          CLKIN1              => sys_clk_i,
