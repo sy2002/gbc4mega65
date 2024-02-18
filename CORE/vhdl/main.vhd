@@ -28,6 +28,7 @@ entity main is
       clk_main_speed_i        : in  natural;
 
       -- Video output
+      clk_video_i             : in  std_logic;
       video_ce_o              : out std_logic;
       video_ce_ovl_o          : out std_logic;
       video_red_o             : out std_logic_vector(7 downto 0);
@@ -103,6 +104,10 @@ signal lcd_mode               : std_logic_vector(1 downto 0);
 signal lcd_on                 : std_logic;
 signal lcd_vsync              : std_logic;
 
+signal video_ce_pix           : std_logic;
+signal video_hs               : std_logic;
+signal video_vs               : std_logic;
+
 -- joypad: p54 selects matrix entry and data contains either
 -- the direction keys or the other buttons
 signal joypad_p54             : std_logic_vector(1 downto 0);
@@ -115,14 +120,19 @@ signal m65_joystick           : std_logic_vector(4 downto 0);
 signal speed                  : std_logic;
 signal DMA_on                 : std_logic;
 
--- constants necessary due to Verilog in VHDL embedding
--- otherwise, when wiring constants directly to the entity, then Vivado throws an error
+-- @TODO palette handling: this needs to be a dynamically loadable register instead of a constant
+-- The default value is taken from MiSTer's Gameboy.sv
+constant palette              : std_logic_vector(127 downto 0) := x"828214517356305A5F1A3B4900000000";
+
+-- constants necessary due to Verilog in VHDL embedding (otherwise we would need to do a full component declaration)
 constant c_fast_boot          : std_logic := '0';
-constant c_joystick           : std_logic_vector(7 downto 0) := X"FF";
+constant c_joystick           : std_logic_vector(7 downto 0)   := X"FF";
 constant c_dummy_0            : std_logic := '0';
-constant c_dummy_2bit_0       : std_logic_vector(1 downto 0) := (others => '0');
-constant c_dummy_8bit_0       : std_logic_vector(7 downto 0) := (others => '0');
-constant c_dummy_64bit_0      : std_logic_vector(63 downto 0) := (others => '0');
+constant c_dummy_1            : std_logic := '1';
+constant c_dummy_2bit_0       : std_logic_vector(  1 downto 0) := (others => '0');
+constant c_dummy_8bit_0       : std_logic_vector(  7 downto 0) := (others => '0');
+constant c_dummy_16bit_0      : std_logic_vector( 15 downto 0) := (others => '0');
+constant c_dummy_64bit_0      : std_logic_vector( 63 downto 0) := (others => '0');
 constant c_dummy_129bit_0     : std_logic_vector(128 downto 0) := (others => '0');
 
 begin
@@ -230,20 +240,20 @@ begin
    i_gb_clk_ctrl : entity work.speedcontrol
       port map
       (
-         clk_sys                 => clk_main_i,
-         pause                   => pause_i,
-         speedup                 => '0',
-         DMA_on                  => DMA_on,
-         cart_act                => cart_rd or cart_wr,
-         ce                      => sc_ce,
-         ce_2x                   => sc_ce_2x,
-         refresh                 => open,
-         ff_on                   => open
+         clk_sys                 => clk_main_i,            -- input 
+         pause                   => pause_i,               -- input
+         speedup                 => '0',                   -- input
+         DMA_on                  => DMA_on,                -- input
+         cart_act                => cart_rd or cart_wr,    -- input
+         ce                      => sc_ce,                 -- output
+         ce_2x                   => sc_ce_2x,              -- output
+         refresh                 => open,                  -- output
+         ff_on                   => open                   -- output
       );
-      
+
    -- MEGA65 keyboard and joystick controller
    -- m65_joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
-   i_gamectrl : entity work.keyboard
+   i_kbd_joy_ctrl : entity work.keyboard
       port map
       (
          -- M2M framework interface
@@ -257,8 +267,8 @@ begin
          --          01 = Standard, Fire=B
          --          10 = Up=A, Fire=B
          --          11 = Up=B, Fire=A
-         joystick                => m65_joystick,
-         joy_map                 => "00",                -- @TODO
+         joystick_i              => m65_joystick,
+         joy_map_i               => "00",                -- @TODO
 
          -- interface to the GBC's internal logic (low active)
          -- joypad:   
@@ -266,16 +276,81 @@ begin
          -- Bit 2 - P12 Input Up    or Select
          -- Bit 1 - P11 Input Left  or Button B
          -- Bit 0 - P10 Input Right or Button A   
-         p54                     => joypad_p54, -- "01" selects buttons and "10" selects direction keys
-         joypad                  => joypad_data
+         p54_i                   => joypad_p54, -- "01" selects buttons and "10" selects direction keys
+         joypad_o                => joypad_data
       );
 
    m65_joystick <= (joy_1_fire_n_i  and joy_2_fire_n_i)  &
                    (joy_1_up_n_i    and joy_2_up_n_i)    &
                    (joy_1_down_n_i  and joy_2_down_n_i)  &
                    (joy_1_left_n_i  and joy_2_left_n_i)  &
-                   (joy_1_right_n_i and joy_2_right_n_i);     
+                   (joy_1_right_n_i and joy_2_right_n_i);
+                   
+   -- Convert the Game Boy's LCD output to an analog video signal:
+   -- 160x144 pixels, 15.8 kHz horizontal frequency, 59.7 vertical frequency, 6.71 pixel clock
+   i_lcd_to_video : entity work.lcd
+      port map
+      (
+         clk_sys                 => clk_main_i,            -- input
+         ce                      => sc_ce,                 -- input
 
+         -- Game Boy Color mode
+         isGBC                   => c_dummy_0,             -- input     @TODO
+
+         -- LCD interface
+         lcd_clkena              => lcd_clkena,            -- input
+         data                    => lcd_data,              -- input
+         mode                    => lcd_mode,              -- input
+         lcd_on                  => lcd_on,                -- input
+         lcd_vs                  => lcd_vsync,             -- input
+         shadow                  => c_dummy_0,             -- input     @TODO MiSTer option: "P1o4,Screen Shadow,No,Yes;"
+         
+         -- Display options
+	      tint                    => c_dummy_0,             -- input     @TODO MiSTer option: "P1O12,Custom Palette,Off,Auto,On;"
+	      inv                     => c_dummy_0,             -- input     @TODO MiSTer option: "P1OC,Inverted color,No,Yes;"
+	      double_buffer           => c_dummy_1,             -- input     @TODO MiSTer option: "P1O5,Stabilize video(buffer),Off,On;"
+	      frame_blend             => c_dummy_0,             -- input     @TODO MiSTer option: "P1OG,Frame blend,Off,On;"
+	      originalcolors          => c_dummy_1,             -- input     @TODO MiSTer option: "d4P1OU,GBC Colors,Corrected,Raw;"
+	      analog_wide             => c_dummy_0,             -- input     @TODO MiSTer option: "P1o2,Analog width,Narrow,Wide;"
+
+         -- Palette
+         pal1                    => palette(127 downto 104),   -- input
+         pal2                    => palette(103 downto  80),   -- input
+         pal3                    => palette( 79 downto  56),   -- input
+         pal4                    => palette( 55 downto  32),   -- input
+
+         -- @TODO research Super Game Boy, currently not supported
+         sgb_en                  => c_dummy_0,             -- input                            
+         sgb_border_pix          => c_dummy_16bit_0,       -- input
+	      sgb_pal_en              => c_dummy_0,             -- input
+         sgb_freeze              => c_dummy_0,             -- input
+
+         -- Analog video output
+         clk_vid                 => clk_video_i,           -- input
+         ce_pix                  => video_ce_pix,          -- output
+         hs                      => video_hs,              -- output
+         vs                      => video_vs,              -- output
+         hbl                     => video_hblank_o,        -- output
+         r                       => video_red_o,           -- output
+         g                       => video_green_o,         -- output
+         b                       => video_blue_o,          -- output
+         h_cnt                   => open,                  -- output
+         v_cnt                   => open,                  -- output
+         h_end                   => open                   -- output        
+      );
+      
+   p_hsync_vsync : process(clk_video_i)
+   begin
+      if rising_edge(clk_video_i) then
+         if video_ce_pix = '1' then
+            video_hs_o <= video_hs;
+            if video_hs_o = '0' and video_hs = '1' then
+               video_vs_o <= video_vs;
+            end if;
+         end if;
+      end if;
+   end process;
+   
    -- On video_ce_o and video_ce_ovl_o: You have an important @TODO when porting a core:
    -- video_ce_o: You need to make sure that video_ce_o divides clk_main_i such that it transforms clk_main_i
    --             into the pixelclock of the core (means: the core's native output resolution pre-scandoubler)
@@ -291,7 +366,7 @@ begin
    -- TEMPORARY HARDCODED TETRIS CARTRIDGE MODELED AS A SIMPLE ROM 
    -------------------------------------------------------------------------------------------------
 
-   itemp_cart : entity work.dualport_2clk_ram
+   i_temp_cart : entity work.dualport_2clk_ram
       generic map (
          ADDR_WIDTH  => 16,
          DATA_WIDTH  => 8,

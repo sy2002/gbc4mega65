@@ -308,9 +308,7 @@ begin
    main_joy_2_right_n_o <= '1';
    main_joy_2_fire_n_o  <= '1';
 
-
-   -- MMCME2_ADV clock generators:
-   --   @TODO YOURCORE:       54 MHz
+   -- Core's main clock and video clock
    clk_gen : entity work.clk
       port map (
          sys_clk_i         => CLK,             -- expects 100 MHz
@@ -350,7 +348,7 @@ begin
          clk_main_speed_i     => CORE_CLK_SPEED,
 
          -- Video output
-         -- This is PAL 720x576 @ 50 Hz (pixel clock 27 MHz), but synchronized to main_clk (54 MHz).
+         clk_video_i          => video_clk_o,
          video_ce_o           => video_ce_o,
          video_ce_ovl_o       => video_ce_ovl_o,
          video_red_o          => video_red_o,

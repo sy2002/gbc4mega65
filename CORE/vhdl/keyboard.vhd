@@ -29,8 +29,8 @@ entity keyboard is
       --          10 = Up=A, Fire=B
       --          11 = Up=B, Fire=A
       -- make sure that this mapping is consistent with gbc.asm
-      joystick    : in std_logic_vector(4 downto 0);
-      joy_map     : in std_logic_vector(1 downto 0);
+      joystick_i           : in std_logic_vector(4 downto 0);
+      joy_map_i            : in std_logic_vector(1 downto 0);
          
       -- interface to the GBC's internal logic (low active)
       -- joypad:   
@@ -38,8 +38,8 @@ entity keyboard is
       -- Bit 2 - P12 Input Up    or Select
       -- Bit 1 - P11 Input Left  or Button B
       -- Bit 0 - P10 Input Right or Button A   
-      p54         : in std_logic_vector(1 downto 0);  -- "01" selects buttons and "10" selects direction keys
-      joypad      : out std_logic_vector(3 downto 0)
+      p54_i                : in std_logic_vector(1 downto 0);  -- "01" selects buttons and "10" selects direction keys
+      joypad_o             : out std_logic_vector(3 downto 0)
    );
 end keyboard;
 
@@ -177,45 +177,45 @@ begin
    end process;
    
    -- perform joystick mapping
-   map_joystick : process(joystick, joy_map)
+   map_joystick : process(all)
    begin
       -- joystick input vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
-      joystick_m(JM_LEFT)  <= joystick(1);
-      joystick_m(JM_RIGHT) <= joystick(0);
-      joystick_m(JM_UP)    <= joystick(3);      
-      joystick_m(JM_DOWN)  <= joystick(2);
+      joystick_m(JM_LEFT)  <= joystick_i(1);
+      joystick_m(JM_RIGHT) <= joystick_i(0);
+      joystick_m(JM_UP)    <= joystick_i(3);      
+      joystick_m(JM_DOWN)  <= joystick_i(2);
       
       -- low active; make sure this mapping is consistent to gbc.asm      
-      case joy_map is
+      case joy_map_i is
          -- 00 = Standard, Fire=A      
          when "00" =>
-            joystick_m(JM_A)  <= joystick(4);
+            joystick_m(JM_A)  <= joystick_i(4);
             joystick_m(JM_B)  <= '1';
             
          -- 01 = Standard, Fire=B
          when "01" =>
             joystick_m(JM_A)  <= '1';
-            joystick_m(JM_B)  <= joystick(4);
+            joystick_m(JM_B)  <= joystick_i(4);
             
          -- 10 = Up=A, Fire=B
          when "10" =>   
-            joystick_m(JM_A)  <= joystick(3);
-            joystick_m(JM_B)  <= joystick(4);
+            joystick_m(JM_A)  <= joystick_i(3);
+            joystick_m(JM_B)  <= joystick_i(4);
             
          -- 11 = Up=B, Fire=A
          when "11" =>
-            joystick_m(JM_A)  <= joystick(4);
-            joystick_m(JM_B)  <= joystick(3);            
+            joystick_m(JM_A)  <= joystick_i(4);
+            joystick_m(JM_B)  <= joystick_i(3);            
       end case;
    end process;
       
    -- return matrix to Game Boy
-   read_matrix : process(p54, matrix)
+   read_matrix : process(all)
    begin
-      case p54 is
-         when "01"   => joypad <= matrix(1);
-         when "10"   => joypad <= matrix(0);
-         when others => joypad <= "1111";
+      case p54_i is
+         when "01"   => joypad_o <= matrix(1);
+         when "10"   => joypad_o <= matrix(0);
+         when others => joypad_o <= "1111";
       end case;
    end process;
 
