@@ -125,7 +125,6 @@ signal DMA_on                 : std_logic;
 constant palette              : std_logic_vector(127 downto 0) := x"828214517356305A5F1A3B4900000000";
 
 -- constants necessary due to Verilog in VHDL embedding (otherwise we would need to do a full component declaration)
-constant c_fast_boot          : std_logic := '0';
 constant c_joystick           : std_logic_vector(7 downto 0)   := X"FF";
 constant c_dummy_0            : std_logic := '0';
 constant c_dummy_1            : std_logic := '1';
@@ -165,18 +164,18 @@ begin
          ext_bus_a15             => ext_bus_a15,           -- output
          cart_rd                 => cart_rd,               -- output
          cart_wr                 => cart_wr,               -- output
-         cart_di                 => cart_di,               -- input
-         cart_do                 => cart_do,               -- output
-         cart_oe                 => cart_oe,               -- output
+         cart_di                 => cart_di,               -- output
+         cart_do                 => cart_do,               -- input
+         cart_oe                 => c_dummy_1,             -- input
          nCS                     => nCS,                   -- output
 
          -- ROM loading signals
-	      cgb_boot_download       => rom_cgb_load,          -- input
-	      dmg_boot_download       => rom_dmg_load,          -- input
-	      sgb_boot_download       => rom_sgb_load,          -- input
-	      ioctl_wr                => rom_wr,                -- input
-	      ioctl_addr              => rom_addr,              -- input
-	      ioctl_dout              => rom_data,              -- input
+	      cgb_boot_download       => c_dummy_0,             -- input     @TODO
+	      dmg_boot_download       => c_dummy_0,             -- input     @TODO
+	      sgb_boot_download       => c_dummy_0,             -- input     @TODO
+	      ioctl_wr                => c_dummy_0,             -- input     @TODO
+	      ioctl_addr              => rom_addr,              -- input     @TODO
+	      ioctl_dout              => rom_data,              -- input     @TODO
 
          -- audio: unsigned value that can be sampled
          audio_l                 => gb_audio_l_signed,     -- output
@@ -377,9 +376,7 @@ begin
       )
       port map (
          clock_a     => clk_main_i,
-         address_a   => ext_bus_a15 & ext_bus_addr,
-         data_a      => cart_di,
-         wren_a      => cart_wr,
+         address_a   => "0" & ext_bus_addr(14 downto 0),
          q_a         => cart_do
      );
 
