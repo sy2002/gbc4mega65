@@ -101,7 +101,7 @@ port (
    -- Core Clock Domain
    --------------------------------------------------------------------------------------------------------
 
-   CLK                     : in  std_logic;              -- 100 MHz clock
+   clk_i                   : in  std_logic;              -- 100 MHz clock
 
    -- Share clock and reset with the framework
    main_clk_o              : out std_logic;              -- CORE's 54 MHz clock
@@ -322,11 +322,17 @@ begin
    -- Core's main clock and video clock
    clk_gen : entity work.clk
       port map (
+<<<<<<< HEAD
          sys_clk_i         => CLK,             -- expects 100 MHz
          main_clk_o        => main_clk,        -- CORE's 33.548387 MHz clock (equals video clock divided by 2)
          main_rst_o        => main_rst,        -- CORE's reset, synchronized
          video_clk_o       => video_clk_o,     -- video clock running at 67.096774 MHz
          video_rst_o       => video_rst_o      -- video's reset, synchronized         
+=======
+         sys_clk_i         => clk_i,           -- expects 100 MHz
+         main_clk_o        => main_clk,        -- CORE's 54 MHz clock
+         main_rst_o        => main_rst         -- CORE's reset, synchronized
+>>>>>>> 8ab57bf0361387aebd4a618e5f7f2e289d45c2f1
       ); -- clk_gen
 
    main_clk_o  <= main_clk;
