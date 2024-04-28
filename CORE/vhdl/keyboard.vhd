@@ -125,8 +125,6 @@ constant m65_left_crsr     : integer := 74;  -- cursor left
 constant m65_restore       : integer := 75;
 
 -- Game Boy's keyboard matrix: low active matrix with 2 rows and 4 columns
--- Refer to "doc/assets/spectrum_keyboard_ports.png" to learn how it works
--- One more column was added to support additional keys used by QNICE
 type matrix_reg_t is array(0 to 1) of std_logic_vector(3 downto 0);
 signal matrix : matrix_reg_t := (others => "1111");  -- low active, i.e. "1111" means "no key pressed"
 

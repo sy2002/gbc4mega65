@@ -329,114 +329,184 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 35;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 68;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
 
 -- Net size of the Options menu on the screen in characters (excluding the frame, which is hardcoded to two characters)
 -- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is.
-constant OPTM_DX           : natural := 23;
-constant OPTM_DY           : natural := 24;
+constant OPTM_DX           : natural := 24;
+constant OPTM_DY           : natural := 18;
 
 constant OPTM_ITEMS        : string :=
 
-   " Demo Headline A\n"     &
-   "\n"                     &
-   " Item A.1\n"            &
-   " Item A.2\n"            &
-   " Item A.3\n"            &
-   " Item A.4\n"            &
-   "\n"                     &
-   " Demo Headline B\n"     &
-   "\n"                     &
+   " Game Boy for MEGA65\n"     &
+   "\n"                         &
+   " Classic\n"                 &
+   " Color\n"                   &
+   "\n"                         &
+   
+   " Joystick: %s\n"            &    -- Joystick submenu
+   " Joystick Settings\n"       &
+   "\n"                         &
+   " Std, Fire=A\n"             &
+   " Std, Fire=B\n"             &
+   " Up=A, Fire=B\n"            &
+   " Up=B, Fire=A\n"            &
+   "\n"                         &
+   " Back to main menu\n"       &
+   
+   " Flip joystick ports\n"     &   
 
-   " HDMI: %s\n"            &    -- HDMI submenu
-   " HDMI Settings\n"       &
-   "\n"                     &
-   " 720p 50 Hz 16:9\n"     &
-   " 720p 60 Hz 16:9\n"     &
-   " 576p 50 Hz 4:3\n"      &
-   " 576p 50 Hz 5:4\n"      &
-   " 640x480 60 Hz\n"       &
-   " 720x480 59.94 Hz\n"    &
-   " 800x600 60 Hz\n"       &
-   "\n"                     &
-   " Back to main menu\n"   &
+   "\n"                         &
+   " Display Settings\n"        &
+   "\n"                         &
 
-   "\n"                     &
-   " Drives\n"              &
-   "\n"                     &
-   " Drive X:%s\n"          &
-   " Drive Y:%s\n"          &
-   " Drive Z:%s\n"          &
-   "\n"                     &
-   " Another Headline\n"    &
-   "\n"                     &
-   " HDMI: CRT emulation\n" &
-   " HDMI: Zoom-in\n"       &
-   " Audio improvements\n"  &
-   "\n"                     &
-   " Close Menu\n";
+   " HDMI: %s\n"                &    -- HDMI resolution submenu
+   " HDMI Settings\n"           &
+   "\n"                         &
+   " 720p    60 Hz\n"           &
+   " 640x480 60 Hz\n"           &
+   " 720x480 59.94 Hz\n"        &
+   " 800x600 60 Hz\n"           &
+   "\n"                         &
+   " DVI (no sound)\n"          &
+   "\n"                         &
+   " Back to main menu\n"       &
 
--- define your own constants here and choose meaningful names
--- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
--- and be aware that you can only have a maximum of 254 groups (255 means "Close Menu");
--- also make sure that your group numbers are monotonic increasing (e.g. 1, 2, 3, 4, ...)
--- single-select items and therefore also drive mount items need to have unique identifiers
-constant OPTM_G_Demo_A     : integer := 1;
-constant OPTM_G_HDMI       : integer := 2;
-constant OPTM_G_Drive_X    : integer := 3;
-constant OPTM_G_Drive_Y    : integer := 4;
-constant OPTM_G_Drive_Z    : integer := 5;
-constant OPTM_G_CRT        : integer := 6;
-constant OPTM_G_Zoom       : integer := 7;
-constant OPTM_G_Audio      : integer := 8;
+   " HDMI: %s\n"                &    -- HDMI rendering submenu   
+   " HDMI Rendering\n"          &
+   "\n"                         &
+   " Standard\n"                &
+   " Bilinear\n"                &
+   " Sharp bilinear\n"          &
+   " Bicubic\n"                 & 
+   " CRT emulation\n"           &
+   "\n"                         &
+   " Back to main menu\n"       &
+
+   " VGA: %s\n"                 &  -- VGA submenu
+   " VGA Display Mode\n"        &
+   "\n"                         &
+   " Standard\n"                &
+   "\n"                         &
+   " Retro 15 kHz mode\n"       &
+   "\n"                         &
+   " 15 kHz with HS/VS\n"       &
+   " 15 kHz with CSYNC\n"       &
+   "\n"                         &
+   " Back to main menu\n"       &
+
+   " OSM: %s\n"                 &  -- OSM submenu
+   " OSM Scaling\n"             &
+   "\n"                         &
+   " 100%\n"                    &
+   " 89%\n"                     &
+   " 80%\n"                     &
+   " 73%\n"                     &
+   " 67%\n"                     &
+   " 62%\n"                     &
+   " 57%\n"                     &
+   " 53%\n"                     &
+   " 50%\n"                     &
+   "\n"                         &
+   " Back to main menu\n"       &
+
+   "\n"                         &
+   " About & Help\n"            &
+   "\n"                         &
+   " Close menu\n";
+
+constant OPTM_G_MODELS           : integer := 1;
+constant OPTM_G_JOY_MODES        : integer := 2;
+constant OPTM_G_JOY_FLIP         : integer := 3;
+constant OPTM_G_HDMI_MODES       : integer := 4;
+constant OPTM_G_HDMI_DVI         : integer := 5;
+constant OPTM_G_HDMI_RENDERING   : integer := 6;
+constant OPTM_G_VGA_MODES        : integer := 7;
+constant OPTM_G_OSM_MODES        : integer := 8;
+constant OPTM_G_ABOUT_HELP       : integer := 9;
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
 
--- define your menu groups: which menu items are belonging together to form a group?
--- where are separator lines? which items should be selected by default?
--- make sure that you have exactly the same amount of entries here than in OPTM_ITEMS and defined by OPTM_SIZE
-constant OPTM_GROUPS       : OPTM_GTYPE := ( OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Demo Headline A"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_Demo_A + OPTM_G_START,             -- Item A.1, cursor start position
-                                             OPTM_G_Demo_A + OPTM_G_STDSEL,            -- Item A.2, selected by default
-                                             OPTM_G_Demo_A,                            -- Item A.3
-                                             OPTM_G_Demo_A,                            -- Item A.4
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Demo Headline B"
-                                             OPTM_G_LINE,                              -- Line
+constant OPTM_GROUPS       : OPTM_GTYPE := ( OPTM_G_TEXT + OPTM_G_HEADLINE,                  -- Headline "Game Boy for MEGA65"
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_MODELS + OPTM_G_START + OPTM_G_STDSEL,   -- (Game Boy) Classic
+                                             OPTM_G_MODELS,                                  -- (Game Boy) Color
+                                             OPTM_G_LINE,                                    -- Line
+                                  
+                                             OPTM_G_SUBMENU,                                 -- Joystick submenu
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                  -- Submenu headline "Joystick Settings"
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_JOY_MODES + OPTM_G_STDSEL,               -- Std, Fire=A
+                                             OPTM_G_JOY_MODES,                               -- Std, Fire=B
+                                             OPTM_G_JOY_MODES,                               -- Up=A, Fire=B
+                                             OPTM_G_JOY_MODES,                               -- Up=A, Fire=B
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_SUBMENU + OPTM_G_CLOSE,                  -- Back to main menu
 
-                                             OPTM_G_SUBMENU,                           -- HDMI submenu block: START: "HDMI: %s"
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "HDMI Settings"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_HDMI + OPTM_G_STDSEL,              -- 720p 50 Hz 16:9, selected by default
-                                             OPTM_G_HDMI,                              -- 720p 60 Hz 16:9
-                                             OPTM_G_HDMI,                              -- 576p 50 Hz 4:3
-                                             OPTM_G_HDMI,                              -- 576p 50 Hz 5:4
-                                             OPTM_G_HDMI,                              -- 640x480 60 Hz
-                                             OPTM_G_HDMI,                              -- 720x480 59.94 Hz
-                                             OPTM_G_HDMI,                              -- 600p 60 Hz
-                                             OPTM_G_LINE,                              -- open
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- Close submenu / back to main menu
-                                                                                       -- HDMI submenu block: END
+                                             OPTM_G_JOY_FLIP + OPTM_G_SINGLESEL,             -- Flip joystick ports
 
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Drives"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_Drive_X + OPTM_G_MOUNT_DRV,        -- Drive X
-                                             OPTM_G_Drive_Y + OPTM_G_MOUNT_DRV,        -- Drive Y
-                                             OPTM_G_Drive_Z + OPTM_G_MOUNT_DRV,        -- Drive Z
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Another Headline"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_CRT     + OPTM_G_SINGLESEL,        -- On/Off toggle ("Single Select")
-                                             OPTM_G_Zoom    + OPTM_G_SINGLESEL,        -- On/Off toggle ("Single Select")
-                                             OPTM_G_Audio   + OPTM_G_SINGLESEL,        -- On/Off toggle ("Single Select")
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_CLOSE                              -- Close Menu
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                  -- Headline: "Display Settings"
+                                             OPTM_G_LINE,
+
+                                             OPTM_G_SUBMENU,                                 -- HDMI resolution submenu
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                  -- Submenu headline "HDMI Settings"
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_HDMI_MODES + OPTM_G_STDSEL,              -- 720p    60 Hz
+                                             OPTM_G_HDMI_MODES,                              -- 640x480 60 Hz
+                                             OPTM_G_HDMI_MODES,                              -- 720x480 59.94 Hz
+                                             OPTM_G_HDMI_MODES,                              -- 800x600 60 Hz
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_HDMI_DVI + OPTM_G_SINGLESEL,             -- DVI (no sound)
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_SUBMENU + OPTM_G_CLOSE,                  -- Back to main menu
+
+                                             OPTM_G_SUBMENU,                                 -- HDMI rendering submenu
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,                  -- Submenu headline "HDMI Rendering"
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_HDMI_RENDERING + OPTM_G_STDSEL,          -- Standard
+                                             OPTM_G_HDMI_RENDERING,                          -- Bilinear
+                                             OPTM_G_HDMI_RENDERING,                          -- Sharp bilinear
+                                             OPTM_G_HDMI_RENDERING,                          -- Bicubic
+                                             OPTM_G_HDMI_RENDERING,                          -- CRT emulation
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_SUBMENU + OPTM_G_CLOSE,                  -- Back to main menu
+
+                                             OPTM_G_SUBMENU,                                 -- VGA submenu
+                                             OPTM_G_HEADLINE,                                -- Submenu headline "VGA Displapy Mode"
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_VGA_MODES + OPTM_G_STDSEL,               -- Standard
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_TEXT,                                    -- Sub headline "Retro 15 kHz mode"
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_VGA_MODES,                               -- 15 kHz with HS/VS
+                                             OPTM_G_VGA_MODES,                               -- 15 kHz with CSYNC
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_SUBMENU + OPTM_G_CLOSE,                  -- Back to main menu
+
+                                             OPTM_G_SUBMENU,                                 -- OSM submenu
+                                             OPTM_G_HEADLINE,                                -- Submenu headline "OSM Scaling"
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_OSM_MODES + OPTM_G_STDSEL,               -- Standard
+                                             OPTM_G_OSM_MODES,                               -- 6%
+                                             OPTM_G_OSM_MODES,                               -- 13%
+                                             OPTM_G_OSM_MODES,                               -- 19%
+                                             OPTM_G_OSM_MODES,                               -- 25%
+                                             OPTM_G_OSM_MODES,                               -- 31%
+                                             OPTM_G_OSM_MODES,                               -- 38%
+                                             OPTM_G_OSM_MODES,                               -- 44%
+                                             OPTM_G_OSM_MODES,                               -- 50%
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_SUBMENU + OPTM_G_CLOSE,                  -- Back to main menu
+
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_ABOUT_HELP    + OPTM_G_HELP,             -- About & Help
+                                             OPTM_G_LINE,                                    -- Line
+                                             OPTM_G_CLOSE                                    -- Close menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------
