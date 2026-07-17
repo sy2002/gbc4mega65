@@ -33,11 +33,27 @@ body {
   background-size: 16px 16px;
 }
 
+/* The header is the DMG screen bezel: dark blue-grey with the magenta
+   accent line, monospace lettering and the red battery LED. */
 .md-header {
-  background: var(--gb-paper);
-  border-bottom: 3px solid var(--gb-ink);
-  color: var(--gb-ink);
+  background: var(--gb-ink);
+  border-bottom: 3px solid #1c1c38;
+  color: #d7d4cf;
   box-shadow: 0 3px 0 var(--gb-magenta);
+}
+
+/* the round red battery LED of the DMG, left of the title */
+.md-header__topic:first-child::before {
+  display: inline-block;
+  width: 0.5em;
+  height: 0.5em;
+  margin-right: 0.45em;
+  border: 1px solid #1c1c38;
+  border-radius: 50%;
+  background: #d22;
+  box-shadow: 0 0 4px rgb(255 64 64 / 80%);
+  vertical-align: baseline;
+  content: "";
 }
 
 .md-header__title,
@@ -58,7 +74,7 @@ body {
 .md-header__button,
 .md-header__topic,
 .md-search__icon {
-  color: var(--gb-ink);
+  color: #d7d4cf;
 }
 
 .md-search__form {
@@ -122,6 +138,20 @@ body {
       var(--gb-lcd-light) 50% 75%,
       var(--gb-lcd-lightest) 75% 100%
     );
+  content: "";
+}
+
+/* The diagonal speaker grille of the DMG, bottom right of every page. */
+.md-content__inner::after {
+  display: block;
+  width: 8.5rem;
+  height: 0.9rem;
+  margin: 2.2rem 0 0 auto;
+  background: repeating-linear-gradient(
+    -55deg,
+    var(--gb-ink) 0 4px,
+    transparent 4px 12px
+  );
   content: "";
 }
 
@@ -247,9 +277,51 @@ body {
   padding-left: 0.35rem;
 }
 
+/* Quotes and admonition-like notes render as the green LCD screen itself:
+   lightest-green glass, darkest-green pixels, dark bezel. */
+.md-typeset blockquote {
+  padding: 0.55rem 0.8rem;
+  border: 2px solid var(--gb-ink);
+  border-left: 0.5rem solid var(--gb-lcd-darkest);
+  border-radius: 0;
+  background: var(--gb-lcd-lightest);
+  box-shadow: 3px 3px 0 var(--gb-shadow);
+  color: var(--gb-lcd-darkest);
+}
+
+.md-typeset blockquote code {
+  background: rgb(15 56 15 / 12%);
+  color: var(--gb-lcd-darkest);
+}
+
 .md-footer {
   border-top: 3px solid var(--gb-ink);
   background: var(--gb-lcd-darkest);
+}
+
+/* Prev/next page links as the angled grey START / SELECT pills - the only
+   rounded elements on the page, exactly like on the real hardware. */
+.md-footer__link {
+  align-items: center;
+  margin: 0.8rem 0.4rem;
+  padding: 0.15rem 0.9rem;
+  border: 2px solid #1c1c38;
+  border-radius: 999px;
+  background: #b9b5b0;
+  box-shadow: 2px 2px 0 #1c2a1c;
+  color: #1c1c38;
+  opacity: 1;
+}
+
+.md-footer__link:is(:focus, :hover) {
+  background: #cac6c1;
+  color: var(--gb-magenta);
+  opacity: 1;
+}
+
+.md-footer__link .md-footer__title {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
 }
 
 .md-footer-meta {
