@@ -1,76 +1,185 @@
-MiSTer2MEGA65
-=============
+Game Boy and Game Boy Color for MEGA65
+======================================
 
-MiSTer2MEGA65 is a framework to simplify porting MiSTer cores to the MEGA65.
+Play [Game Boy](https://en.wikipedia.org/wiki/Game_Boy) and
+[Game Boy Color](https://en.wikipedia.org/wiki/Game_Boy_Color) games on your
+[MEGA65](https://mega65.org/)! The core is super stable and plays 99% (or
+more) of all Game Boy and Game Boy Color games, given that the cartridge ROM
+size of the game is up to 1 MB.
 
-![Title Image](doc/wiki/assets/MiSTer2MEGA65-Title.png)
+![Game Boy and Game Boy Color](doc/gb-and-gbc.jpg)
 
-Learn more by
-[watching this YouTube video](https://youtu.be/9Ib7z64z9N4)
-and get started by reading the
-[MiSTer2MEGA65 Wiki](https://github.com/sy2002/MiSTer2MEGA65/wiki).
+Version 1.0 supports all current MEGA65 models (R3/R3A, R4, R5 and R6) and is
+built on the [MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65)
+framework - the framework whose creation was originally inspired by this very
+core, back in 2021.
 
-TL;DR
------
+Credits
+-------
 
-1. Scroll up and press the "Use this template" button to start a new
-   MiSTer2MEGA65 project. Then fork the MiSTer core you want to port
-   and make it a Git submodule of your newly created project.
+* This core is based on the
+  [MiSTer](https://github.com/MiSTer-devel/Gameboy_MiSTer) Game Boy core which
+  itself is based on the [MiST](https://github.com/mist-devel/gameboy)
+  Game Boy core by Till Harbaum.
+* [sy2002](http://www.sy2002.de) and
+  [MJoergen](https://github.com/MJoergen) ported the core to the MEGA65
+  in 2021 - 2026. Special thanks to
+  [Robert Peip](https://github.com/RobertPeip) for his invaluable support.
+* The included Open Source Game Boy Color BIOS is from the
+  [SameBoy](https://github.com/LIJI32/SameBoy) project.
+* Powered by [MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65) and
+  [QNICE-FPGA](https://github.com/sy2002/QNICE-FPGA).
 
-2. Wrap the MiSTer core inside `CORE/vhdl/main.vhd` while
-   adjusting the clocks in `CORE/vhdl/clk.vhd`. Provide RAMs, ROMs and other
-   devices in `CORE/vhdl/mega65.vhd` and wire everything correctly.
+See [AUTHORS](AUTHORS) for the complete list of credits.
 
-3. Configure your core's behavior, including how the start screen looks like,
-   what ROMs should be loaded (and where to), the abilities of the
-   <kbd>Help</kbd> menu and more in `CORE/vhdl/config.vhd` and in
-   `CORE/vhdl/globals.vhd`.
+Features
+--------
 
-**DONE** your core is ported to MEGA65! :-)
+* Game Boy and Game Boy Color support (default is Game Boy Classic)
+* Convenient on-screen-menu and cartridge file browser which supports long
+  filenames; all settings are saved to the SD card
+* [Joystick support](doc/joystick.md) including special mappings so that you
+  can for example play Super Mario Land via joystick
+* Optional [color grading](doc/colormodes.md) that desaturates the colors,
+  similarly to how they looked on the LCD display of the original
+  Game Boy Color hardware
+* HDMI: four 60 Hz [display modes](doc/video_modes.md), eight image filters
+  from razor sharp to CRT simulation, flicker-free HDMI and zoom
+* VGA: standard 31 kHz output plus two
+  [retro 15 kHz modes](doc/video_modes.md) for CRT monitors and
+  RGB/SCART setups
+* Support for both MEGA65 SD card slots
+* Works out of the box: an Open Source Game Boy BIOS
+  ([boot ROM](doc/bootroms.md)) is included
 
-*Obviously, this is a shameless exaggeration of how easy it is to work with
-MiSTer2MEGA65, but you get the gist of it.*
+Installation
+------------
 
-Getting started, detailed documentation and support
----------------------------------------------------
+1. Download the ZIP file that contains the bitstream and the core file from
+   the [releases page](https://github.com/sy2002/gbc4mega65/releases) and
+   unpack it.
+2. Choose the right `.cor` file (or `.bit` file) for your MEGA65 model:
+   `R3` (also for R3A), `R4`, `R5` or `R6`. If you are not sure which model
+   you have: The MEGA65s delivered since 2022 are R3/R3A machines, later
+   batches are R4 to R6.
+3. Either use MEGA65's <kbd>No Scroll</kbd> boot menu to install the `.cor`
+   file or use [MEGA65's bitstream utility](https://github.com/MEGA65/mega65-tools)
+   (`m65 -q yourbitstream.bit`) to run the `.bit` file. Please have a look at
+   the [MEGA65 Starter Guide](https://files.mega65.org/news/MEGA65-Starter-Guide.pdf)
+   to learn more.
+4. The core needs a FAT32 formatted SD card to load game cartridges (ROMs).
+5. If you put your ROMs into a folder called `/gbc`, then the file browser
+   will display this folder on startup. The core supports `.gb` (Game Boy)
+   and `.gbc` (Game Boy Color) files up to 1 MB.
+6. The core includes an Open Source Game Boy BIOS. For more authenticity,
+   learn [here](doc/bootroms.md) how to use an original BIOS.
 
-* Please visit our official
-  [MiSTer2MEGA65 Wiki](https://github.com/sy2002/MiSTer2MEGA65/wiki). It
-  contains everything you ever wanted to know about M2M, including a
-  "Getting Started" tutorial and a step-by-step guide to port a MiSTer core.
-  You might whant to start your journey
-  [here](https://github.com/sy2002/MiSTer2MEGA65/wiki/1.-What-is-MiSTer2MEGA65)
-  and then follow the reading track that is pointed out in the
-  respective chapters.
+Getting started
+---------------
 
-* Post a question in our
-  [Discussion Forum](https://github.com/sy2002/MiSTer2MEGA65/discussions).
+After you start the core, you see a welcome screen that explains the
+keyboard mapping. Here are the most important hints:
 
-Status of the framework
------------------------
+* Press <kbd>Help</kbd> to open and to close the on-screen-menu. Load a
+  cartridge via the menu item `Cartridge`: Choose a Game Boy ROM (normally
+  having the file extension `.gb`) or a Game Boy Color ROM (`.gbc`) from any
+  folder of your SD card using the cursor keys and <kbd>Return</kbd> to
+  navigate. The game starts as soon as it is loaded.
 
-**The MiSTer2MEGA (M2M) framework is stable and ready for being used.**
-The first production quality core that is based on M2M is the
-[Commodore 64 for MEGA65](https://github.com/MJoergen/C64MEGA65).
-Additionally there is already
-[a decent amount of cores](https://sy2002.github.io/m65cores/)
-that are based on the M2M framework. Head to the
-[Alternate MEGA65 cores](https://sy2002.github.io/m65cores/)
-website to learn more.
+* Use <kbd>Space</kbd> as the Game Boy's "Start" key and <kbd>Return</kbd>
+  as the Game Boy's "Select" key. <kbd>Left Shift</kbd> is Game Boy's "A"
+  and <kbd>Mega 65</kbd> is Game Boy's "B". The cursor keys of the MEGA65
+  are the Game Boy's joypad.
 
-The documentation of the M2M framework needs quite some more work before
-we will be able to call it "good enough" - let alone complete:
-[MiSTer2MEGA65 Wiki](https://github.com/sy2002/MiSTer2MEGA65/wiki)
+* In the on-screen-menu you can switch between Game Boy Classic and Game Boy
+  Color, configure the [joystick mapping](doc/joystick.md), choose between
+  two [color modes](doc/colormodes.md) and configure the
+  [video output](doc/video_modes.md). The core remembers all your settings.
 
-This should not discourage you from using the MiSTer2MEGA65 framework right
-now to port MiSTer cores and other cores to the MEGA65. You can use the
-source code of the
-[Commodore 64 for MEGA65](https://github.com/MJoergen/C64MEGA65)
-as your "user's manual" and "reference handbook" for the M2M framework.
+Some demo pictures
+------------------
 
-Additionally to helping yourself with the Wiki (and the turorials there) and
-the C64 source code as your "user's manual" and "reference handbook": Post
-your question in the
-[Discussion Forum](https://github.com/sy2002/MiSTer2MEGA65/discussions)
-and join the
-[friendly MEGA65 community on Discord](https://discord.com/channels/719326990221574164/1177364456896999485).
+| ![gbc01](doc/gbc01.jpg)      | ![gbc02](doc/gbc02.jpg)     | ![gbc03](doc/gbc03.jpg)       |
+|:----------------------------:|:---------------------------:|:-----------------------------:|
+| *MEGA65 Core Selection*      | *Game Boy Core: Start*      | *Game Boy Core: File Browser* |
+| ![gbc04](doc/gbc04.jpg)      | ![gbc05](doc/gbc05.jpg)     | ![gbc06](doc/gbc06.jpg)       |
+| *Game Boy Color Boot Screen* | *Super Mario Start Screen*  | *Super Mario Gameplay Screen* |
+
+Clarification: These screenshots are just for illustration purposes.
+This repository does not contain any copyrighted ROMs
+such as BIOS ROMs or game ROMs.
+
+Game Boy Mode and cartridges
+----------------------------
+
+The core starts in **Game Boy Classic** mode: games are rendered in the
+authentic grayscale look. Switch to **Game Boy Color** in the on-screen-menu
+to play Game Boy Color games (and Game Boy games that are Color enhanced) in
+color. A mode change takes effect when the next cartridge is loaded or when
+the core is reset (short press of the MEGA65 reset button).
+
+The core checks each cartridge before loading it: the maximum supported
+cartridge (ROM) size is 1 MB and the cartridge needs to use one of the
+supported Memory Bank Controllers (ROM only, MBC1, MBC2, MBC3 and MBC5,
+which covers the vast majority of all games ever released).
+
+There are no savegames yet: highscores and game states are lost when the
+core is switched off (exactly as in V0.8).
+
+Boot ROMs (BIOS)
+----------------
+
+The core includes the Open Source Game Boy and Game Boy Color boot ROMs from
+the [SameBoy](https://github.com/LIJI32/SameBoy) project, so it works out of
+the box. For more authenticity you can put the original Game Boy Color BIOS
+into the `/gbc` folder of your SD card; the core loads it automatically at
+startup. Learn more in the [boot ROM documentation](doc/bootroms.md).
+
+Joystick usage and mapping
+--------------------------
+
+Basic usage: Just plug your joystick into port #1 or #2 of the MEGA65. Both
+ports work in parallel. By default the fire button of the joystick is mapped
+to the Game Boy's A button, which is fine for many games - and for games
+that jump with A or B (such as Super Mario Land or Castlevania) the
+on-screen-menu offers three more [mapping modes](doc/joystick.md).
+
+Color Modes
+-----------
+
+For Game Boy Color games you can choose between two
+[color modes](doc/colormodes.md) in the on-screen-menu: "Fully Saturated"
+shows the raw colors and "LCD Emulation" performs a color grading to
+approximate the historical color LCD screen.
+
+Video output
+------------
+
+HDMI and VGA are active simultaneously. The HDMI output offers four 60 Hz
+display modes, eight image filters, a flicker-free mode and a zoom mode;
+the VGA output offers a standard 31 kHz mode and two retro 15 kHz modes for
+CRT monitors, including composite sync (CSYNC) for RGB/SCART setups. Learn
+more in the [display documentation](doc/video_modes.md).
+
+SD cards
+--------
+
+SD cards need to be formatted with FAT32. If you have a folder called
+`/gbc`, then the file browser will start in this folder, and the core will
+also look for [boot ROMs](doc/bootroms.md) and store its settings file
+there.
+
+Both SD card slots of the MEGA65 are supported. The back slot ("external")
+has precedence over the bottom tray slot ("internal"): If you insert a card
+into the back slot, then it is used, otherwise the card in the bottom tray
+slot. While the file browser is open, you can use <kbd>F1</kbd> to manually
+switch to the internal card and <kbd>F3</kbd> to switch to the external
+card.
+
+For developers
+--------------
+
+gbc4mega65 is Open Source (GPL v3). Learn how to
+[build the core from source](doc/developers.md), have a look at the list of
+[work-in-progress builds](doc/inofficial.md) or read how the
+[documentation website](doc/make_doc.md) is generated.
