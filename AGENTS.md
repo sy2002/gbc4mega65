@@ -86,9 +86,11 @@ hardcodes `sgb_en=1` + black backdrop). Result: the 160×144 picture centered in
 inside lcd.v's 425×264 timing. This canvas is what makes the M2M on-screen-menu usable:
 `VGA_DX×VGA_DY = 512×448` post-scandoubler = a 32×28 character OSM raster.
 
-- `video_ce_o` = lcd.v's `ce_pix` (~6.71 MHz); `video_ce_ovl_o` = exactly 2× `ce_pix`,
-  phase-locked by delaying `ce_pix` 5 video clocks (the per-line 16-cycle stretch sits in
-  blanking). Same ovl rate in the retro-15 kHz modes — the framework doubles OSM rows there.
+- `video_ce_o` = lcd.v's `ce_pix` (~6.71 MHz); `video_ce_ovl_o` is mode-dependent so that
+  `VGA_DX = 512` overlay ticks always span the visible picture: **4×** `ce_pix` with the
+  scandoubler (pattern 0/2/5/7 within each 10-clock pixel) and **2×** `ce_pix` in the
+  retro-15 kHz modes (the framework doubles OSM rows there). All taps are phase-locked
+  delays of `ce_pix` (the per-line 16-cycle stretch sits in blanking).
 - GBC color grading ("LCD Emulation" vs "Fully Saturated") is lcd.v's `originalcolors`
   input; DMG grayscale is lcd.v's default (tint=0).
 - "HDMI: Zoom-in" = the framework crop (`M2M/vhdl/av_pipeline/crop.vhd`, constants changed

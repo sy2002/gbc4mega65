@@ -15,16 +15,18 @@ The Game Boy runs at 59.7275 Hz, so all HDMI modes are members of the 60 Hz
 family. Choose your mode in the "HDMI" submenu of the on-screen-menu:
 
 * **16:9 720p 60 Hz** (default)
-* **4:3 640x480 60 Hz**
-* **4:3 720x480 59.94 Hz**
-* **4:3 800x600 60 Hz**
+* **640x480 60 Hz** (4:3)
+* **720x480 59.94 Hz** (4:3)
+* **800x600 60 Hz** (4:3)
 
 ### HDMI: Flicker-free
 
 "HDMI: Flicker-free" is switched on by default. It gently dithers the core
 between a 59.73 Hz and a 60.05 Hz leg so that the average is exactly the
 HDMI rate. This removes the slowly wandering tear line that otherwise
-appears when a 59.7275 Hz core meets a 60 Hz display.
+appears when a 59.7275 Hz core meets a 60 Hz display. One exception:
+the 800x600 mode runs at 60.32 Hz, which is above what the faster leg can
+reach, so a slow tear line can remain in this mode.
 
 Advice: Switch "HDMI: Flicker-free" off when you primarily use a CRT on the
 VGA output - the speed dithering is visible on analog.
@@ -49,7 +51,8 @@ The "HDMI Filter" submenu offers eight options:
 * **CRT (S-Video)**
 * **CRT (Composite)**
 
-The last four options are polyphase filters. The two CRT options simulate
+The last five options (from "Smooth" on) are polyphase filters. The two CRT
+options simulate
 the horizontal smear of S-Video and Composite cabling combined with
 scanlines.
 

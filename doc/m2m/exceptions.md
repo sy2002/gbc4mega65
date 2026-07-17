@@ -63,7 +63,7 @@ away (5x integer scaling at 720p):
 
 ```vhdl
 constant LEFT_BORDER_IN    : natural := 48;
-constant TOP_BORDER_IN     : natural := 40;
+constant TOP_BORDER_IN     : natural := 41;   -- 41, not 40: see the comment in crop.vhd
 constant IMAGE_SIZE_X      : natural := 160;
 constant IMAGE_SIZE_Y      : natural := 144;
 constant LEFT_BORDER_NEW   : natural := 0;

@@ -50,9 +50,15 @@ end entity crop;
 architecture synthesis of crop is
 
    -- These constants are properties of the input stream: the 160x144 Game Boy
-   -- picture centered in the 256x224 active area that main.vhd outputs
+   -- picture centered in the 256x224 active area that main.vhd outputs.
+   --
+   -- TOP_BORDER_IN is 41 and not 40 although the picture starts at window row 40:
+   -- lcd.v deasserts vblank shortly BEFORE the hblank falling edge of the first
+   -- visible line, so y_count is reset to 0 and then immediately incremented by
+   -- that same line - every window row n passes this module with y_count = n+1
+   -- (verified cycle-exact against lcd.v in simulation).
    constant LEFT_BORDER_IN    : natural := 48;
-   constant TOP_BORDER_IN     : natural := 40;
+   constant TOP_BORDER_IN     : natural := 41;
    constant IMAGE_SIZE_X      : natural := 160;
    constant IMAGE_SIZE_Y      : natural := 144;
 

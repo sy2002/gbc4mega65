@@ -48,7 +48,9 @@ it automatically at synthesis via `synth_pre.tcl`.
 Open one of the four Vivado projects - `CORE/CORE-R3.xpr`,
 `CORE/CORE-R4.xpr`, `CORE/CORE-R5.xpr` or `CORE/CORE-R6.xpr` - that matches
 your MEGA65 model and run synthesis, implementation and bitstream
-generation. You need Vivado 2019.2 or newer.
+generation. You need Vivado 2022.2 or newer (the project files were
+written by Vivado 2022.2, and Vivado cannot open projects created by a
+newer release).
 
 ## Packaging a release
 

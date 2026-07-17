@@ -139,8 +139,9 @@ constant HELP_2 : string :=
    " (or cgb_bios.bin) into the\n" &
    " /gbc folder.\n\n" &
 
-   " Settings are saved to the\n" &
-   " SD card automatically.\n\n\n" &
+   " Settings are saved if the\n" &
+   " settings file from the\n" &
+   " release ZIP is in /gbc.\n\n" &
 
    " Crsr left/right     (2 of 3)\n" &
    " Space: close the help screen.\n";
@@ -379,9 +380,9 @@ constant OPTM_ITEMS        : string :=
    " HDMI Display Mode\n"      &    -- 24: headline
    "\n"                        &    -- 25
    " 16:9 720p 60 Hz\n"        &    -- 26: default
-   " 4:3 640x480 60 Hz\n"      &    -- 27
-   " 4:3 720x480 59.94 Hz\n"   &    -- 28
-   " 4:3 800x600 60 Hz\n"      &    -- 29
+   " 640x480 60 Hz\n"          &    -- 27
+   " 720x480 59.94 Hz\n"       &    -- 28
+   " 800x600 60 Hz\n"          &    -- 29
    "\n"                        &    -- 30
    " HDMI: Flicker-free\n"     &    -- 31: default on
    " HDMI: Zoom-in\n"          &    -- 32: default on

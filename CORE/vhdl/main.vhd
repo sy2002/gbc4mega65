@@ -43,6 +43,10 @@ entity main is
       gb_joy_map_i            : in  std_logic_vector(1 downto 0); -- joystick mapping, see keyboard.vhd
       gb_saturated_colors_i   : in  std_logic;              -- 1 = fully saturated GBC colors, 0 = LCD emulation
 
+      -- 1 = the analog output runs in one of the retro 15 kHz modes (no scandoubler);
+      -- needed to generate the correct overlay clock enable, see p_ce_ovl below
+      video_retro15kHz_i      : in  std_logic;
+
       -- Cartridge state: the Game Boy is held in reset while no cartridge is loaded
       -- and during cartridge loading
       cart_loaded_i           : in  std_logic;
@@ -154,7 +158,8 @@ architecture synthesis of main is
 
    -- video clock domain
    signal video_ce_pix           : std_logic;
-   signal video_ce_pix_dly       : std_logic_vector(4 downto 0) := (others => '0');
+   signal video_ce_pix_dly       : std_logic_vector(6 downto 0) := (others => '0');
+   signal video_retro15kHz       : std_logic_vector(1 downto 0) := (others => '0');
 
    -- constants necessary due to Verilog in VHDL embedding
    -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
@@ -336,21 +341,36 @@ begin
    -- video_ce_o: the core's native pixel clock enable (~6.71 MHz on the 67.1 MHz video clock)
    video_ce_o <= video_ce_pix;
 
-   -- video_ce_ovl_o: pixel clock enable for the on-screen-menu overlay and for sampling the
-   -- core's output on the analog output. It runs at 2x the native pixel rate (~13.42 MHz),
-   -- phase-locked to lcd.v's pixel enable: the visible portion of a scanline uses an exact
-   -- 1-of-10 pixel enable, so "ce_pix delayed by 5 video clocks" is exactly the mid-point
-   -- between two pixels. This maps the VGA_DX x VGA_DY = 512x448 overlay raster (globals.vhd)
-   -- precisely onto the 256x224 picture - both with the scandoubler (31 kHz) and in the
-   -- retro 15 kHz modes (where the framework doubles the overlay rows).
+   -- video_ce_ovl_o: pixel clock enable for the on-screen-menu overlay and for sampling
+   -- the core's output on the analog output. The rate must be chosen such that the
+   -- VGA_DX = 512 overlay ticks (globals.vhd) span exactly the visible picture:
+   --
+   --   * Standard VGA (scandoubler on, the default): the scandoubler halves the line
+   --     duration, so the visible 256 pixels pass in 1280 video clocks - the overlay
+   --     needs 4x the native pixel rate (~26.84 MHz, one tick every 2.5 clocks,
+   --     realized as the uneven but DE-covering pattern 0/2/5/7 within each 10-clock
+   --     pixel; same approach as the ce_x4 grid inside MiSTer's scandoubler).
+   --   * Retro 15 kHz modes (no scandoubler): the visible 256 pixels pass in 2560
+   --     video clocks - the overlay needs 2x the native pixel rate (~13.42 MHz);
+   --     the framework doubles the overlay rows in these modes.
+   --
+   -- All taps are phase-locked to lcd.v's pixel enable: the visible portion of a
+   -- scanline uses an exact 1-of-10 pixel enable (the one stretched 16-clock pixel
+   -- per line sits inside the horizontal blanking).
    p_ce_ovl : process (clk_video_i)
    begin
       if rising_edge(clk_video_i) then
-         video_ce_pix_dly <= video_ce_pix_dly(3 downto 0) & video_ce_pix;
+         video_ce_pix_dly <= video_ce_pix_dly(5 downto 0) & video_ce_pix;
+
+         -- synchronize the quasi-static menu selection into the video clock domain
+         video_retro15kHz <= video_retro15kHz(0) & video_retro15kHz_i;
       end if;
    end process;
 
-   video_ce_ovl_o <= video_ce_pix or video_ce_pix_dly(4);
+   video_ce_ovl_o <= video_ce_pix or video_ce_pix_dly(4)
+                        when video_retro15kHz(1) = '1' else       -- 2x: retro 15 kHz
+                     video_ce_pix or video_ce_pix_dly(1) or
+                        video_ce_pix_dly(4) or video_ce_pix_dly(6); -- 4x: scandoubled
 
    -- Convert the Game Boy's unsigned audio to M2M's signed PCM format.
    -- gbc_snd's output is unsigned and NOT centered around 0x8000 (the center drifts with

@@ -27,3 +27,4 @@ CORE/m2m-rom/osm_const.asm
 /_site/
 doc/.venv/
 doc/.gbc-doc-requirements
+__pycache__/

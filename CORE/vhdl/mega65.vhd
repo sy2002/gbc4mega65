@@ -481,6 +481,10 @@ begin
          gb_joy_map_i         => main_gb_joy_map,
          gb_saturated_colors_i => not main_osm_control_i(C_MENU_COL_LCDEMU),
 
+         -- the overlay clock enable depends on whether the scandoubler is active
+         video_retro15kHz_i   => main_osm_control_i(C_MENU_VGA_15KHZHSVS) or
+                                 main_osm_control_i(C_MENU_VGA_15KHZCS),
+
          -- Cartridge state and header flags
          cart_loaded_i        => main_cart_loaded,
          cart_loading_i       => main_cart_loading,

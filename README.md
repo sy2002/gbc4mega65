@@ -37,7 +37,8 @@ Features
 
 * Game Boy and Game Boy Color support (default is Game Boy Classic)
 * Convenient on-screen-menu and cartridge file browser which supports long
-  filenames; all settings are saved to the SD card
+  filenames; all settings are saved to the SD card (via the settings file
+  that is included in the release ZIP, see Installation)
 * [Joystick support](doc/joystick.md) including special mappings so that you
   can for example play Super Mario Land via joystick
 * Optional [color grading](doc/colormodes.md) that desaturates the colors,
@@ -49,7 +50,7 @@ Features
   [retro 15 kHz modes](doc/video_modes.md) for CRT monitors and
   RGB/SCART setups
 * Support for both MEGA65 SD card slots
-* Works out of the box: an Open Source Game Boy BIOS
+* Works out of the box: an Open Source Game Boy Color BIOS
   ([boot ROM](doc/bootroms.md)) is included
 
 Installation
@@ -71,8 +72,11 @@ Installation
 5. If you put your ROMs into a folder called `/gbc`, then the file browser
    will display this folder on startup. The core supports `.gb` (Game Boy)
    and `.gbc` (Game Boy Color) files up to 1 MB.
-6. The core includes an Open Source Game Boy BIOS. For more authenticity,
-   learn [here](doc/bootroms.md) how to use an original BIOS.
+6. Copy the settings file from the ZIP (for example
+   `gbc4mega65-V1.0.cfg`) into the `/gbc` folder of your SD card: it
+   enables the core to remember all your on-screen-menu settings.
+7. The core includes an Open Source Game Boy Color BIOS. For more
+   authenticity, learn [here](doc/bootroms.md) how to use an original BIOS.
 
 Getting started
 ---------------
@@ -94,7 +98,9 @@ keyboard mapping. Here are the most important hints:
 * In the on-screen-menu you can switch between Game Boy Classic and Game Boy
   Color, configure the [joystick mapping](doc/joystick.md), choose between
   two [color modes](doc/colormodes.md) and configure the
-  [video output](doc/video_modes.md). The core remembers all your settings.
+  [video output](doc/video_modes.md). The core remembers all your settings
+  as soon as the settings file from the release ZIP is in the `/gbc` folder
+  (Installation, step 6).
 
 Some demo pictures
 ------------------

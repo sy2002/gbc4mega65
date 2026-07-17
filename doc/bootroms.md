@@ -1,9 +1,11 @@
 # Boot ROMs and BIOS
 
 The core embeds the Open Source
-[SameBoy](https://github.com/LIJI32/SameBoy) Game Boy and Game Boy Color
-boot ROMs (MIT-licensed, located in the repository folder `BootROMs/`), so
-it works with zero setup: Just start the core and play.
+[SameBoy](https://github.com/LIJI32/SameBoy) Game Boy Color boot ROM (BIOS)
+(MIT-licensed, located in the repository folder `BootROMs/`), so Game Boy
+Color mode works with zero setup: Just start the core and play. Game Boy
+Classic mode uses the boot ROM that is built into the MiSTer Game Boy core
+which this core is based on.
 
 ## Using an original boot ROM
 
@@ -23,6 +25,8 @@ works. If both files exist, `cgb_bios.bin` wins.
 ## Good to know
 
 * The maximum boot ROM size is 4096 bytes; larger files are truncated.
-* The DMG boot ROM used in Game Boy Classic mode is built into the bitstream
-  and is not replaceable at runtime.
-* This repository ships no copyrighted ROMs.
+* The boot ROM used in Game Boy Classic mode comes from the MiSTer Game Boy
+  core (it is built into the bitstream) and is not replaceable at runtime.
+* This repository ships no game ROMs and no BIOS files beyond the Open
+  Source SameBoy boot ROMs and what the MiSTer Game Boy core itself
+  contains.

@@ -5,7 +5,7 @@ washed out colors. Game developers back then knew this and chose their color
 palettes accordingly: A game that looks garish on a modern display may have
 looked exactly right on the real hardware.
 
-This is why the on-screen-menu offers a "Color Mode" submenu with two modes:
+This is why the on-screen-menu offers a "Color Mode" section with two modes:
 
 * **Fully Saturated** (default): The raw RGB values of the Game Boy Color
   are shown without any processing.
