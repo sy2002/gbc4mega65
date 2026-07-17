@@ -643,79 +643,79 @@
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/gbc_snd.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/boot_rom.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/speedcontrol.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/bus_savestates.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/reg_savestates.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/gb_savestates.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/gb_statemanager.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/T80/T80_Pack.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/T80/T80.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/T80/T80_ALU.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/T80/T80_MCode.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/T80/T80_Reg.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
       </File>
       <File Path="$PPRDIR/GameBoy/T80/GBse.vhd">
-        <FileInfo SFType="VHDL2008">
+        <FileInfo>
           <Attr Name="UsedIn" Val="synthesis"/>
           <Attr Name="UsedIn" Val="simulation"/>
         </FileInfo>
