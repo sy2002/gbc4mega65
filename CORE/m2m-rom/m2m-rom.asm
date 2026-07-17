@@ -1,12 +1,12 @@
 ; ****************************************************************************
-; YOUR-PROJECT-NAME (GITHUB-REPO-SHORTNAME) QNICE ROM
+; Game Boy and Game Boy Color for MEGA65 (gbc4mega65) QNICE ROM
 ;
-; Main program that is used to build m2m-rom.rom by make-rom.sh.
-; The ROM is loaded by TODO-ADD-NAME-OF-VHDL-FILE-HERE.
+; Main program that is used to build m2m-rom.rom by make_rom.sh.
+; The ROM is loaded by QNICE (see M2M/vhdl/QNICE/qnice.vhd).
 ;
 ; The execution starts at the label START_FIRMWARE.
 ;
-; done by YOURNAME in YEAR and licensed under GPL v3
+; done by sy2002 in 2021 - 2026 and licensed under GPL v3
 ; ****************************************************************************
 
 ; If the define RELEASE is defined, then the ROM will be a self-contained and
@@ -53,6 +53,9 @@ START_FIRMWARE  RBRA    START_SHELL, 1
 ; change the standard semantics when it comes to summarizing the status of the
 ; very submenu that is meant by the "headline" / starting point.
 ;
+; The Game Boy core uses the standard semantics for all submenus: the framework
+; shows the label of the currently selected radio item of each submenu.
+;
 ; Input:
 ;   R8: pointer to the string that includes the "%s"
 ;   R9: pointer to the menu item within the M2M$CFG_OPTM_GROUPS structure
@@ -66,21 +69,48 @@ SUBMENU_SUMMARY XOR     R8, R8                  ; R8 = 0 = no custom string
                 RET
 
 ; ----------------------------------------------------------------------------
-; Core specific callback functions: File browsing and disk image mounting
+; Core specific callback functions: File browsing and cartridge loading
 ; ----------------------------------------------------------------------------
 
 ; FILTER_FILES callback function:
 ;
-; Called by the file- and directory browser. Used to make sure that the 
+; Called by the file- and directory browser. Used to make sure that the
 ; browser is only showing valid files and directories.
+;
+; The Game Boy core only shows *.gb and *.gbc files when the user loads
+; a cartridge. Directories are always shown.
 ;
 ; Input:
 ;   R8: Name of the file in capital letters
 ;   R9: 0=file, 1=directory
-;  R10: @TODO: Future release: Context (see CTX_* in sysdef.asm)
+;  R10: Context (CTX_* constants in sysdef.asm)
+;  R11: Menu group id (see config.vhd)
 ; Output:
 ;   R8: 0=do not filter file, i.e. show file
-FILTER_FILES    XOR     R8, R8                  ; R8 = 0 = do not filter file
+FILTER_FILES    INCRB
+                MOVE    R9, R0
+
+                CMP     1, R9                   ; do not filter directories
+                RBRA    _FFILES_RET_0, Z
+
+                CMP     CTX_LOAD_ROM, R10       ; only filter in the
+                RBRA    _FFILES_RET_0, !Z       ; cartridge load context
+
+                MOVE    GB_FILE_EXT, R9         ; show *.gb files
+                RSUB    M2M$CHK_EXT, 1          ; preserves R8/R9/R10
+                RBRA    _FFILES_RET_0, C        ; extension matched: show it
+
+                MOVE    GBC_FILE_EXT, R9        ; show *.gbc files
+                RSUB    M2M$CHK_EXT, 1
+                RBRA    _FFILES_RET_0, C        ; extension matched: show it
+
+                MOVE    1, R8                   ; no match: filter it
+                RBRA    _FFILES_RET, 1
+
+_FFILES_RET_0   XOR     R8, R8                  ; R8 = 0 = do not filter file
+
+_FFILES_RET     MOVE    R0, R9
+                DECRB
                 RET
 
 ; PREP_LOAD_IMAGE callback function:
@@ -88,18 +118,158 @@ FILTER_FILES    XOR     R8, R8                  ; R8 = 0 = do not filter file
 ; Some images need to be parsed, for example to extract configuration data or
 ; to move the file read pointer to the start position of the actual data.
 ; Sanity checks ("is this a valid file") can also be implemented here.
-; Last but not least: The mount system supports the concept of a 2-bit
-; "image type". In case this is used at the core of your choice, make sure
-; you return the correct image type.
+;
+; The Game Boy core checks the cartridge BEFORE it is loaded (the cartridge
+; RAM is only 1 MB and the old firmware of gbc4mega65 V0.8 performed the
+; equivalent checks while loading):
+;
+;   1. The file size must be at least 0x150 bytes (i.e. the file contains
+;      a complete cartridge header), otherwise it is not a valid cartridge.
+;   2. The file size must not exceed 1 MB (0x00100000 bytes).
+;   3. The Memory Bank Controller (MBC) type (header byte 0x0147) must be
+;      supported by mbc.sv: everything but MMM01 (0x0B..0x0D), MBC6 (0x20),
+;      MBC7 (0x22), Pocket Camera (0xFC), Bandai TAMA5 (0xFD), HuC3 (0xFE)
+;      and HuC1 (0xFF) is accepted (i.e. ROM only, MBC1, MBC2, MBC3, MBC5
+;      incl. their battery/RTC variants).
+;   4. The ROM size code (header byte 0x0148) must be 5 or less (max 1 MB).
+;   5. The RAM size code (header byte 0x0149) must be 5 or less (max 128 KB).
+;
+; The header bytes are read via the file handle and afterwards the read
+; pointer is moved back to the start of the file, so that the Shell streams
+; the complete file into the cartridge RAM. (FAT32$FILE_SEEK of the QNICE
+; version used by M2M V2.0.1 seeks relative to the start of the file.)
 ;
 ; Input:
 ;   R8: File handle: You are allowed to modify the read pointer of the handle
-;   R9: @TODO: Future release: Context (see CTX_* in sysdef.asm)
+;   R9: Context (CTX_* constants in sysdef.asm)
+;  R10: Context data: menu group id
 ; Output:
 ;   R8: 0=OK, error code otherwise
-;   R9: image type if R8=0, otherwise 0 or optional ptr to  error msg string
-PREP_LOAD_IMAGE XOR     R8, R8                  ; no errors
+;   R9: image type if R8=0, otherwise 0 or optional ptr to error msg string
+PREP_LOAD_IMAGE INCRB
+
+                MOVE    R8, R0                  ; R0: file handle
+
+                CMP     CTX_LOAD_ROM, R9        ; loading a cartridge?
+                RBRA    _PLI_OK, !Z             ; no: nothing to check
+
+                ; ------------------------------------------------------------
+                ; Check 1 and 2: file size between 0x150 bytes and 1 MB
+                ; ------------------------------------------------------------
+
+                MOVE    R0, R1
+                ADD     FAT32$FDH_SIZE_LO, R1
+                MOVE    @R1, R1                 ; R1: file size, low word
+                MOVE    R0, R2
+                ADD     FAT32$FDH_SIZE_HI, R2
+                MOVE    @R2, R2                 ; R2: file size, high word
+
+                CMP     0x0010, R2              ; compare high word with 0x10
+                RBRA    _PLI_MAX1MB, Z          ; equal: low word must be 0
+                RBRA    _PLI_CHKMIN, N          ; 0x10 > hi: less than 1 MB
+                RBRA    _PLI_TOOLARGE, 1        ; hi > 0x10: more than 1 MB
+
+_PLI_MAX1MB     CMP     0, R1                   ; exactly 1 MB is still OK
+                RBRA    _PLI_HEADER, Z
+                RBRA    _PLI_TOOLARGE, 1
+
+_PLI_CHKMIN     CMP     0, R2                   ; high word zero?
+                RBRA    _PLI_HEADER, !Z         ; no: large enough
+                CMP     0x0150, R1              ; 0x150 > size?
+                RBRA    _PLI_NOTVALID, N        ; yes: no cartridge header
+
+                ; ------------------------------------------------------------
+                ; Check 3, 4 and 5: cartridge header
+                ; read the three header bytes 0x0147 (MBC type),
+                ; 0x0148 (ROM size code) and 0x0149 (RAM size code)
+                ; ------------------------------------------------------------
+
+_PLI_HEADER     MOVE    R0, R8
+                MOVE    0x0147, R9              ; seek to the MBC type byte
+                XOR     R10, R10
+                SYSCALL(f32_fseek, 1)
+                CMP     0, R9
+                RBRA    _PLI_NOTVALID, !Z
+
+                MOVE    R0, R8                  ; read MBC type
+                SYSCALL(f32_fread, 1)
+                CMP     0, R10
+                RBRA    _PLI_NOTVALID, !Z
+                MOVE    R9, R3                  ; R3: MBC type
+                MOVE    R0, R8                  ; read ROM size code
+                SYSCALL(f32_fread, 1)
+                CMP     0, R10
+                RBRA    _PLI_NOTVALID, !Z
+                MOVE    R9, R4                  ; R4: ROM size code
+                MOVE    R0, R8                  ; read RAM size code
+                SYSCALL(f32_fread, 1)
+                CMP     0, R10
+                RBRA    _PLI_NOTVALID, !Z
+                MOVE    R9, R5                  ; R5: RAM size code
+
+                ; move the read pointer back to the start of the file, so
+                ; that the Shell streams the complete file afterwards
+                MOVE    R0, R8
+                XOR     R9, R9
+                XOR     R10, R10
+                SYSCALL(f32_fseek, 1)
+                CMP     0, R9
+                RBRA    _PLI_NOTVALID, !Z
+
+                ; unsupported MBC types, see also mbc.sv and the identical
+                ; list in the original gbc4mega65 firmware (constraints.asm)
+                CMP     0x000B, R3              ; MMM01
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x000C, R3              ; MMM01+RAM
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x000D, R3              ; MMM01+RAM+BATTERY
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x0020, R3              ; MBC6
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x0022, R3              ; MBC7
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x00FC, R3              ; Pocket Camera
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x00FD, R3              ; Bandai TAMA5
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x00FE, R3              ; HuC3
+                RBRA    _PLI_BADMBC, Z
+                CMP     0x00FF, R3              ; HuC1+RAM+BATTERY
+                RBRA    _PLI_BADMBC, Z
+
+                ; ROM size code must be 5 (= 1 MB) or less
+                CMP     0x0005, R4
+                RBRA    _PLI_CHKRAM, Z
+                RBRA    _PLI_TOOLARGE, !N       ; code > 5: ROM too large
+
+                ; RAM size code must be 5 (= max 128 KB in mbc.sv) or less
+_PLI_CHKRAM     CMP     0x0005, R5
+                RBRA    _PLI_OK, Z
+                RBRA    _PLI_BADRAM, !N         ; code > 5: RAM too large
+
+_PLI_OK         XOR     R8, R8                  ; no errors
                 XOR     R9, R9                  ; image type hardcoded to 0
+                DECRB
+                RET
+
+_PLI_NOTVALID   MOVE    1, R8
+                MOVE    WRN_NO_CART, R9
+                DECRB
+                RET
+
+_PLI_BADMBC     MOVE    2, R8
+                MOVE    WRN_UNSUPP_MBC, R9
+                DECRB
+                RET
+
+_PLI_TOOLARGE   MOVE    3, R8
+                MOVE    WRN_TOO_LARGE, R9
+                DECRB
+                RET
+
+_PLI_BADRAM     MOVE    4, R8
+                MOVE    WRN_RAM_SIZE, R9
+                DECRB
                 RET
 
 ; ----------------------------------------------------------------------------
@@ -113,11 +283,16 @@ PREP_LOAD_IMAGE XOR     R8, R8                  ; no errors
 ; core is still held in reset (if RESET_KEEP is on). So at this point in time,
 ; you can execute tasks that change the run-state of the core.
 ;
+; The Game Boy core applies the saved HDMI Filter selection here, so that the
+; user-selected filter replaces the framework boot-time default before the
+; first frame reaches HDMI.
+;
 ; Input: None
 ; Output:
 ;   R8: 0=OK, else pointer to string with error message
 ;   R9: 0=OK, else error code
 PREP_START      INCRB
+                RSUB    LOAD_HDMI_FILTER, 1
                 XOR     R8, R8
                 XOR     R9, R9
                 DECRB
@@ -135,6 +310,9 @@ PREP_START      INCRB
 ; basic semantics but you are able to add core specific additional
 ; "intelligent" semantics and behaviors.
 ;
+; The Game Boy core applies a newly selected HDMI Filter live: no core reset,
+; the next frame already shows the new filter.
+;
 ; Input:
 ;   R8: selected menu group (as defined in config.vhd)
 ;   R9: selected item within menu group
@@ -145,7 +323,12 @@ PREP_START      INCRB
 ;   R8: 0=OK, else pointer to string with error message
 ;   R9: 0=OK, else error code
 OSM_SEL_POST    INCRB
-                XOR     R8, R8
+
+                CMP     GBC_OPTM_G_HDMI_FLT, R8 ; HDMI Filter changed?
+                RBRA    _OSMSP_RET, !Z
+                RSUB    LOAD_HDMI_FILTER, 1     ; yes: apply it live
+
+_OSMSP_RET      XOR     R8, R8
                 XOR     R9, R9
                 DECRB
                 RET
@@ -176,14 +359,213 @@ OSM_SEL_PRE     INCRB
 ; Output:
 ;   R8: 0=no custom message available, otherwise pointer to string
 
-CUSTOM_MSG      XOR     R8, R8
-                RET              
+CUSTOM_MSG      INCRB
+
+                CMP     CMSG_BROWSENOTHING, R8  ; no valid files in folder?
+                RBRA    _CMSG_RET_0, !Z
+                CMP     CTX_LOAD_ROM, R9        ; while loading a cartridge?
+                RBRA    _CMSG_RET_0, !Z
+                MOVE    WRN_NO_GB_FILES, R8
+                RBRA    _CMSG_RET, 1
+
+_CMSG_RET_0     XOR     R8, R8
+
+_CMSG_RET       DECRB
+                RET
+
+; ----------------------------------------------------------------------------
+; HDMI Filter dispatch
+; (same mechanism as in the C64MEGA65 V6 and AExp cores)
+; ----------------------------------------------------------------------------
+
+; LOAD_HDMI_FILTER: Read the saved HDMI Filter selection from M2M$CFM_DATA
+; and configure ascal accordingly. Called from PREP_START (boot) and
+; OSM_SEL_POST (runtime). Eight options, single-select: exactly one of the
+; GBC_OSM_HDMI_FLT_* bits is set at any time -- OPTM_G_STDSEL in config.vhd
+; guarantees a default ("Lanczos") if the saved SD config file is missing
+; or empty.
+;
+; Two execution shapes, both encoded in HDMI_FLT_TABLE rows
+; (OSM_bit, ASCAL_MODE_word, H_label, V_label):
+;
+;   * Native modes (No Filter / Sharp Bilinear / Bicubic) -> write the
+;                  matching mode word (NEAREST / SBILINEAR / BICUBIC) to
+;                  M2M$ASCAL_MODE. The H/V labels are 0 sentinels: we skip
+;                  the polyphase RAM write entirely and let ascal run its
+;                  built-in scaler datapath.
+;   * Polyphase modes (Smooth / Lanczos / Scanlines / CRT (S-Video) /
+;                  CRT (Composite)) -> write POLYPHASE then push the
+;                  (H_label, V_label) pair into the ascal polyphase RAM
+;                  via M2M$LOAD_POLYPHASE.
+;
+; This routine assumes ASCAL_USAGE=1 (AUSE_CUSTOM) in config.vhd: ASCAL_INIT
+; in M2M/rom/gencfg.asm always clears the M2M$CSR ascal-autosync bit first
+; and only re-sets it for AUSE_AUTO, so with AUSE_CUSTOM the M2M$ASCAL_MODE
+; register stays firmware-writable.
+;
+; Input:  None
+; Output: R8 = 0, R9 = 0 on success
+LOAD_HDMI_FILTER INCRB
+                MOVE    HDMI_FLT_TABLE, R0
+                MOVE    8, R1                   ; option count
+
+_LHF_LOOP       MOVE    @R0++, R8               ; R8 = OSM bit for this option
+                RSUB    M2M$GET_SETTING, 1
+                CMP     1, R9                   ; selected?
+                RBRA    _LHF_FOUND, Z           ; yes -> apply this row
+                ADD     3, R0                   ; no -> skip MODE, H, V
+                SUB     1, R1
+                RBRA    _LHF_LOOP, !Z
+
+                ; Defensive fallback: no bit set. Force the Lanczos preset
+                ; (polyphase mode + Lanczos2_12 on both axes), matching the
+                ; config.vhd OPTM_G_STDSEL default.
+                MOVE    M2M$ASCAL_MODE, R2
+                MOVE    M2M$ASCAL_POLYPHASE, @R2
+                MOVE    LANCZOS2_12,    R8
+                MOVE    LANCZOS2_12,    R9
+                RSUB    M2M$LOAD_POLYPHASE, 1
+                RBRA    _LHF_RET, 1
+
+_LHF_FOUND      MOVE    @R0++, R3               ; R3 = ASCAL_MODE word
+                MOVE    M2M$ASCAL_MODE, R2
+                MOVE    R3, @R2                 ; write mode register
+                MOVE    @R0++, R8               ; R8 = H label (0 = sentinel)
+                MOVE    @R0,   R9               ; R9 = V label (0 = sentinel)
+                CMP     0, R8                   ; native-mode sentinel?
+                RBRA    _LHF_RET, Z             ; yes -> done, no RAM write
+                RSUB    M2M$LOAD_POLYPHASE, 1
+
+_LHF_RET        XOR     R8, R8
+                XOR     R9, R9
+                DECRB
+                RET
+
+; Filter table: (OSM_bit, ASCAL_MODE_word, H_label, V_label) per option, in
+; OPTM_ITEMS display order. The first three rows use ascal native modes
+; (NEAREST / SBILINEAR / BICUBIC); their H and V are 0 sentinels so the
+; dispatcher skips the polyphase RAM write for them. The remaining five
+; rows all select polyphase (mode 100) and provide real coefficient table
+; labels.
+;
+; See CORE/m2m-rom/video_filters/README.md for per-blob notes and
+; CORE/vhdl/config.vhd for the OPTM_ITEMS / OPTM_GROUPS structure.
+HDMI_FLT_TABLE  .DW GBC_OSM_HDMI_FLT_NO_FILTER,     M2M$ASCAL_NEAREST,   0,                   0
+                .DW GBC_OSM_HDMI_FLT_SHARP,         M2M$ASCAL_SBILINEAR, 0,                   0
+                .DW GBC_OSM_HDMI_FLT_BICUBIC,       M2M$ASCAL_BICUBIC,   0,                   0
+                .DW GBC_OSM_HDMI_FLT_SMOOTH,        M2M$ASCAL_POLYPHASE, GS_SHARPNESS_050,    GS_SHARPNESS_050
+                .DW GBC_OSM_HDMI_FLT_LANCZOS,       M2M$ASCAL_POLYPHASE, LANCZOS2_12,         LANCZOS2_12
+                .DW GBC_OSM_HDMI_FLT_SCANLINES,     M2M$ASCAL_POLYPHASE, LANCZOS2_12,         SCAN_BR_110_80
+
+                ; Both CRT rows reuse SCAN_BR_110_80 as the V file (same as
+                ; Scanlines mode). CRT_Sim_*_V is a deep ~40% mid-phase
+                ; plateau designed to be combined with the MiSTer gamma LUT
+                ; + shadow mask; M2M supports neither, so standalone the
+                ; plateau crushes bright content into a dark band. The
+                ; Composite vs S-Video character lives entirely in the H
+                ; file (Composite has heavy horizontal blur, S-Video has
+                ; mild softening), so swapping only the V file preserves the
+                ; perceptual distinction while restoring near-unity mean
+                ; brightness.
+                .DW GBC_OSM_HDMI_FLT_CRT_SVIDEO,    M2M$ASCAL_POLYPHASE, CRT_SIM_SVIDEO_H,    SCAN_BR_110_80
+                .DW GBC_OSM_HDMI_FLT_CRT_COMPOSITE, M2M$ASCAL_POLYPHASE, CRT_SIM_COMPOSITE_H, SCAN_BR_110_80
+
+; ----------------------------------------------------------------------------
+; M2M$LOAD_POLYPHASE  Load a (horizontal, vertical) filter pair into the
+;                    ascal polyphase coefficient RAM. ASCAL_FILTER_LEN
+;                    (= 0x100, defined in M2M/rom/filters.asm) words are
+;                    copied into the H slot at M2M$ASCAL_PP_HORIZ and another
+;                    0x100 words into the V slot at M2M$ASCAL_PP_VERT.
+;
+;                    BACKPORT from M2M V2.1 (M2M/rom/tools.asm): the M2M
+;                    V2.0.1 framework does not ship this routine and M2M/rom
+;                    firmware stays unmodified in this repo, so it lives here
+;                    (see doc/m2m/exceptions.md). When the framework is
+;                    upgraded to V2.1+, delete this copy -- the assembler
+;                    will flag the duplicate label.
+;
+; Input:  R8 = pointer to a 256-word horizontal coefficient table
+;         R9 = pointer to a 256-word vertical   coefficient table
+; Output: -
+; ----------------------------------------------------------------------------
+
+M2M$LOAD_POLYPHASE  SYSCALL(enter, 1)
+
+                ; select the ascal Polyphase RAM device
+                MOVE    M2M$RAMROM_DEV, R0
+                MOVE    M2M$ASCAL_PPHASE, @R0
+                MOVE    M2M$RAMROM_4KWIN, R0
+                MOVE    0, @R0
+
+                MOVE    ASCAL_FILTER_LEN, R10
+
+                ; copy horizontal filter (R8 already = H label) to PP_HORIZ
+                MOVE    R9, R0                  ; stash V pointer
+                MOVE    M2M$RAMROM_DATA, R9
+                ADD     M2M$ASCAL_PP_HORIZ, R9
+                SYSCALL(memcpy, 1)
+
+                ; copy vertical filter (R0 = stashed V label) to PP_VERT.
+                MOVE    R0, R8
+                MOVE    M2M$RAMROM_DATA, R9
+                ADD     M2M$ASCAL_PP_VERT, R9
+                SYSCALL(memcpy, 1)
+
+                SYSCALL(leave, 1)
+                RET
+
+; Filter coefficient blobs for the polyphase-based options that the M2M
+; framework does not already link: LANCZOS2_12 and SCAN_BR_110_80 come in
+; via M2M/rom/filters.asm (included from M2M/rom/shell.asm); the three blobs
+; below are core-local copies (see video_filters/README.md).
+#include "video_filters/GS_Sharpness_050.asm"
+#include "video_filters/CRT_Sim_Composite_H.asm"
+#include "video_filters/CRT_Sim_SVideo_H.asm"
 
 ; ----------------------------------------------------------------------------
 ; Core specific constants and strings
 ; ----------------------------------------------------------------------------
 
-; Add your core specific constants and strings here
+; OSM menu constants are autogenerated by make_rom.sh (like in C64MEGA65 and
+; AExp): the GBC_OSM_* line numbers are scraped from the C_MENU_* constants in
+; ../vhdl/mega65.vhd and the GBC_OPTM_G_* group ids from the OPTM_G_*
+; constants in ../vhdl/config.vhd -- no hardcoded menu indexes here.
+#include "osm_const.asm"
+
+; cartridge file extensions (need to be upper case)
+GB_FILE_EXT     .ASCII_W ".GB"
+GBC_FILE_EXT    .ASCII_W ".GBC"
+
+; Cartridge check warnings, shown by the Shell together with an error code.
+; The screen of the Game Boy core is 32x28 characters, so keep all lines
+; at a maximum of 30 characters. The wording is based on the original
+; gbc4mega65 V0.8 firmware.
+WRN_NO_CART     .ASCII_P "\nCannot run this cartridge!\n\n"
+                .ASCII_P "This is not a valid Game Boy\n"
+                .ASCII_P "cartridge file.\n\n"
+                .ASCII_W "Press SPACE to continue.\n"
+
+WRN_UNSUPP_MBC  .ASCII_P "\nCannot run this cartridge!\n\n"
+                .ASCII_P "It uses a not yet supported\n"
+                .ASCII_P "Memory Bank Controller (MBC).\n\n"
+                .ASCII_W "Press SPACE to continue.\n"
+
+WRN_TOO_LARGE   .ASCII_P "\nCannot run this cartridge!\n\n"
+                .ASCII_P "The cartridge ROM is too\n"
+                .ASCII_P "large. Maximum supported\n"
+                .ASCII_P "ROM size: 1 MB\n\n"
+                .ASCII_W "Press SPACE to continue.\n"
+
+WRN_RAM_SIZE    .ASCII_P "\nCannot run this cartridge!\n\n"
+                .ASCII_P "The cartridge RAM is too\n"
+                .ASCII_P "large. Maximum supported\n"
+                .ASCII_P "RAM size: 128 KB\n\n"
+                .ASCII_W "Press SPACE to continue.\n"
+
+WRN_NO_GB_FILES .ASCII_P "This folder does not contain\n"
+                .ASCII_P "any Game Boy cartridges\n"
+                .ASCII_P "(*.gb or *.gbc files)\n\n"
+                .ASCII_W "Press SPACE to continue"
 
 ; This needs to be the last thing before the "Variables" sections starts
 END_OF_ROM      .DW 0
@@ -210,9 +592,9 @@ END_OF_ROM      .DW 0
 ; The On-Screen-Menu uses the heap for several data structures. This heap
 ; is located before the main system heap in memory.
 ; You need to deduct MENU_HEAP_SIZE from the actual heap size below.
-; Example: If your HEAP_SIZE would be 29696, then you write 29696-1024=28672
+; Example: If your HEAP_SIZE would be 29696, then you write 29696-1280=28416
 ; instead, but when doing the sanity check calculations, you use 29696
-MENU_HEAP_SIZE  .EQU 1024
+MENU_HEAP_SIZE  .EQU 1280
 
 #ifndef RELEASE
 
@@ -220,20 +602,20 @@ MENU_HEAP_SIZE  .EQU 1024
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 6144                       ; 7168 - 1024 = 6144
+HEAP_SIZE       .EQU 5888                       ; 7168 - 1280 = 5888
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 28672                      ; 29696 - 1024 = 28672
+HEAP_SIZE       .EQU 28416                      ; 29696 - 1280 = 28416
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract
 ; it from FF00 because this is at the moment the highest address that we
 ; can use as RAM: 0xFEE0
-; The stack starts at 0xFEE0 (search var VAR$STACK_START in osm_rom.lis to
+; The stack starts at 0xFEE0 (search var VAR$STACK_START in m2m-rom.lis to
 ; calculate the address). To see, if there is enough room for the stack
 ; given the HEAP_SIZE do this calculation: Add 29696 words to HEAP which
 ; is currently 0xXXXX and subtract the result from 0xFEE0. This yields
