@@ -163,7 +163,7 @@ constant HELP_3 : string :=
    " for CRT monitors, also with\n" &
    " CSYNC for RGB/SCART.\n\n" &
 
-   " gbc4mega65.de for more.\n\n\n" &
+   " github.com/sy2002/gbc4mega65\n\n\n" &
 
    " Crsr left: back      (3 of 3)\n" &
    " Space: close the help screen.\n";
