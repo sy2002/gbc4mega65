@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">gbc4mega65</title>
+  <rect width="64" height="64" fill="#fbfaf4"/>
+  <path fill="#2f2f5f" d="M8 0h48v50a14 14 0 0 1-14 14H8z"/>
+  <path fill="#c5c1bd" d="M11 3h42v46a11 11 0 0 1-11 11H11z"/>
+  <path fill="#0f380f" d="M15 8h34v24H15z"/>
+  <path fill="#9bbc0f" d="M18 11h28v18H18z"/>
+  <path fill="#2f2f5f" d="M19 42h16v6H19z"/>
+  <path fill="#2f2f5f" d="M24 37h6v16h-6z"/>
+  <circle cx="41" cy="51" r="5" fill="#9c2c60"/>
+  <circle cx="49" cy="45" r="5" fill="#9c2c60"/>
+</svg>
