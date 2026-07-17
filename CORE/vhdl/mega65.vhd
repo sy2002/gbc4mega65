@@ -1,9 +1,11 @@
 ----------------------------------------------------------------------------------
--- MiSTer2MEGA65 Framework
+-- Game Boy and Game Boy Color for MEGA65 (gbc4mega65)
 --
 -- MEGA65 main file that contains the whole machine
 --
--- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
+-- This machine is based on Gameboy_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by sy2002 in 2021 - 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;
@@ -43,7 +45,7 @@ port (
    qnice_ascal_polyphase_o : out std_logic;
    qnice_ascal_triplebuf_o : out std_logic;
    qnice_retro15kHz_o      : out std_logic;              -- 0 = normal frequency, 1 = retro 15 kHz frequency
-   qnice_csync_o           : out std_logic;              -- 0 = normal HS/VS, 1 = Composite Sync  
+   qnice_csync_o           : out std_logic;              -- 0 = normal HS/VS, 1 = Composite Sync
 
    -- Flip joystick ports
    qnice_flip_joyports_o   : out std_logic;
@@ -104,7 +106,7 @@ port (
    clk_i                   : in  std_logic;              -- 100 MHz clock
 
    -- Share clock and reset with the framework
-   main_clk_o              : out std_logic;              -- CORE's 54 MHz clock
+   main_clk_o              : out std_logic;              -- CORE's 33.554432 MHz clock
    main_rst_o              : out std_logic;              -- CORE's reset, synchronized
 
    -- M2M's reset manager provides 2 signals:
@@ -224,40 +226,142 @@ architecture synthesis of MEGA65_Core is
 -- Clocks and active high reset signals for each clock domain
 ---------------------------------------------------------------------------------------------
 
-signal main_clk               : std_logic;               -- Core main clock
+signal main_clk               : std_logic;               -- Game Boy core clock: 33.554432 MHz
 signal main_rst               : std_logic;
+signal video_clk              : std_logic;               -- lcd.v video clock: 67.108864 MHz
+signal video_rst              : std_logic;
+
+---------------------------------------------------------------------------------------------
+-- On-Screen-Menu bit positions: zero-based line numbers in config.vhd's OPTM_ITEMS
+--
+-- ALL C_MENU_* constants below are additionally scraped by CORE/m2m-rom/make_rom.sh into
+-- the auto-generated osm_const.asm (as GBC_OSM_*), so the firmware never hardcodes menu
+-- line numbers. Keep them single-line for the awk scraper and keep them in sync with
+-- config.vhd's OPTM_ITEMS!
+---------------------------------------------------------------------------------------------
+
+constant C_MENU_GB_CLASSIC    : natural := 6;
+constant C_MENU_GB_COLOR      : natural := 7;
+constant C_MENU_COL_SATURATED : natural := 11;
+constant C_MENU_COL_LCDEMU    : natural := 12;
+constant C_MENU_JOY_STD_A     : natural := 17;
+constant C_MENU_JOY_STD_B     : natural := 18;
+constant C_MENU_JOY_UP_A      : natural := 19;
+constant C_MENU_JOY_UP_B      : natural := 20;
+constant C_MENU_HDMI_720P_60  : natural := 26;
+constant C_MENU_HDMI_640_60   : natural := 27;
+constant C_MENU_HDMI_480_5994 : natural := 28;
+constant C_MENU_HDMI_800_60   : natural := 29;
+constant C_MENU_HDMI_FF       : natural := 31;
+constant C_MENU_HDMI_ZOOM     : natural := 32;
+constant C_MENU_HDMI_FLT_NO_FILTER     : natural := 38;
+constant C_MENU_HDMI_FLT_SHARP         : natural := 39;
+constant C_MENU_HDMI_FLT_BICUBIC       : natural := 40;
+constant C_MENU_HDMI_FLT_SMOOTH        : natural := 41;
+constant C_MENU_HDMI_FLT_LANCZOS       : natural := 42;
+constant C_MENU_HDMI_FLT_SCANLINES     : natural := 43;
+constant C_MENU_HDMI_FLT_CRT_SVIDEO    : natural := 44;
+constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 45;
+constant C_MENU_VGA_STD       : natural := 51;
+constant C_MENU_VGA_15KHZHSVS : natural := 55;
+constant C_MENU_VGA_15KHZCS   : natural := 56;
+constant C_MENU_IMPROVE_AUDIO : natural := 59;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
 ---------------------------------------------------------------------------------------------
 
+-- Game Boy configuration from the on-screen-menu
+signal main_gb_joy_map        : std_logic_vector(1 downto 0);
+
+-- Cartridge state and header flags after clock domain crossing
+signal main_cart_loaded       : std_logic;
+signal main_cart_loading      : std_logic;
+signal main_cart_cgb_flag     : std_logic_vector(7 downto 0);
+signal main_cart_mbc_type     : std_logic_vector(7 downto 0);
+signal main_cart_rom_size     : std_logic_vector(7 downto 0);
+signal main_cart_ram_size     : std_logic_vector(7 downto 0);
+
+-- Game Boy Color BIOS interface between main.vhd and the BIOS RAM
+signal main_bios_addr         : std_logic_vector(11 downto 0);
+signal main_bios_data         : std_logic_vector(7 downto 0);
+
+-- Cartridge ROM interface between main.vhd (MBC) and the cartridge RAM
+signal main_cartrom_addr      : std_logic_vector(22 downto 0);
+signal main_cartrom_rd        : std_logic;
+signal main_cartrom_data      : std_logic_vector(7 downto 0);
+
+-- Cartridge RAM interface between main.vhd (MBC) and the cartridge RAM
+signal main_cartram_addr      : std_logic_vector(16 downto 0);
+signal main_cartram_rd        : std_logic;
+signal main_cartram_wr        : std_logic;
+signal main_cartram_data_to   : std_logic_vector(7 downto 0);
+signal main_cartram_data_from : std_logic_vector(7 downto 0);
+
 ---------------------------------------------------------------------------------------------
 -- qnice_clk
 ---------------------------------------------------------------------------------------------
 
+-- CRT/ROM device control and status register protocol, see M2M/rom/sysdef.asm:
+-- the register block is located at 4k window 0xFFFF of the device
+constant C_CRTROM_CSR_WINDOW  : std_logic_vector(15 downto 0) := x"FFFF";
+constant C_CRTROM_CSR_STATUS  : std_logic_vector(11 downto 0) := x"000";
+constant C_CRTROM_CSR_FS_LO   : std_logic_vector(11 downto 0) := x"001";
+constant C_CRTROM_CSR_FS_HI   : std_logic_vector(11 downto 0) := x"002";
+constant C_CRTROM_CSR_PARSEST : std_logic_vector(11 downto 0) := x"010";
+constant C_CRTROM_CSR_PARSEE1 : std_logic_vector(11 downto 0) := x"011";
+
+constant C_CRTROM_ST_IDLE     : std_logic_vector(15 downto 0) := x"0000";
+constant C_CRTROM_ST_LDNG     : std_logic_vector(15 downto 0) := x"0001";
+constant C_CRTROM_ST_ERR      : std_logic_vector(15 downto 0) := x"0002";
+constant C_CRTROM_ST_OK       : std_logic_vector(15 downto 0) := x"0003";
+
+constant C_CRTROM_PT_IDLE     : std_logic_vector(15 downto 0) := x"0000";
+constant C_CRTROM_PT_OK       : std_logic_vector(15 downto 0) := x"0002";
+
+-- Cartridge header byte offsets, see https://gbdev.io/pandocs/The_Cartridge_Header.html
+constant C_CART_HDR_CGB       : std_logic_vector(19 downto 0) := x"00143";
+constant C_CART_HDR_SGB       : std_logic_vector(19 downto 0) := x"00146";
+constant C_CART_HDR_MBC       : std_logic_vector(19 downto 0) := x"00147";
+constant C_CART_HDR_ROM_SIZE  : std_logic_vector(19 downto 0) := x"00148";
+constant C_CART_HDR_RAM_SIZE  : std_logic_vector(19 downto 0) := x"00149";
+constant C_CART_HDR_OLDLIC    : std_logic_vector(19 downto 0) := x"0014B";
+
+-- Cartridge device: state, registers and RAM wiring
+signal qnice_cart_csr_status  : std_logic_vector(15 downto 0);
+signal qnice_cart_fs_lo       : std_logic_vector(15 downto 0);
+signal qnice_cart_fs_hi       : std_logic_vector(15 downto 0);
+signal qnice_cart_loaded      : std_logic;
+signal qnice_cart_loading     : std_logic;    -- data is being streamed into the cartridge RAM
+signal qnice_cart_data_we     : std_logic;    -- write to the cartridge RAM (data windows)
+signal qnice_cart_csr_we      : std_logic;    -- write to the CSR register block
+signal qnice_cart_data_read   : std_logic_vector(7 downto 0);
+
+-- Cartridge header flags, snooped while the Shell streams the file into the device
+signal qnice_cf_cgb           : std_logic_vector(7 downto 0);
+signal qnice_cf_sgb           : std_logic_vector(7 downto 0);
+signal qnice_cf_mbc           : std_logic_vector(7 downto 0);
+signal qnice_cf_rom_size      : std_logic_vector(7 downto 0);
+signal qnice_cf_ram_size      : std_logic_vector(7 downto 0);
+signal qnice_cf_oldlicensee   : std_logic_vector(7 downto 0);
+
+-- BIOS device
+signal qnice_bios_we          : std_logic;
+signal qnice_bios_data_read   : std_logic_vector(7 downto 0);
+
 ---------------------------------------------------------------------------------------------
--- Democore & example stuff: Delete before starting to port your own core
+-- hr_clk (HyperRAM clock domain)
 ---------------------------------------------------------------------------------------------
 
--- Democore menu items
-constant C_MENU_HDMI_16_9_50   : natural := 12;
-constant C_MENU_HDMI_16_9_60   : natural := 13;
-constant C_MENU_HDMI_4_3_50    : natural := 14;
-constant C_MENU_HDMI_5_4_50    : natural := 15;
-constant C_MENU_HDMI_640_60    : natural := 16;
-constant C_MENU_HDMI_720_5994  : natural := 17;
-constant C_MENU_SVGA_800_60    : natural := 18;
-constant C_MENU_CRT_EMULATION  : natural := 30;
-constant C_MENU_HDMI_ZOOM      : natural := 31;
-constant C_MENU_IMPROVE_AUDIO  : natural := 32;
-
--- QNICE clock domain
-signal qnice_demo_vd_data_o   : std_logic_vector(15 downto 0);
-signal qnice_demo_vd_ce       : std_logic;
-signal qnice_demo_vd_we       : std_logic;
+-- HDMI flicker-free: the core-speed select for clk.vhd, driven by the ascal over/underflow
+-- feedback (hr_high_i/hr_low_i, already in the hr_clk domain -> no CDC), and the
+-- flicker-free ON/OFF menu bit synchronized from the core clock domain. Power-up = native.
+signal hr_core_speed          : unsigned(1 downto 0) := "00";
+signal hr_hdmi_ff             : std_logic;
 
 begin
 
+   -- The Game Boy core does not use HyperRAM: the cartridge stays in BRAM
    hr_core_write_o      <= '0';
    hr_core_read_o       <= '0';
    hr_core_address_o    <= (others => '0');
@@ -266,12 +370,11 @@ begin
    hr_core_burstcount_o <= (others => '0');
 
    -- Tristate all expansion port drivers that we can directly control
-   -- @TODO: As soon as we support modules that can act as busmaster, we need to become more flexible here
    cart_ctrl_oe_o       <= '0';
    cart_addr_oe_o       <= '0';
    cart_data_oe_o       <= '0';
 
-   -- Due to a bug in the R5/R6 boards, the cartridge port needs to be enabled for joystick port 2 to work 
+   -- Due to a bug in the R5/R6 boards, the cartridge port needs to be enabled for joystick port 2 to work
    cart_en_o            <= '1';
 
    cart_reset_oe_o      <= '0';
@@ -299,6 +402,16 @@ begin
    cart_a_o             <= (others => '0');
    cart_d_o             <= (others => '0');
 
+   -- The IEC port is not used by the Game Boy core
+   iec_reset_n_o        <= '1';
+   iec_atn_n_o          <= '1';
+   iec_clk_en_o         <= '0';
+   iec_clk_n_o          <= '1';
+   iec_data_en_o        <= '0';
+   iec_data_n_o         <= '1';
+   iec_srq_en_o         <= '0';
+   iec_srq_n_o          <= '1';
+
    main_joy_1_up_n_o    <= '1';
    main_joy_1_down_n_o  <= '1';
    main_joy_1_left_n_o  <= '1';
@@ -310,20 +423,22 @@ begin
    main_joy_2_right_n_o <= '1';
    main_joy_2_fire_n_o  <= '1';
 
-
-   -- MMCME2_ADV clock generators:
-   --   @TODO YOURCORE:       54 MHz
+   -- MMCME2_ADV clock generators: 33.554432 MHz main clock and 67.108864 MHz video clock,
+   -- plus the HDMI flicker-free "fast" twins selected by hr_core_speed (see clk.vhd)
    clk_gen : entity work.clk
       port map (
          sys_clk_i         => clk_i,           -- expects 100 MHz
-         main_clk_o        => main_clk,        -- CORE's 54 MHz clock
-         main_rst_o        => main_rst         -- CORE's reset, synchronized
+         core_speed_i      => hr_core_speed,   -- "00"=native, "01"=fast (HDMI flicker-free)
+         main_clk_o        => main_clk,        -- Game Boy core clock: 33.554432 MHz
+         main_rst_o        => main_rst,        -- CORE's reset, synchronized
+         video_clk_o       => video_clk,       -- video clock: 67.108864 MHz
+         video_rst_o       => video_rst        -- video reset, synchronized
       ); -- clk_gen
 
    main_clk_o  <= main_clk;
    main_rst_o  <= main_rst;
-   video_clk_o <= main_clk;
-   video_rst_o <= main_rst;
+   video_clk_o <= video_clk;
+   video_rst_o <= video_rst;
 
    ---------------------------------------------------------------------------------------------
    -- main_clk (MiSTer core's clock)
@@ -334,6 +449,18 @@ begin
    main_power_led_o     <= '1';
    main_power_led_col_o <= x"0000FF" when main_reset_m2m_i else x"00FF00";
 
+   -- The Game Boy core does not use the drive led
+   main_drive_led_o     <= '0';
+   main_drive_led_col_o <= x"00FF00";
+
+   -- Joystick mapping mode: the four radio buttons of the Joystick Mode menu
+   -- encoded into the 2-bit mapping code of keyboard.vhd (fall-through default
+   -- is Standard, Fire=A so that an all-zero config file is safe)
+   main_gb_joy_map <= "01" when main_osm_control_i(C_MENU_JOY_STD_B) = '1' else
+                      "10" when main_osm_control_i(C_MENU_JOY_UP_A)  = '1' else
+                      "11" when main_osm_control_i(C_MENU_JOY_UP_B)  = '1' else
+                      "00";
+
    -- main.vhd contains the actual MiSTer core
    i_main : entity work.main
       generic map (
@@ -341,14 +468,46 @@ begin
       )
       port map (
          clk_main_i           => main_clk,
+         clk_video_i          => video_clk,
          reset_soft_i         => main_reset_core_i,
          reset_hard_i         => main_reset_m2m_i,
          pause_i              => main_pause_core_i,
 
          clk_main_speed_i     => CORE_CLK_SPEED,
 
+         -- Game Boy configuration: fall-through defaults keep an all-zero config file safe:
+         -- Game Boy Classic and fully saturated colors
+         gb_color_i           => main_osm_control_i(C_MENU_GB_COLOR),
+         gb_joy_map_i         => main_gb_joy_map,
+         gb_saturated_colors_i => not main_osm_control_i(C_MENU_COL_LCDEMU),
+
+         -- Cartridge state and header flags
+         cart_loaded_i        => main_cart_loaded,
+         cart_loading_i       => main_cart_loading,
+         cart_cgb_flag_i      => main_cart_cgb_flag,
+         cart_mbc_type_i      => main_cart_mbc_type,
+         cart_rom_size_i      => main_cart_rom_size,
+         cart_ram_size_i      => main_cart_ram_size,
+
+         -- Game Boy Color BIOS RAM
+         gbc_bios_addr_o      => main_bios_addr,
+         gbc_bios_data_i      => main_bios_data,
+
+         -- Cartridge ROM interface (MBC)
+         cartrom_addr_o       => main_cartrom_addr,
+         cartrom_rd_o         => main_cartrom_rd,
+         cartrom_data_i       => main_cartrom_data,
+
+         -- Cartridge RAM interface (MBC)
+         cartram_addr_o       => main_cartram_addr,
+         cartram_rd_o         => main_cartram_rd,
+         cartram_wr_o         => main_cartram_wr,
+         cartram_data_o       => main_cartram_data_to,
+         cartram_data_i       => main_cartram_data_from,
+
          -- Video output
-         -- This is PAL 720x576 @ 50 Hz (pixel clock 27 MHz), but synchronized to main_clk (54 MHz).
+         -- 256x224 @ 59.7275 Hz (the 160x144 Game Boy picture centered with a black
+         -- border, Super Game Boy screen geometry), synchronized to video_clk
          video_ce_o           => video_ce_o,
          video_ce_ovl_o       => video_ce_ovl_o,
          video_red_o          => video_red_o,
@@ -390,59 +549,63 @@ begin
    -- Audio and video settings (QNICE clock domain)
    ---------------------------------------------------------------------------------------------
 
-   -- Due to a discussion on the MEGA65 discord (https://discord.com/channels/719326990221574164/794775503818588200/1039457688020586507)
-   -- we decided to choose a naming convention for the PAL modes that might be more intuitive for the end users than it is
-   -- for the programmers: "4:3" means "meant to be run on a 4:3 monitor", "5:4 on a 5:4 monitor".
-   -- The technical reality is though, that in our "5:4" mode we are actually doing a 4/3 aspect ratio adjustment
-   -- while in the 4:3 mode we are outputting a 5:4 image. This is kind of odd, but it seemed that our 4/3 aspect ratio
-   -- adjusted image looks best on a 5:4 monitor and the other way round.
-   -- Not sure if this will stay forever or if we will come up with a better naming convention.
-   qnice_video_mode_o <= C_VIDEO_SVGA_800_60   when qnice_osm_control_i(C_MENU_SVGA_800_60)    = '1' else
-                         C_VIDEO_HDMI_720_5994 when qnice_osm_control_i(C_MENU_HDMI_720_5994)  = '1' else
-                         C_VIDEO_HDMI_640_60   when qnice_osm_control_i(C_MENU_HDMI_640_60)    = '1' else
-                         C_VIDEO_HDMI_5_4_50   when qnice_osm_control_i(C_MENU_HDMI_5_4_50)    = '1' else
-                         C_VIDEO_HDMI_4_3_50   when qnice_osm_control_i(C_MENU_HDMI_4_3_50)    = '1' else
-                         C_VIDEO_HDMI_16_9_60  when qnice_osm_control_i(C_MENU_HDMI_16_9_60)   = '1' else
-                         C_VIDEO_HDMI_16_9_50;
+   -- The Game Boy is a 59.7275 Hz machine, so only 60 Hz family HDMI modes are offered.
+   -- Fall-through default is 720p 60 Hz so that an all-zero config file is safe.
+   qnice_video_mode_o <= C_VIDEO_SVGA_800_60   when qnice_osm_control_i(C_MENU_HDMI_800_60)   = '1' else
+                         C_VIDEO_HDMI_720_5994 when qnice_osm_control_i(C_MENU_HDMI_480_5994) = '1' else
+                         C_VIDEO_HDMI_640_60   when qnice_osm_control_i(C_MENU_HDMI_640_60)   = '1' else
+                         C_VIDEO_HDMI_16_9_60;
 
    -- Use On-Screen-Menu selections to configure several audio and video settings
    -- Video and audio mode control
    qnice_dvi_o                <= '0';                                         -- 0=HDMI (with sound), 1=DVI (no sound)
-   qnice_scandoubler_o        <= '0';                                         -- no scandoubler
    qnice_audio_mute_o         <= '0';                                         -- audio is not muted
    qnice_audio_filter_o       <= qnice_osm_control_i(C_MENU_IMPROVE_AUDIO);   -- 0 = raw audio, 1 = use filters from globals.vhd
-   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_ZOOM);       -- 0 = no zoom/crop
-   
-   -- These two signals are often used as a pair (i.e. both '1'), particularly when
-   -- you want to run old analog cathode ray tube monitors or TVs (via SCART)
-   -- If you want to provide your users a choice, then a good choice is:
-   --    "Standard VGA":                     qnice_retro15kHz_o=0 and qnice_csync_o=0
-   --    "Retro 15 kHz with HSync and VSync" qnice_retro15kHz_o=1 and qnice_csync_o=0
-   --    "Retro 15 kHz with CSync"           qnice_retro15kHz_o=1 and qnice_csync_o=1
-   qnice_retro15kHz_o         <= '0';
-   qnice_csync_o              <= '0';
+   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_ZOOM);       -- crop the black border on HDMI
+
+   -- VGA output modes, see also the VGA submenu in config.vhd:
+   --    "Standard VGA":                      scandoubler on,  retro15kHz off, csync off
+   --    "Retro 15 kHz with HSync and VSync": scandoubler off, retro15kHz on,  csync off
+   --    "Retro 15 kHz with CSync":           scandoubler off, retro15kHz on,  csync on
+   -- Fall-through default is Standard VGA (no 15 kHz bit set)
+   qnice_scandoubler_o        <= (not qnice_osm_control_i(C_MENU_VGA_15KHZHSVS)) and
+                                 (not qnice_osm_control_i(C_MENU_VGA_15KHZCS));
+   qnice_retro15kHz_o         <= qnice_osm_control_i(C_MENU_VGA_15KHZHSVS) or
+                                 qnice_osm_control_i(C_MENU_VGA_15KHZCS);
+   qnice_csync_o              <= qnice_osm_control_i(C_MENU_VGA_15KHZCS);
    qnice_osm_cfg_scaling_o    <= (others => '1');
 
-   -- ascal filters that are applied while processing the input
-   -- 00 : Nearest Neighbour
-   -- 01 : Bilinear
-   -- 10 : Sharp Bilinear
-   -- 11 : Bicubic
+   -- ASCAL_USAGE = 1 (AUSE_CUSTOM) in config.vhd: the HDMI Filter menu is implemented by
+   -- the QNICE firmware (LOAD_HDMI_FILTER in CORE/m2m-rom/m2m-rom.asm), which drives
+   -- M2M$ASCAL_MODE and the polyphase coefficient RAM itself. These three signals are
+   -- therefore ignored by the framework at runtime:
    qnice_ascal_mode_o         <= "00";
-
-   -- If polyphase is '1' then the ascal filter mode is ignored and polyphase filters are used instead
-   -- @TODO: Right now, the filters are hardcoded in the M2M framework, we need to make them changeable inside m2m-rom.asm
-   qnice_ascal_polyphase_o    <= qnice_osm_control_i(C_MENU_CRT_EMULATION);
-
-   -- ascal triple-buffering
-   -- @TODO: Right now, the M2M framework only supports OFF, so do not touch until the framework is upgraded
+   qnice_ascal_polyphase_o    <= '0';
    qnice_ascal_triplebuf_o    <= '0';
 
    -- Flip joystick ports (i.e. the joystick in port 2 is used as joystick 1 and vice versa)
+   -- Not needed by the Game Boy core: both joystick ports work in parallel
    qnice_flip_joyports_o      <= '0';
 
    ---------------------------------------------------------------------------------------------
    -- Core specific device handling (QNICE clock domain)
+   --
+   -- Two devices:
+   --
+   -- C_DEV_GB_CART (1 MB cartridge ROM): The Shell streams *.gb / *.gbc files byte by byte
+   -- into the 4k windows 0x0000 .. 0x00FF and afterwards performs the CRT/ROM control and
+   -- status register protocol at 4k window 0xFFFF (see HANDLE_CRTROM_M in
+   -- M2M/rom/crts-and-roms.asm). While the file streams in, the device snoops the relevant
+   -- cartridge header bytes. There is no dedicated hardware parser: all sanity checks happen
+   -- before loading in the firmware (PREP_LOAD_IMAGE in CORE/m2m-rom/m2m-rom.asm), so the
+   -- parser handshake immediately reports "OK".
+   --
+   -- C_DEV_GB_BIOS (4 KB Game Boy Color BIOS): Preloaded at synthesis with the Open Source
+   -- SameBoy boot ROM; the Shell auto-load mechanism (C_CRTROMS_AUTO in globals.vhd)
+   -- optionally overwrites it with cgb_boot.bin / cgb_bios.bin from the SD card. Auto-load
+   -- does not use the CSR protocol, so the device is a plain memory window. Writes beyond
+   -- the 4 KB of window 0 are ignored (over-long files are truncated, exactly like the
+   -- original gbc4mega65 firmware did).
    ---------------------------------------------------------------------------------------------
 
    core_specific_devices : process(all)
@@ -451,97 +614,245 @@ begin
       qnice_dev_data_o     <= x"EEEE";
       qnice_dev_wait_o     <= '0';
 
-      -- Demo core specific: Delete before starting to port your core
-      qnice_demo_vd_ce     <= '0';
-      qnice_demo_vd_we     <= '0';
+      qnice_cart_data_we   <= '0';
+      qnice_cart_csr_we    <= '0';
+      qnice_bios_we        <= '0';
 
       case qnice_dev_id_i is
 
-         -- Demo core specific stuff: delete before porting your own core
-         when C_DEV_DEMO_VD =>
-            qnice_demo_vd_ce     <= qnice_dev_ce_i;
-            qnice_demo_vd_we     <= qnice_dev_we_i;
-            qnice_dev_data_o     <= qnice_demo_vd_data_o;
+         -- 1 MB cartridge ROM incl. the CRT/ROM CSR protocol
+         when C_DEV_GB_CART =>
+            if qnice_dev_addr_i(27 downto 12) = C_CRTROM_CSR_WINDOW then
+               -- the whole CSR window reads as zero by default so that the Shell reads
+               -- an empty (zero-terminated) error string at CRTROM_CSR_ERR_STRT
+               qnice_dev_data_o <= x"0000";
+               case qnice_dev_addr_i(11 downto 0) is
+                  when C_CRTROM_CSR_STATUS =>
+                     qnice_cart_csr_we <= qnice_dev_ce_i and qnice_dev_we_i;
+                     qnice_dev_data_o  <= qnice_cart_csr_status;
+                  when C_CRTROM_CSR_FS_LO =>
+                     qnice_cart_csr_we <= qnice_dev_ce_i and qnice_dev_we_i;
+                     qnice_dev_data_o  <= qnice_cart_fs_lo;
+                  when C_CRTROM_CSR_FS_HI =>
+                     qnice_cart_csr_we <= qnice_dev_ce_i and qnice_dev_we_i;
+                     qnice_dev_data_o  <= qnice_cart_fs_hi;
+                  when C_CRTROM_CSR_PARSEST =>
+                     -- no hardware parser: report OK as soon as the Shell set the status
+                     -- to OK (all checks are done in the firmware before loading)
+                     if qnice_cart_csr_status = C_CRTROM_ST_OK then
+                        qnice_dev_data_o <= C_CRTROM_PT_OK;
+                     else
+                        qnice_dev_data_o <= C_CRTROM_PT_IDLE;
+                     end if;
+                  when C_CRTROM_CSR_PARSEE1 =>
+                     qnice_dev_data_o <= x"0000";
+                  when others => null;
+               end case;
+            elsif qnice_dev_addr_i(27 downto 20) = x"00" then
+               -- data windows 0x0000 .. 0x00FF: 1 MB cartridge RAM, one byte per address
+               qnice_cart_data_we <= qnice_dev_ce_i and qnice_dev_we_i;
+               qnice_dev_data_o   <= x"00" & qnice_cart_data_read;
+            end if;
 
-         -- @TODO YOUR RAMs or ROMs (e.g. for cartridges) or other devices here
-         -- Device numbers need to be >= 0x0100
+         -- 4 KB Game Boy Color BIOS
+         when C_DEV_GB_BIOS =>
+            if qnice_dev_addr_i(27 downto 12) = x"0000" then
+               qnice_bios_we    <= qnice_dev_ce_i and qnice_dev_we_i;
+               qnice_dev_data_o <= x"00" & qnice_bios_data_read;
+            end if;
 
          when others => null;
       end case;
    end process core_specific_devices;
 
+   -- Cartridge device: CSR registers, header snooping and load state.
+   -- QNICE reads/writes registers on the falling clock edge.
+   qnice_cart_regs : process (qnice_clk_i)
+   begin
+      if falling_edge(qnice_clk_i) then
+         -- CSR register writes by the Shell
+         if qnice_cart_csr_we = '1' then
+            case qnice_dev_addr_i(11 downto 0) is
+               when C_CRTROM_CSR_STATUS =>
+                  qnice_cart_csr_status <= qnice_dev_data_i;
+                  -- a successful load ends the loading phase and marks the cartridge
+                  -- as loaded (the Game Boy leaves the reset state and starts the game);
+                  -- error/idle end the loading phase, too
+                  if qnice_dev_data_i = C_CRTROM_ST_OK then
+                     qnice_cart_loading <= '0';
+                     qnice_cart_loaded  <= '1';
+                  elsif qnice_dev_data_i /= C_CRTROM_ST_LDNG then
+                     qnice_cart_loading <= '0';
+                  end if;
+               when C_CRTROM_CSR_FS_LO =>
+                  qnice_cart_fs_lo <= qnice_dev_data_i;
+               when C_CRTROM_CSR_FS_HI =>
+                  qnice_cart_fs_hi <= qnice_dev_data_i;
+               when others => null;
+            end case;
+         end if;
+
+         -- Data streaming: as soon as the first byte of a new cartridge overwrites the
+         -- BRAM, the previous cartridge is gone, so the Game Boy is held in reset from
+         -- here until the Shell reports "OK". (If the firmware aborts before streaming -
+         -- for example because the cartridge is too large - then nothing was overwritten
+         -- and a currently running game keeps running.)
+         if qnice_cart_data_we = '1' and qnice_cart_csr_status = C_CRTROM_ST_LDNG then
+            qnice_cart_loading <= '1';
+
+            -- snoop the cartridge header bytes
+            case qnice_dev_addr_i(19 downto 0) is
+               when C_CART_HDR_CGB      => qnice_cf_cgb         <= qnice_dev_data_i(7 downto 0);
+               when C_CART_HDR_SGB      => qnice_cf_sgb         <= qnice_dev_data_i(7 downto 0);
+               when C_CART_HDR_MBC      => qnice_cf_mbc         <= qnice_dev_data_i(7 downto 0);
+               when C_CART_HDR_ROM_SIZE => qnice_cf_rom_size    <= qnice_dev_data_i(7 downto 0);
+               when C_CART_HDR_RAM_SIZE => qnice_cf_ram_size    <= qnice_dev_data_i(7 downto 0);
+               when C_CART_HDR_OLDLIC   => qnice_cf_oldlicensee <= qnice_dev_data_i(7 downto 0);
+               when others => null;
+            end case;
+         end if;
+
+         if qnice_rst_i = '1' then
+            qnice_cart_csr_status <= C_CRTROM_ST_IDLE;
+            qnice_cart_fs_lo      <= (others => '0');
+            qnice_cart_fs_hi      <= (others => '0');
+            qnice_cart_loaded     <= '0';
+            qnice_cart_loading    <= '0';
+            qnice_cf_cgb          <= (others => '0');
+            qnice_cf_sgb          <= (others => '0');
+            qnice_cf_mbc          <= (others => '0');
+            qnice_cf_rom_size     <= (others => '0');
+            qnice_cf_ram_size     <= (others => '0');
+            qnice_cf_oldlicensee  <= (others => '0');
+         end if;
+      end if;
+   end process qnice_cart_regs;
+
    ---------------------------------------------------------------------------------------------
-   -- Dual Clocks
+   -- Dual Clocks: RAMs and ROMs
    ---------------------------------------------------------------------------------------------
 
-   -- Put your dual-clock devices such as RAMs and ROMs here
-   --
-   -- Use the M2M framework's official RAM/ROM: dualport_2clk_ram
-   -- and make sure that the you configure the port that works with QNICE as a falling edge
-   -- by setting G_FALLING_A or G_FALLING_B (depending on which port you use) to true.
-
-   ---------------------------------------------------------------------------------------
-   -- Virtual drive handler
-   --
-   -- Only added for demo-purposes at this place, so that we can demonstrate the
-   -- firmware's ability to browse files and folders. It is very likely, that the
-   -- virtual drive handler needs to be placed somewhere else, for example inside
-   -- main.vhd. We advise to delete this before starting to port a core and re-adding
-   -- it later (and at the right place), if and when needed.
-   ---------------------------------------------------------------------------------------
-
-   -- @TODO:
-   -- a) In case that this is handled in main.vhd, you need to add the appropriate ports to i_main
-   -- b) You might want to change the drive led's color (just like the C64 core does) as long as
-   --    the cache is dirty (i.e. as long as the write process is not finished, yet)
-   main_drive_led_o     <= '0';
-   main_drive_led_col_o <= x"00FF00";  -- 24-bit RGB value for the led
-
-   i_vdrives : entity work.vdrives
+   -- 1 MB cartridge ROM: the Game Boy expects that the RAM latches the address on cart_rd
+   cartrom : entity work.dualport_2clk_ram
       generic map (
-         VDNUM       => C_VDNUM
+         ADDR_WIDTH        => 20,              -- 1 MB
+         DATA_WIDTH        => 8,
+         LATCH_ADDR_A      => true,
+         FALLING_B         => true             -- QNICE reads/writes on the falling clock edge
       )
-      port map
-      (
-         clk_qnice_i       => qnice_clk_i,
-         clk_core_i        => main_clk,
-         reset_core_i      => main_reset_core_i,
+      port map (
+         clock_a           => main_clk,
+         address_a         => main_cartrom_addr(19 downto 0),
+         do_latch_addr_a   => main_cartrom_rd,
+         q_a               => main_cartrom_data,
 
-         -- Core clock domain
-         img_mounted_o     => open,
-         img_readonly_o    => open,
-         img_size_o        => open,
-         img_type_o        => open,
-         drive_mounted_o   => open,
+         clock_b           => qnice_clk_i,
+         address_b         => qnice_dev_addr_i(19 downto 0),
+         data_b            => qnice_dev_data_i(7 downto 0),
+         wren_b            => qnice_cart_data_we,
+         q_b               => qnice_cart_data_read
+      ); -- cartrom
 
-         -- Cache output signals: The dirty flags can be used to enforce data consistency
-         -- (for example by ignoring/delaying a reset or delaying a drive unmount/mount, etc.)
-         -- The flushing flags can be used to signal the fact that the caches are currently
-         -- flushing to the user, for example using a special color/signal for example
-         -- at the drive led
-         cache_dirty_o     => open,
-         cache_flushing_o  => open,
+   -- 128 KB cartridge RAM
+   -- Note: QNICE has no access, so battery-buffered savegames are not possible yet.
+   -- This is the V1.0 status quo, exactly like the original gbc4mega65.
+   cartram : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH        => 17,              -- 128 KB
+         DATA_WIDTH        => 8
+      )
+      port map (
+         clock_a           => main_clk,
+         address_a         => main_cartram_addr,
+         data_a            => main_cartram_data_to,
+         wren_a            => main_cartram_wr,
+         q_a               => main_cartram_data_from
+      ); -- cartram
 
-         -- QNICE clock domain
-         sd_lba_i          => (others => (others => '0')),
-         sd_blk_cnt_i      => (others => (others => '0')),
-         sd_rd_i           => (others => '0'),
-         sd_wr_i           => (others => '0'),
-         sd_ack_o          => open,
+   -- 4 KB Game Boy Color BIOS, preloaded with the Open Source SameBoy boot ROM
+   bios : entity work.dualport_2clk_ram
+      generic map (
+         ADDR_WIDTH        => 12,              -- 4 KB
+         DATA_WIDTH        => 8,
+         ROM_PRELOAD       => true,            -- load default ROM in case no other ROM is on the SD card
+         ROM_FILE          => "../../BootROMs/cgb_boot.rom",
+         FALLING_B         => true             -- QNICE reads/writes on the falling clock edge
+      )
+      port map (
+         clock_a           => main_clk,
+         address_a         => main_bios_addr,
+         q_a               => main_bios_data,
 
-         sd_buff_addr_o    => open,
-         sd_buff_dout_o    => open,
-         sd_buff_din_i     => (others => (others => '0')),
-         sd_buff_wr_o      => open,
+         clock_b           => qnice_clk_i,
+         address_b         => qnice_dev_addr_i(11 downto 0),
+         data_b            => qnice_dev_data_i(7 downto 0),
+         wren_b            => qnice_bios_we,
+         q_b               => qnice_bios_data_read
+      ); -- bios
 
-         -- QNICE interface (MMIO, 4k-segmented)
-         -- qnice_addr is 28-bit because we have a 16-bit window selector and a 4k window: 65536*4096 = 268.435.456 = 2^28
-         qnice_addr_i      => qnice_dev_addr_i,
-         qnice_data_i      => qnice_dev_data_i,
-         qnice_data_o      => qnice_demo_vd_data_o,
-         qnice_ce_i        => qnice_demo_vd_ce,
-         qnice_we_i        => qnice_demo_vd_we
-      ); -- i_vdrives
+   ---------------------------------------------------------------------------------------------
+   -- Clock Domain Crossings
+   ---------------------------------------------------------------------------------------------
+
+   -- Cartridge state and header flags: QNICE clock domain to core clock domain.
+   -- These signals are stable while the Game Boy is running (they only change during
+   -- cartridge loading, when the Game Boy is held in reset).
+   i_cdc_qnice2main : xpm_cdc_array_single
+      generic map (
+         WIDTH => 34
+      )
+      port map (
+         src_clk                => qnice_clk_i,
+         src_in(0)              => qnice_cart_loaded,
+         src_in(1)              => qnice_cart_loading,
+         src_in(9 downto 2)     => qnice_cf_cgb,
+         src_in(17 downto 10)   => qnice_cf_mbc,
+         src_in(25 downto 18)   => qnice_cf_rom_size,
+         src_in(33 downto 26)   => qnice_cf_ram_size,
+         dest_clk               => main_clk,
+         dest_out(0)            => main_cart_loaded,
+         dest_out(1)            => main_cart_loading,
+         dest_out(9 downto 2)   => main_cart_cgb_flag,
+         dest_out(17 downto 10) => main_cart_mbc_type,
+         dest_out(25 downto 18) => main_cart_rom_size,
+         dest_out(33 downto 26) => main_cart_ram_size
+      ); -- i_cdc_qnice2main
+
+   ---------------------------------------------------------------------------------------------
+   -- hr_clk (HyperRAM clock domain): HDMI flicker-free core-speed FSM
+   --
+   -- The ascal frame buffer feedback hr_high_i/hr_low_i dithers the core between the
+   -- native (59.73 Hz) and the fast (60.05 Hz) clock leg, time-averaging the Game Boy
+   -- to exactly the HDMI frame rate. See clk.vhd for the details.
+   ---------------------------------------------------------------------------------------------
+
+   p_flicker_fsm : process (hr_clk_i)
+   begin
+      if rising_edge(hr_clk_i) then
+         if hr_low_i = '1' then      -- core too slow (write pointer lagging) ...
+            hr_core_speed <= "01";   -- ... speed up: FAST twin (60.05 Hz, above 60)
+         end if;
+         if hr_high_i = '1' then     -- core too fast (write pointer leading) ...
+            hr_core_speed <= "00";   -- ... slow down: NATIVE (59.73 Hz, below 60)
+         end if;
+         if hr_hdmi_ff = '0' then    -- flicker-free OFF ...
+            hr_core_speed <= "00";   -- ... hold authentic native, no dither
+         end if;
+      end if;
+   end process p_flicker_fsm;
+
+   -- Flicker-free ON/OFF menu bit into the hr_clk domain. Toggling it live only changes the
+   -- glitch-free mux select, so there is no core reset (identical to C64MEGA65's mechanism).
+   i_cdc_hdmi_ff : entity work.cdc_stable
+      generic map (
+         G_DATA_SIZE    => 1,
+         G_REGISTER_SRC => true
+      )
+      port map (
+         src_clk_i     => main_clk,
+         src_data_i(0) => main_osm_control_i(C_MENU_HDMI_FF),
+         dst_clk_i     => hr_clk_i,
+         dst_data_o(0) => hr_hdmi_ff
+      ); -- i_cdc_hdmi_ff
 
 end architecture synthesis;
-

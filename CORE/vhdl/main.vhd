@@ -1,24 +1,35 @@
 ----------------------------------------------------------------------------------
--- MiSTer2MEGA65 Framework
+-- Game Boy and Game Boy Color for MEGA65 (gbc4mega65)
 --
--- Wrapper for the MiSTer core that runs exclusively in the core's clock domanin
+-- Wrapper for the MiSTer core that runs exclusively in the core's clock domain
 --
--- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
+-- This is the actual Game Boy machine: gb.v plus the MiSTer modules speedcontrol
+-- (clock enables, pause) and lcd.v (LCD capture, double buffering, color grading,
+-- 59.7275 Hz video timing) plus the gbc4mega65 Memory Bank Controller (mbc.sv)
+-- and the MEGA65 keyboard/joystick to Game Boy joypad adapter (keyboard.vhd).
+--
+-- The video output is the classic Super Game Boy screen geometry: the 160x144
+-- Game Boy picture centered in a 256x224 active area with a black border, at the
+-- authentic frame rate of 59.7275 Hz. The border makes the M2M on-screen-menu
+-- usable on the analog output; for HDMI the framework's zoom/crop feature can
+-- crop back to the pure 160x144 picture (5x integer scaling at 720p).
+--
+-- This machine is based on Gameboy_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by sy2002 in 2021 - 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-library work;
-use work.video_modes_pkg.all;
-
 entity main is
    generic (
       G_VDNUM                 : natural                     -- amount of virtual drives
    );
    port (
-      clk_main_i              : in  std_logic;
+      clk_main_i              : in  std_logic;              -- 33.554432 MHz Game Boy machine clock
+      clk_video_i             : in  std_logic;              -- 67.108864 MHz video clock (2x main)
       reset_soft_i            : in  std_logic;
       reset_hard_i            : in  std_logic;
       pause_i                 : in  std_logic;
@@ -27,7 +38,40 @@ entity main is
       -- Make sure you pass very exact numbers here, because they are used for avoiding clock drift at derived clocks
       clk_main_speed_i        : in  natural;
 
-      -- Video output
+      -- Game Boy configuration (see also gbc4mega65's OSM in config.vhd)
+      gb_color_i              : in  std_logic;              -- 0 = Game Boy Classic, 1 = Game Boy Color
+      gb_joy_map_i            : in  std_logic_vector(1 downto 0); -- joystick mapping, see keyboard.vhd
+      gb_saturated_colors_i   : in  std_logic;              -- 1 = fully saturated GBC colors, 0 = LCD emulation
+
+      -- Cartridge state: the Game Boy is held in reset while no cartridge is loaded
+      -- and during cartridge loading
+      cart_loaded_i           : in  std_logic;
+      cart_loading_i          : in  std_logic;
+
+      -- Cartridge header flags, set by the QNICE firmware/hardware while loading a cartridge
+      -- https://gbdev.io/pandocs/The_Cartridge_Header.html
+      cart_cgb_flag_i         : in  std_logic_vector(7 downto 0);  -- header byte 0x0143
+      cart_mbc_type_i         : in  std_logic_vector(7 downto 0);  -- header byte 0x0147
+      cart_rom_size_i         : in  std_logic_vector(7 downto 0);  -- header byte 0x0148
+      cart_ram_size_i         : in  std_logic_vector(7 downto 0);  -- header byte 0x0149
+
+      -- Game Boy Color BIOS interface (4 KB dual clock RAM in mega65.vhd)
+      gbc_bios_addr_o         : out std_logic_vector(11 downto 0);
+      gbc_bios_data_i         : in  std_logic_vector(7 downto 0);
+
+      -- Cartridge ROM interface (1 MB dual clock RAM in mega65.vhd)
+      cartrom_addr_o          : out std_logic_vector(22 downto 0);
+      cartrom_rd_o            : out std_logic;
+      cartrom_data_i          : in  std_logic_vector(7 downto 0);
+
+      -- Cartridge RAM interface (128 KB RAM in mega65.vhd)
+      cartram_addr_o          : out std_logic_vector(16 downto 0);
+      cartram_rd_o            : out std_logic;
+      cartram_wr_o            : out std_logic;
+      cartram_data_o          : out std_logic_vector(7 downto 0);
+      cartram_data_i          : in  std_logic_vector(7 downto 0);
+
+      -- Video output: 256x224 @ 59.7275 Hz in the clk_video_i domain
       video_ce_o              : out std_logic;
       video_ce_ovl_o          : out std_logic;
       video_red_o             : out std_logic_vector(7 downto 0);
@@ -68,75 +112,279 @@ end entity main;
 
 architecture synthesis of main is
 
--- @TODO: Remove these demo core signals
-signal keyboard_n          : std_logic_vector(79 downto 0);
+   -- Game Boy reset: QNICE/framework reset, or no cartridge loaded yet, or a cartridge
+   -- is currently being loaded (the original gbc4mega65 held the Game Boy in reset in
+   -- exactly these situations)
+   signal main_gb_reset          : std_logic;
+
+   -- speed control
+   signal main_sc_ce             : std_logic;
+   signal main_sc_ce_2x          : std_logic;
+   signal main_hdma_on           : std_logic;
+
+   -- cartridge bus of gb.v
+   signal main_cart_addr         : std_logic_vector(15 downto 0);
+   signal main_cart_rd           : std_logic;
+   signal main_cart_wr           : std_logic;
+   signal main_cart_do           : std_logic_vector(7 downto 0);
+   signal main_cart_di           : std_logic_vector(7 downto 0);
+
+   -- current cartridge is a dedicated Game Boy Color game
+   signal main_isGBC_game        : std_logic;
+
+   -- LCD interface between gb.v and lcd_wrapper.v
+   signal main_lcd_clkena        : std_logic;
+   signal main_lcd_data          : std_logic_vector(14 downto 0);
+   signal main_lcd_mode          : std_logic_vector(1 downto 0);
+   signal main_lcd_on            : std_logic;
+   signal main_lcd_vsync         : std_logic;
+
+   -- joypad: p54 selects matrix entry and data contains either
+   -- the direction keys or the other buttons
+   signal main_joypad_p54        : std_logic_vector(1 downto 0);
+   signal main_joypad_data       : std_logic_vector(3 downto 0);
+
+   -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+   -- (both MEGA65 joystick ports are merged; the framework already debounced them)
+   signal main_m65_joystick      : std_logic_vector(4 downto 0);
+
+   -- audio: gbc_snd delivers 16-bit UNSIGNED audio that is not centered around 0x8000
+   signal main_audio_l           : std_logic_vector(15 downto 0);
+   signal main_audio_r           : std_logic_vector(15 downto 0);
+
+   -- video clock domain
+   signal video_ce_pix           : std_logic;
+   signal video_ce_pix_dly       : std_logic_vector(4 downto 0) := (others => '0');
+
+   -- constants necessary due to Verilog in VHDL embedding
+   -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
+   constant c_fast_boot          : std_logic := '0';
+   constant c_joystick           : std_logic_vector(7 downto 0) := x"FF";
+   constant c_dummy_0            : std_logic := '0';
+   constant c_dummy_2bit_0       : std_logic_vector(1 downto 0) := (others => '0');
+   constant c_dummy_8bit_0       : std_logic_vector(7 downto 0) := (others => '0');
+   constant c_dummy_64bit_0      : std_logic_vector(63 downto 0) := (others => '0');
+   constant c_dummy_129bit_0     : std_logic_vector(128 downto 0) := (others => '0');
 
 begin
 
-   -- @TODO: Add the actual MiSTer core here
-   -- The demo core's purpose is to show a test image and to make sure, that the MiSTer2MEGA65 framework
-   -- can be synthesized and run stand-alone without an actual MiSTer core being there, yet
-   i_democore : entity work.democore
+   -- Hold the Game Boy in reset while the framework requests it, while no cartridge is
+   -- loaded, and while a cartridge is being loaded. Releasing the reset after a
+   -- successful load (re)starts the boot ROM with the freshly loaded cartridge.
+   main_gb_reset <= reset_soft_i or reset_hard_i or cart_loading_i or (not cart_loaded_i);
+
+   -- Cartridge header: CGB flag values 0x80 (GBC enhanced) and 0xC0 (GBC only) mark a
+   -- dedicated Game Boy Color game
+   main_isGBC_game <= '1' when cart_cgb_flag_i = x"80" or cart_cgb_flag_i = x"C0" else '0';
+
+   -- The actual machine (GB/GBC core)
+   gameboy : entity work.gb
       port map (
-         clk_main_i           => clk_main_i,
+         reset                   => main_gb_reset,          -- input
 
-         reset_i              => reset_soft_i or reset_hard_i,       -- long and short press of reset button mean the same
-         pause_i              => pause_i,
+         clk_sys                 => clk_main_i,             -- input
+         ce                      => main_sc_ce,             -- input
+         ce_2x                   => main_sc_ce_2x,          -- input
 
-         ball_col_rgb_i       => x"EE4020",                          -- ball color (RGB): orange
-         paddle_speed_i       => x"1",                               -- paddle speed is about 50 pixels / sec (due to 50 Hz)
+         fast_boot               => c_fast_boot,            -- input
+         joystick                => c_joystick,             -- input (unused inside gb.v)
+         isGBC                   => gb_color_i,             -- input
+         isGBC_game              => main_isGBC_game,        -- input
 
-         keyboard_n_i         => keyboard_n,                         -- move the paddle with the cursor left/right keys...
-         joy_up_n_i           => joy_1_up_n_i,                       -- ... or move the paddle with a joystick in port #1
-         joy_down_n_i         => joy_1_down_n_i,
-         joy_left_n_i         => joy_1_left_n_i,
-         joy_right_n_i        => joy_1_right_n_i,
-         joy_fire_n_i         => joy_1_fire_n_i,
+         -- Cartridge interface: Connects with the Memory Bank Controller (MBC)
+         cart_addr               => main_cart_addr,         -- output
+         cart_rd                 => main_cart_rd,           -- output
+         cart_wr                 => main_cart_wr,           -- output
+         cart_di                 => main_cart_di,           -- input
+         cart_do                 => main_cart_do,           -- output
 
-         vga_ce_o             => video_ce_o,
-         vga_red_o            => video_red_o,
-         vga_green_o          => video_green_o,
-         vga_blue_o           => video_blue_o,
-         vga_vs_o             => video_vs_o,
-         vga_hs_o             => video_hs_o,
-         vga_hblank_o         => video_hblank_o,
-         vga_vblank_o         => video_vblank_o,
+         -- Game Boy BIOS interface
+         gbc_bios_addr           => gbc_bios_addr_o,        -- output
+         gbc_bios_do             => gbc_bios_data_i,        -- input
 
-         audio_left_o         => audio_left_o,
-         audio_right_o        => audio_right_o
-      ); -- i_democore
+         -- audio: unsigned value that can be sampled
+         audio_l                 => main_audio_l,           -- output
+         audio_r                 => main_audio_r,           -- output
 
-   -- On video_ce_o and video_ce_ovl_o: You have an important @TODO when porting a core:
-   -- video_ce_o: You need to make sure that video_ce_o divides clk_main_i such that it transforms clk_main_i
-   --             into the pixelclock of the core (means: the core's native output resolution pre-scandoubler)
-   -- video_ce_ovl_o: Clock enable for the OSM overlay and for sampling the core's (retro) output in a way that
-   --             it is displayed correctly on a "modern" analog input device: Make sure that video_ce_ovl_o
-   --             transforms clk_main_o into the post-scandoubler pixelclock that is valid for the target
-   --             resolution specified by VGA_DX/VGA_DY (globals.vhd)
-   -- video_retro15kHz_o: '1', if the output from the core (post-scandoubler) in the retro 15 kHz analog RGB mode.
-   --             Hint: Scandoubler off does not automatically mean retro 15 kHz on.
-   video_ce_ovl_o <= video_ce_o;
+         -- lcd interface
+         lcd_clkena              => main_lcd_clkena,        -- output
+         lcd_data                => main_lcd_data,          -- output
+         lcd_mode                => main_lcd_mode,          -- output
+         lcd_on                  => main_lcd_on,            -- output
+         lcd_vsync               => main_lcd_vsync,         -- output
 
-   -- @TODO: Keyboard mapping and keyboard behavior
-   -- Each core is treating the keyboard in a different way: Some need low-active "matrices", some
-   -- might need small high-active keyboard memories, etc. This is why the MiSTer2MEGA65 framework
-   -- lets you define literally everything and only provides a minimal abstraction layer to the keyboard.
-   -- You need to adjust keyboard.vhd to your needs
+         joy_p54                 => main_joypad_p54,        -- output
+         joy_din                 => main_joypad_data,       -- input
+
+         speed                   => open,   --GBC           -- output
+         HDMA_on                 => main_hdma_on,           -- output
+
+         -- cheating/game code engine: not supported on MEGA65
+         gg_reset                => main_gb_reset,          -- input
+         gg_en                   => c_dummy_0,              -- input
+         gg_code                 => c_dummy_129bit_0,       -- input
+         gg_available            => open,                   -- output
+
+         -- serial port: not supported on MEGA65
+         sc_int_clock2           => open,                   -- output
+         serial_clk_in           => c_dummy_0,              -- input
+         serial_clk_out          => open,                   -- output
+         serial_data_in          => c_dummy_0,              -- input
+         serial_data_out         => open,                   -- output
+
+         -- MiSTer's save states & rewind feature: not supported on MEGA65
+         cart_ram_size           => c_dummy_8bit_0,         -- input
+         save_state              => c_dummy_0,              -- input
+         load_state              => c_dummy_0,              -- input
+         savestate_number        => c_dummy_2bit_0,         -- input
+         sleep_savestate         => open,                   -- output
+         state_loaded            => open,                   -- output
+         SaveStateExt_Din        => open,                   -- output
+         SaveStateExt_Adr        => open,                   -- output
+         SaveStateExt_wren       => open,                   -- output
+         SaveStateExt_rst        => open,                   -- output
+         SaveStateExt_Dout       => c_dummy_64bit_0,        -- input
+         SaveStateExt_load       => open,                   -- output
+         Savestate_CRAMAddr      => open,                   -- output
+         Savestate_CRAMRWrEn     => open,                   -- output
+         Savestate_CRAMWriteData => open,                   -- output
+         Savestate_CRAMReadData  => c_dummy_8bit_0,         -- input
+         SAVE_out_Din            => open,                   -- output
+         SAVE_out_Dout           => c_dummy_64bit_0,        -- input
+         SAVE_out_Adr            => open,                   -- output
+         SAVE_out_rnw            => open,                   -- output
+         SAVE_out_ena            => open,                   -- output
+         SAVE_out_done           => c_dummy_0,              -- input
+         rewind_on               => c_dummy_0,              -- input
+         rewind_active           => c_dummy_0               -- input
+      ); -- gameboy : entity work.gb
+
+   -- Speed control is mainly a clock divider and it also manages pause/resume
+   gb_clk_ctrl : entity work.speedcontrol
+      port map (
+         clk_sys                 => clk_main_i,
+         pause                   => pause_i,
+         speedup                 => '0',
+         cart_act                => main_cart_rd or main_cart_wr,
+         HDMA_on                 => main_hdma_on,
+         ce                      => main_sc_ce,
+         ce_2x                   => main_sc_ce_2x,
+         refresh                 => open,
+         ff_on                   => open
+      ); -- gb_clk_ctrl
+
+   -- Memory Bank Controller (MBC)
+   gb_mbc : entity work.mbc
+      port map (
+         -- Game Boy's clock and reset
+         clk_sys                 => clk_main_i,             -- input
+         ce_cpu2x                => main_sc_ce_2x,          -- input
+         reset                   => main_gb_reset,          -- input
+
+         -- Game Boy's cartridge interface
+         cart_addr               => main_cart_addr,         -- input
+         cart_rd                 => main_cart_rd,           -- input
+         cart_wr                 => main_cart_wr,           -- input
+         cart_do                 => main_cart_do,           -- input
+         cart_di                 => main_cart_di,           -- output
+
+         -- Cartridge ROM interface
+         rom_addr                => cartrom_addr_o,         -- output
+         rom_rd                  => cartrom_rd_o,           -- output
+         rom_data                => cartrom_data_i,         -- input
+
+         -- Cartridge RAM interface
+         ram_addr                => cartram_addr_o,         -- output
+         ram_rd                  => cartram_rd_o,           -- output
+         ram_wr                  => cartram_wr_o,           -- output
+         ram_do                  => cartram_data_i,         -- input
+         ram_di                  => cartram_data_o,         -- output
+
+         -- Cartridge flags
+         cart_mbc_type           => cart_mbc_type_i,        -- input
+         cart_rom_size           => cart_rom_size_i,        -- input
+         cart_ram_size           => cart_ram_size_i         -- input
+      ); -- gb_mbc : entity work.mbc
+
+   -- MiSTer's lcd.v (via lcd_wrapper.v): LCD capture, double buffering, DMG grayscale,
+   -- GBC color grading and the 59.7275 Hz video timing generator; produces the 256x224
+   -- active area with the Game Boy picture centered (SGB screen geometry, black border)
+   i_lcd : entity work.lcd_wrapper
+      port map (
+         clk_sys                 => clk_main_i,
+         ce                      => main_sc_ce,
+         lcd_clkena              => main_lcd_clkena,
+         lcd_vsync               => main_lcd_vsync,
+         lcd_data                => main_lcd_data,
+         lcd_mode                => main_lcd_mode,
+         lcd_on                  => main_lcd_on,
+
+         isGBC                   => gb_color_i,
+         originalcolors          => gb_saturated_colors_i,
+
+         clk_vid                 => clk_video_i,
+         ce_pix                  => video_ce_pix,
+         hs                      => video_hs_o,
+         vs                      => video_vs_o,
+         hbl                     => video_hblank_o,
+         vbl                     => video_vblank_o,
+         r                       => video_red_o,
+         g                       => video_green_o,
+         b                       => video_blue_o
+      ); -- i_lcd
+
+   -- video_ce_o: the core's native pixel clock enable (~6.71 MHz on the 67.1 MHz video clock)
+   video_ce_o <= video_ce_pix;
+
+   -- video_ce_ovl_o: pixel clock enable for the on-screen-menu overlay and for sampling the
+   -- core's output on the analog output. It runs at 2x the native pixel rate (~13.42 MHz),
+   -- phase-locked to lcd.v's pixel enable: the visible portion of a scanline uses an exact
+   -- 1-of-10 pixel enable, so "ce_pix delayed by 5 video clocks" is exactly the mid-point
+   -- between two pixels. This maps the VGA_DX x VGA_DY = 512x448 overlay raster (globals.vhd)
+   -- precisely onto the 256x224 picture - both with the scandoubler (31 kHz) and in the
+   -- retro 15 kHz modes (where the framework doubles the overlay rows).
+   p_ce_ovl : process (clk_video_i)
+   begin
+      if rising_edge(clk_video_i) then
+         video_ce_pix_dly <= video_ce_pix_dly(3 downto 0) & video_ce_pix;
+      end if;
+   end process;
+
+   video_ce_ovl_o <= video_ce_pix or video_ce_pix_dly(4);
+
+   -- Convert the Game Boy's unsigned audio to M2M's signed PCM format.
+   -- gbc_snd's output is unsigned and NOT centered around 0x8000 (the center drifts with
+   -- the number of active voices), so we use a logical shift right by one - silence stays
+   -- at level 0 and the maximum stays in the positive range. Do not use an arithmetic
+   -- shift or a plain "minus 0x8000" conversion here: both lead to loud crackling
+   -- (verified in the original gbc4mega65 with Dig Dug and Super Mario Land 1).
+   audio_left_o  <= signed("0" & main_audio_l(15 downto 1));
+   audio_right_o <= signed("0" & main_audio_r(15 downto 1));
+
+   -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
+   -- both MEGA65 joystick ports work in parallel (exactly like the original gbc4mega65)
+   main_m65_joystick <= (joy_1_fire_n_i  and joy_2_fire_n_i)  &
+                        (joy_1_up_n_i    and joy_2_up_n_i)    &
+                        (joy_1_down_n_i  and joy_2_down_n_i)  &
+                        (joy_1_left_n_i  and joy_2_left_n_i)  &
+                        (joy_1_right_n_i and joy_2_right_n_i);
+
+   -- MEGA65 keyboard and joystick to Game Boy joypad adapter
    i_keyboard : entity work.keyboard
       port map (
-         clk_main_i           => clk_main_i,
+         clk_main_i              => clk_main_i,
 
          -- Interface to the MEGA65 keyboard
-         key_num_i            => kb_key_num_i,
-         key_pressed_n_i      => kb_key_pressed_n_i,
+         key_num_i               => kb_key_num_i,
+         key_pressed_n_i         => kb_key_pressed_n_i,
 
-         -- @TODO: Create the kind of keyboard output that your core needs
-         -- "example_n_o" is a low active register and used by the demo core:
-         --    bit 0: Space
-         --    bit 1: Return
-         --    bit 2: Run/Stop
-         example_n_o          => keyboard_n
+         -- MEGA65 joysticks (both ports merged) and the joystick mapping mode
+         joystick_i              => main_m65_joystick,
+         joy_map_i               => gb_joy_map_i,
+
+         -- Game Boy joypad interface
+         joy_p54_i               => main_joypad_p54,
+         joy_din_o               => main_joypad_data
       ); -- i_keyboard
 
 end architecture synthesis;
-

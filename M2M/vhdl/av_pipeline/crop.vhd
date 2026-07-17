@@ -3,6 +3,15 @@
 --
 -- Optional crop/zoom feature used by the digital pipeline.
 --
+-- Updating notes: gbc4mega65 changed the crop window constants below from the
+-- framework's C64 geometry (320x200 image inside a 720x576 frame) to the Game Boy
+-- geometry: the 160x144 Game Boy picture sits centered in a 256x224 active area
+-- (Super Game Boy screen geometry, black border), and the "HDMI: Zoom-in" menu
+-- item crops away the complete border, so that the Game Boy picture fills the
+-- screen: at 720p this is a crisp 5x integer scaling (800x720 pixels).
+-- This deviation from the original M2M V2.0.1 file is documented in
+-- doc/m2m/exceptions.md.
+--
 -- MiSTer2MEGA65 done by sy2002 and MJoergen in 2022 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
@@ -40,17 +49,18 @@ end entity crop;
 
 architecture synthesis of crop is
 
-   -- These constants are properties of the input stream
-   constant LEFT_BORDER_IN    : natural := 33;
-   constant TOP_BORDER_IN     : natural := 35;
-   constant IMAGE_SIZE_X      : natural := 320;
-   constant IMAGE_SIZE_Y      : natural := 200;
+   -- These constants are properties of the input stream: the 160x144 Game Boy
+   -- picture centered in the 256x224 active area that main.vhd outputs
+   constant LEFT_BORDER_IN    : natural := 48;
+   constant TOP_BORDER_IN     : natural := 40;
+   constant IMAGE_SIZE_X      : natural := 160;
+   constant IMAGE_SIZE_Y      : natural := 144;
 
-   -- These are the new desired borders
-   constant LEFT_BORDER_NEW   : natural := 14;
-   constant RIGHT_BORDER_NEW  : natural := 14;
-   constant TOP_BORDER_NEW    : natural := 4;
-   constant BOTTOM_BORDER_NEW : natural := 4;
+   -- These are the new desired borders: crop the black border away completely
+   constant LEFT_BORDER_NEW   : natural := 0;
+   constant RIGHT_BORDER_NEW  : natural := 0;
+   constant TOP_BORDER_NEW    : natural := 0;
+   constant BOTTOM_BORDER_NEW : natural := 0;
 
    constant X_MIN : natural := LEFT_BORDER_IN-LEFT_BORDER_NEW;
    constant X_MAX : natural := LEFT_BORDER_IN+IMAGE_SIZE_X+RIGHT_BORDER_NEW-1;

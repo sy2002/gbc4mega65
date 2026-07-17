@@ -1,9 +1,11 @@
 ----------------------------------------------------------------------------------
--- MiSTer2MEGA65 Framework
+-- Game Boy and Game Boy Color for MEGA65 (gbc4mega65)
 --
 -- Configuration data for the Shell
 --
--- MiSTer2MEGA65 done by sy2002 and MJoergen in 2023 and licensed under GPL v3
+-- This machine is based on Gameboy_MiSTer
+-- Powered by MiSTer2MEGA65
+-- MEGA65 port done by sy2002 in 2021 - 2026 and licensed under GPL v3
 ----------------------------------------------------------------------------------
 
 library ieee;
@@ -24,6 +26,15 @@ port (
 end entity config;
 
 architecture beh of config is
+
+--------------------------------------------------------------------------------------------------------------------
+-- Version of the core
+--
+-- Single source of truth: The welcome screen, the help system, CORENAME and CFG_FILE derive from this constant
+-- and make_release.py checks the release version against it.
+--------------------------------------------------------------------------------------------------------------------
+
+constant CORE_VERSION : string := "V1.0";
 
 --------------------------------------------------------------------------------------------------------------------
 -- String and character constants (specific for the Anikki-16x16 font)
@@ -58,99 +69,104 @@ type WHS_RECORD_ARRAY_TYPE is array (0 to WHS_RECORDS - 1) of WHS_RECORD_TYPE;
 
 -- START YOUR CONFIGURATION BELOW THIS LINE
 
--- Define all your screens as string constants. They will be synthesized as ROMs.
--- You can name these string constants as you want to, as long as you make them part of the WHS array (see below).
---
--- WHS array position 0 is defined as the "Welcome Screen" as controled by WELCOME_ACTIVE and WELCOME_AT_RESET.
--- If you are not using a Welcome Screen but only Help menu items, then you need to leave WHS array pos. 0 empty.
---
--- WHS array position 1 and onwards is for all the Option Menu items tagged as "Help": The first one in the
--- Options menu is WHS array pos. 1, the second one in the menu is WHS array pos. 2 and so on.
---
--- Maximum 16 WHS array positions: The selector's bits 11 downto 8 select the WHS array position; 0=Welcome Screen
--- That means a maximum of 15 menu items in the Options menu can be tagged as "Help"
--- The selector's bits 7 downto 0 are selecting the page within the WHS array, so maximum 256 pages per Welcome Screen or Help menu item
---
--- Within a selector's address range, address 0 is the beginning of the string itself, while address 0xFFF of the 4k
--- window contains the amount of pages, so each zero-terminated string can be up to 4095 bytes = 4094 characters long.
+-- The screen size of the Game Boy core is 32x28 characters (512x448 pixels, 16x16 font),
+-- so the usable text area inside the frame is 30 columns wide and 26 rows tall:
+-- keep all lines of all screens at a maximum of 30 characters.
 
 constant SCR_WELCOME : string :=
 
-   "Name of the Demo Core Version 1.0\n" &
-   "MiSTer port done by Demo Author in 2022\n\n" &
+   "\n Game Boy & Game Boy Color\n" &
+   " for MEGA65 Version " & CORE_VERSION & "\n\n" &
+   " MiSTer port by sy2002\n" &
+   " and MJoergen in 2021-2026\n\n" &
 
-   -- We are not insisting. But it would be nice if you gave us credit for MiSTer2MEGA65 by leaving these lines in
-   "Powered by MiSTer2MEGA65 Version [WIP],\n" &
-   "done by sy2002 and MJoergen in 2022\n" &
+   " MEGA65         Game Boy\n" &
+   " " & CHR_LINE_10 & CHR_LINE_10 & CHR_LINE_5 & "\n" &
+   " Cursor keys    Joypad\n" &
+   " Space          Start\n" &
+   " Return         Select\n" &
+   " Left Shift     A\n" &
+   " MEGA65 key     B\n" &
+   " Help           Options menu\n\n" &
 
-   "\n\nEdit config.vhd to modify welcome screen.\n\n" &
-   "You can for example show the keyboard map.\n" &
-   "Look at this example for the Demo core:\n\n\n" &
+   " Load a cartridge (*.gb or\n" &
+   " *.gbc file) via the options\n" &
+   " menu item Cartridge.\n\n" &
 
-   "    Key                Demo core\n" &
-   "    " & CHR_LINE_10 & CHR_LINE_10 & CHR_LINE_10 & CHR_LINE_1 & CHR_LINE_1 & "\n" &
-   "    Left Cursor        Paddle left\n" &
-   "    Right Cursor       Paddle right\n" &
-   "    Space              Start game\n" &
-   "    Help               Options menu\n\n\n" &
+   " Learn more in About & Help.\n\n" &
 
-   "\n\n    Press Space to continue.\n\n\n";
+   " Press Space to continue.\n";
 
 constant HELP_1 : string :=
 
-   "\n Demo Core for MEGA65 Version 1\n\n" &
+   "\n Game Boy for MEGA65 " & CORE_VERSION & "\n\n" &
 
-   " MiSTer port 2022 by YOU\n" &
-   " Powered by MiSTer2MEGA65\n\n\n" &
+   " MiSTer port by sy2002\n" &
+   " and MJoergen in 2021-2026\n" &
+   " Powered by MiSTer2MEGA65\n\n" &
 
-   " Lorem ipsum dolor sit amet, consetetur\n" &
-   " sadipscing elitr, sed diam nonumy eirmod\n" &
-   " Mpor invidunt ut labore et dolore magna\n" &
-   " aliquyam erat, sed diam voluptua. At vero\n" &
-   " eos et accusam et justo duo.\n\n" &
+   " MEGA65         Game Boy\n" &
+   " " & CHR_LINE_10 & CHR_LINE_10 & CHR_LINE_5 & "\n" &
+   " Cursor keys    Joypad\n" &
+   " Space          Start\n" &
+   " Return         Select\n" &
+   " Left Shift     A\n" &
+   " MEGA65 key     B\n\n" &
 
-   " Dolores et ea rebum. Stet clita kasd gube\n" &
-   " gren, no sea takimata sanctus est Lorem ip\n" &
-   " Sed diam nonumy eirmod tempor invidunt ut\n" &
-   " labore et dolore magna aliquyam era\n\n" &
+   " Joysticks work in both\n" &
+   " ports. Use the Joystick\n" &
+   " Mode menu for games that\n" &
+   " jump with A or B.\n\n\n" &
 
-   " Cursor right to learn more.       (1 of 3)\n" &
-   " Press Space to close the help screen.";
+   " Crsr right: more     (1 of 3)\n" &
+   " Space: close the help screen.\n";
 
 constant HELP_2 : string :=
 
-   "\n Demo Core for MEGA65 Version 1\n\n" &
+   "\n Cartridges and BIOS\n\n" &
 
-   " XYZ ABCDEFGH:\n\n" &
+   " Put *.gb and *.gbc files on\n" &
+   " a FAT32 SD card. If a /gbc\n" &
+   " folder exists, the file\n" &
+   " browser starts there.\n\n" &
 
-   " 1. ABCD EFGH\n" &
-   " 2. IJK LM NOPQ RSTUVWXYZ\n" &
-   " 3. 10 20 30 40 50\n\n" &
+   " Maximum cartridge size: 1 MB\n\n" &
 
-   " a) Dolores et ea rebum\n" &
-   " b) Takimata sanctus est\n" &
-   " c) Tempor Invidunt ut\n" &
-   " d) Sed Diam Nonumy eirmod te\n" &
-   " e) Awesome\n\n" &
+   " The core includes an Open\n" &
+   " Source Game Boy Color BIOS.\n" &
+   " For more authenticity, copy\n" &
+   " the original cgb_boot.bin\n" &
+   " (or cgb_bios.bin) into the\n" &
+   " /gbc folder.\n\n" &
 
-   " Ut wisi enim ad minim veniam, quis nostru\n" &
-   " exerci tation ullamcorper suscipit lobor\n" &
-   " tis nisl ut aliquip ex ea commodo.\n\n" &
+   " Settings are saved to the\n" &
+   " SD card automatically.\n\n\n" &
 
-   " Crsr left: Prev  Crsr right: Next (2 of 3)\n" &
-   " Press Space to close the help screen.";
+   " Crsr left/right     (2 of 3)\n" &
+   " Space: close the help screen.\n";
 
 constant HELP_3 : string :=
 
-   "\n Help Screens\n\n" &
+   "\n Display\n\n" &
 
-   " You can have 255 screens per help topic.\n\n" &
+   " HDMI: use the HDMI submenus\n" &
+   " to choose 60 Hz modes and\n" &
+   " image filters. Flicker-free\n" &
+   " syncs the core to HDMI;\n" &
+   " switch it off when using\n" &
+   " a retro CRT via VGA.\n" &
+   " Zoom-in removes the black\n" &
+   " border around the picture.\n\n" &
 
-   " 15 topics overall.\n" &
-   " 1 menu item per topic.\n\n\n\n" &
+   " VGA: Standard is 31 kHz.\n" &
+   " The retro 15 kHz modes are\n" &
+   " for CRT monitors, also with\n" &
+   " CSYNC for RGB/SCART.\n\n" &
 
-   " Cursor left to go back.           (3 of 3)\n" &
-   " Press Space to close the help screen.";
+   " gbc4mega65.de for more.\n\n\n" &
+
+   " Crsr left: back      (3 of 3)\n" &
+   " Space: close the help screen.\n";
 
 -- Concatenate all your Welcome and Help screens into one large string, so that during synthesis one large string ROM can be build.
 constant WHS_DATA : string := SCR_WELCOME & HELP_1 & HELP_2 & HELP_3;
@@ -172,7 +188,7 @@ constant WHS : WHS_RECORD_ARRAY_TYPE := (
     page_start    => (SCR_WELCOME_START,  0, 0),
     page_length   => (SCR_WELCOME'length, 0, 0)),
 
-   --- Help pages
+   --- Help pages ("About & Help" menu item)
    (page_count    => 3,
     page_start    => (HELP_1_START,  HELP_2_START,  HELP_3_START),
     page_length   => (HELP_1'length, HELP_2'length, HELP_3'length))
@@ -188,8 +204,13 @@ constant SEL_CFG_FILE      : std_logic_vector(15 downto 0) := x"0101";
 
 -- START YOUR CONFIGURATION BELOW THIS LINE
 
-constant DIR_START         : string := "/m2m";
-constant CFG_FILE          : string := "/m2m/m2mcfg";
+-- The file browser starts in the /gbc folder (falling back to the root folder if it
+-- does not exist), exactly like the original gbc4mega65 releases.
+constant DIR_START         : string := "/gbc";
+
+-- The settings file embeds the core version so that different installed versions of the
+-- core keep separate settings and stale file formats can never be loaded.
+constant CFG_FILE          : string := "/gbc/gbc4mega65-" & CORE_VERSION & ".cfg";
 
 --------------------------------------------------------------------------------------------------------------------
 -- General configuration settings: Reset, Pause, OSD behavior, Ascal, etc. (Selector 0x0110)
@@ -203,7 +224,8 @@ constant SEL_GENERAL       : std_logic_vector(15 downto 0) := x"0110";  -- !!! D
 -- "0" means: deactivate this feature
 constant RESET_COUNTER     : natural := 100;
 
--- put the core in PAUSE state if any OSD opens
+-- keep the core running while the OSD is open (the original gbc4mega65 behaved the same:
+-- the game continues while the options menu is shown; only the controls are decoupled)
 constant OPTM_PAUSE        : boolean := false;
 
 -- show the welcome screen in general
@@ -211,7 +233,7 @@ constant WELCOME_ACTIVE    : boolean := true;
 
 -- shall the welcome screen also be shown after the core is reset?
 -- (only relevant if WELCOME_ACTIVE is true)
-constant WELCOME_AT_RESET  : boolean := true;
+constant WELCOME_AT_RESET  : boolean := false;
 
 -- keyboard and joystick connection during reset and OSD
 constant KEYBOARD_AT_RESET : boolean := false;
@@ -229,7 +251,10 @@ constant JOY_2_AT_OSD      : boolean := false;
 -- 2=keep ascal mode in sync with the QNICE input register ascal_mode_i:
 --   use this if you want to control the ascal mode for example via the Options menu
 --   where you would wire the output of certain options menu bits with ascal_mode_i
-constant ASCAL_USAGE       : natural := 2;
+--
+-- The Game Boy core uses 1 (AUSE_CUSTOM): the firmware in CORE/m2m-rom/m2m-rom.asm implements
+-- the "HDMI Filter" menu (LOAD_HDMI_FILTER) and drives M2M$ASCAL_MODE itself
+constant ASCAL_USAGE       : natural := 1;
 constant ASCAL_MODE        : natural := 0;   -- see ascal.vhd for the meaning of this value
 
 -- Save on-screen-display settings if the file specified by CFG_FILE exists and if it has
@@ -239,22 +264,11 @@ constant ASCAL_MODE        : natural := 0;   -- see ascal.vhd for the meaning of
 constant SAVE_SETTINGS     : boolean := true;
 
 -- Delay in ms between the last write request to a virtual drive from the core and the start of the
--- cache flushing (i.e. writing to the SD card). Since every new write from the core invalidates the cache,
--- and therefore leads to a completely new writing of the cache (flushing), this constant prevents thrashing.
--- The default is 2 seconds (2000 ms). Should be reasonable for many systems, but if you have a very fast
--- or very slow system, you might need to change this constant.
---
--- Constraint (@TODO): Currently we have only one constant for all virtual drives, i.e. the delay is
--- the same for all virtual drives. This might be absolutely OK; future will tell. If we need to have
--- more flexibility: vdrives.vhd already supports one delay per virtual drive. All what would need
--- to be done in such a case is: Enhance config.vhd to have more constants plus enhance the initialization
--- routine VD_INIT in vdrives.asm (tagged by @TODO) to store different values in the appropriate registers.
+-- cache flushing (i.e. writing to the SD card). The Game Boy core does not use virtual drives,
+-- so these two constants are irrelevant; they are kept at the framework defaults.
 constant VD_ANTI_THRASHING_DELAY : natural := 2000;
 
 -- Amount of bytes saved in one iteration of the background saving (buffer flushing) process
--- Constraint (@TODO): Similar constraint as in VD_ANTI_THRASHING_DELAY: Only one value for all drives.
--- shell.asm and shell_vars.asm already supports distinct values per drive; config.vhd and VD_INIT would
--- needs to be updated in case we would need this feature in future
 constant VD_ITERATION_SIZE       : natural := 100;
 
 --------------------------------------------------------------------------------------------------------------------
@@ -268,7 +282,7 @@ constant SEL_CORENAME      : std_logic_vector(15 downto 0) := x"0200";
 
 -- Currently this is only used in the debug console. Use the welcome screen and the
 -- help system to display the name and version of your core to the end user
-constant CORENAME          : string := "M2M DEMO CORE V1.0";
+constant CORENAME          : string := "Game Boy for MEGA65 " & CORE_VERSION;
 
 --------------------------------------------------------------------------------------------------------------------
 -- "Help" menu / Options menu  (Selectors 0x0300 .. 0x0312): DO NOT TOUCH
@@ -308,13 +322,6 @@ constant OPTM_G_LOAD_ROM   : integer := 16#18000#;        -- line item means: lo
 
 constant OPTM_GTC          : natural := 17;                -- Amount of significant bits in OPTM_G_* constants
 
--- @TODO/REMINDER: If we added in future more configuration constants that are not meant to be saved in the
--- configuration file, such as OPTM_G_MOUNT_DRV and OPTM_G_LOAD_ROM, then we need to make sure that we
--- also extend _ROSMS_4A and _ROSMC_NEXTBIT in options.asm accordingly.
--- Also: Right now OPTM_G_SUBMENU cannot have a "selected" state (and therefore cannot be saved in the config file)
--- and therefore _ROSMS_4A and _ROSMC_NEXTBIT are not yet handling the situation. If we decided to change that in future,
--- we would need to define the right semantics everywhere.
-
 --------------------------------------------------------------------------------------------------------------------
 -- "Help" menu / Options menu: START YOUR CONFIGURATION BELOW THIS LINE
 --------------------------------------------------------------------------------------------------------------------
@@ -329,69 +336,103 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 35;  -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 64;  -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
 
 -- Net size of the Options menu on the screen in characters (excluding the frame, which is hardcoded to two characters)
--- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is.
+-- Without submenus: Use OPTM_SIZE as height, otherwise count how large the actually visible main menu is:
+-- one row per main menu line plus one row per submenu opener line (the submenu content is not counted).
 constant OPTM_DX           : natural := 23;
-constant OPTM_DY           : natural := 24;
+constant OPTM_DY           : natural := 23;
 
+-- The zero-based line indices of the menu items below are mirrored as C_MENU_* constants
+-- in mega65.vhd and (auto-generated by CORE/m2m-rom/make_rom.sh) as GBC_OSM_* constants
+-- in the QNICE firmware. When adding/removing/reordering lines: keep all three in sync!
 constant OPTM_ITEMS        : string :=
 
-   " Demo Headline A\n"     &
-   "\n"                     &
-   " Item A.1\n"            &
-   " Item A.2\n"            &
-   " Item A.3\n"            &
-   " Item A.4\n"            &
-   "\n"                     &
-   " Demo Headline B\n"     &
-   "\n"                     &
-
-   " HDMI: %s\n"            &    -- HDMI submenu
-   " HDMI Settings\n"       &
-   "\n"                     &
-   " 720p 50 Hz 16:9\n"     &
-   " 720p 60 Hz 16:9\n"     &
-   " 576p 50 Hz 4:3\n"      &
-   " 576p 50 Hz 5:4\n"      &
-   " 640x480 60 Hz\n"       &
-   " 720x480 59.94 Hz\n"    &
-   " 800x600 60 Hz\n"       &
-   "\n"                     &
-   " Back to main menu\n"   &
-
-   "\n"                     &
-   " Drives\n"              &
-   "\n"                     &
-   " Drive X:%s\n"          &
-   " Drive Y:%s\n"          &
-   " Drive Z:%s\n"          &
-   "\n"                     &
-   " Another Headline\n"    &
-   "\n"                     &
-   " HDMI: CRT emulation\n" &
-   " HDMI: Zoom-in\n"       &
-   " Audio improvements\n"  &
-   "\n"                     &
-   " Close Menu\n";
+   " Game Boy for MEGA65\n"    &    --  0: headline
+   "\n"                        &    --  1
+   " Cartridge:%s\n"           &    --  2: load a *.gb / *.gbc cartridge (%s = <Load> or filename)
+   "\n"                        &    --  3
+   " Game Boy Mode\n"          &    --  4: headline
+   "\n"                        &    --  5
+   " Classic\n"                &    --  6: default
+   " Color\n"                  &    --  7
+   "\n"                        &    --  8
+   " Color Mode\n"             &    --  9: headline
+   "\n"                        &    -- 10
+   " Fully Saturated\n"        &    -- 11: default
+   " LCD Emulation\n"          &    -- 12
+   "\n"                        &    -- 13
+   " Joystick Mode\n"          &    -- 14: submenu
+   " Joystick Mode\n"          &    -- 15: headline
+   "\n"                        &    -- 16
+   " Standard, Fire=A\n"       &    -- 17: default
+   " Standard, Fire=B\n"       &    -- 18
+   " Up=A, Fire=B\n"           &    -- 19
+   " Up=B, Fire=A\n"           &    -- 20
+   "\n"                        &    -- 21
+   " Back to main menu\n"      &    -- 22
+   " HDMI: %s\n"               &    -- 23: submenu (%s = current display mode)
+   " HDMI Display Mode\n"      &    -- 24: headline
+   "\n"                        &    -- 25
+   " 16:9 720p 60 Hz\n"        &    -- 26: default
+   " 4:3 640x480 60 Hz\n"      &    -- 27
+   " 4:3 720x480 59.94 Hz\n"   &    -- 28
+   " 4:3 800x600 60 Hz\n"      &    -- 29
+   "\n"                        &    -- 30
+   " HDMI: Flicker-free\n"     &    -- 31: default on
+   " HDMI: Zoom-in\n"          &    -- 32: default on
+   "\n"                        &    -- 33
+   " Back to main menu\n"      &    -- 34
+   " HDMI: %s\n"               &    -- 35: submenu (%s = current filter)
+   " HDMI Filter\n"            &    -- 36: headline
+   "\n"                        &    -- 37
+   " No Filter\n"              &    -- 38
+   " Sharp Bilinear\n"         &    -- 39
+   " Bicubic\n"                &    -- 40
+   " Smooth\n"                 &    -- 41
+   " Lanczos\n"                &    -- 42: default
+   " Scanlines\n"              &    -- 43
+   " CRT (S-Video)\n"          &    -- 44
+   " CRT (Composite)\n"        &    -- 45
+   "\n"                        &    -- 46
+   " Back to main menu\n"      &    -- 47
+   " VGA: %s\n"                &    -- 48: submenu (%s = current VGA mode)
+   " VGA Display Mode\n"       &    -- 49: headline
+   "\n"                        &    -- 50
+   " Standard\n"               &    -- 51: default
+   "\n"                        &    -- 52
+   " Retro 15 kHz mode\n"      &    -- 53: text
+   "\n"                        &    -- 54
+   " 15 kHz with HS/VS\n"      &    -- 55
+   " 15 kHz with CSYNC\n"      &    -- 56
+   "\n"                        &    -- 57
+   " Back to main menu\n"      &    -- 58
+   " Audio Improvements\n"     &    -- 59
+   "\n"                        &    -- 60
+   " About & Help\n"           &    -- 61
+   "\n"                        &    -- 62
+   " Close Menu\n";                 -- 63
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
 -- and be aware that you can only have a maximum of 254 groups (255 means "Close Menu");
 -- also make sure that your group numbers are monotonic increasing (e.g. 1, 2, 3, 4, ...)
 -- single-select items and therefore also drive mount items need to have unique identifiers
-constant OPTM_G_Demo_A     : integer := 1;
-constant OPTM_G_HDMI       : integer := 2;
-constant OPTM_G_Drive_X    : integer := 3;
-constant OPTM_G_Drive_Y    : integer := 4;
-constant OPTM_G_Drive_Z    : integer := 5;
-constant OPTM_G_CRT        : integer := 6;
-constant OPTM_G_Zoom       : integer := 7;
-constant OPTM_G_Audio      : integer := 8;
+constant OPTM_G_CART       : integer := 1;      -- cartridge loader
+constant OPTM_G_GBMODE     : integer := 2;      -- Game Boy Mode: Classic / Color
+constant OPTM_G_COLMODE    : integer := 3;      -- Color Mode: Fully Saturated / LCD Emulation
+constant OPTM_G_JOYMODE    : integer := 4;      -- Joystick Mode: the four mappings
+constant OPTM_G_HDMI       : integer := 5;      -- HDMI display modes
+constant OPTM_G_HDMI_FF    : integer := 6;      -- HDMI: Flicker-free
+constant OPTM_G_HDMI_ZOOM  : integer := 7;      -- HDMI: Zoom-in
+constant OPTM_G_HDMI_FLT   : integer := 8;      -- HDMI Filter (read by the QNICE firmware)
+constant OPTM_G_VGA        : integer := 9;      -- VGA display modes
+constant OPTM_G_AUDIO      : integer := 10;     -- Audio Improvements
+constant OPTM_G_ABOUT      : integer := 11;     -- About & Help
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
@@ -399,44 +440,73 @@ type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC-
 -- define your menu groups: which menu items are belonging together to form a group?
 -- where are separator lines? which items should be selected by default?
 -- make sure that you have exactly the same amount of entries here than in OPTM_ITEMS and defined by OPTM_SIZE
-constant OPTM_GROUPS       : OPTM_GTYPE := ( OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Demo Headline A"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_Demo_A + OPTM_G_START,             -- Item A.1, cursor start position
-                                             OPTM_G_Demo_A + OPTM_G_STDSEL,            -- Item A.2, selected by default
-                                             OPTM_G_Demo_A,                            -- Item A.3
-                                             OPTM_G_Demo_A,                            -- Item A.4
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Demo Headline B"
-                                             OPTM_G_LINE,                              -- Line
-
-                                             OPTM_G_SUBMENU,                           -- HDMI submenu block: START: "HDMI: %s"
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "HDMI Settings"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_HDMI + OPTM_G_STDSEL,              -- 720p 50 Hz 16:9, selected by default
-                                             OPTM_G_HDMI,                              -- 720p 60 Hz 16:9
-                                             OPTM_G_HDMI,                              -- 576p 50 Hz 4:3
-                                             OPTM_G_HDMI,                              -- 576p 50 Hz 5:4
-                                             OPTM_G_HDMI,                              -- 640x480 60 Hz
-                                             OPTM_G_HDMI,                              -- 720x480 59.94 Hz
-                                             OPTM_G_HDMI,                              -- 600p 60 Hz
-                                             OPTM_G_LINE,                              -- open
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- Close submenu / back to main menu
-                                                                                       -- HDMI submenu block: END
-
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Drives"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_Drive_X + OPTM_G_MOUNT_DRV,        -- Drive X
-                                             OPTM_G_Drive_Y + OPTM_G_MOUNT_DRV,        -- Drive Y
-                                             OPTM_G_Drive_Z + OPTM_G_MOUNT_DRV,        -- Drive Z
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- Headline "Another Headline"
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_CRT     + OPTM_G_SINGLESEL,        -- On/Off toggle ("Single Select")
-                                             OPTM_G_Zoom    + OPTM_G_SINGLESEL,        -- On/Off toggle ("Single Select")
-                                             OPTM_G_Audio   + OPTM_G_SINGLESEL,        -- On/Off toggle ("Single Select")
-                                             OPTM_G_LINE,                              -- Line
-                                             OPTM_G_CLOSE                              -- Close Menu
+constant OPTM_GROUPS       : OPTM_GTYPE := ( OPTM_G_TEXT + OPTM_G_HEADLINE,            --  0: Game Boy for MEGA65
+                                             OPTM_G_LINE,                              --  1
+                                             OPTM_G_CART + OPTM_G_LOAD_ROM +
+                                                           OPTM_G_START,               --  2: Cartridge:%s, cursor start position
+                                             OPTM_G_LINE,                              --  3
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            --  4: Game Boy Mode
+                                             OPTM_G_LINE,                              --  5
+                                             OPTM_G_GBMODE + OPTM_G_STDSEL,            --  6: Classic, default
+                                             OPTM_G_GBMODE,                            --  7: Color
+                                             OPTM_G_LINE,                              --  8
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            --  9: Color Mode
+                                             OPTM_G_LINE,                              -- 10
+                                             OPTM_G_COLMODE + OPTM_G_STDSEL,           -- 11: Fully Saturated, default
+                                             OPTM_G_COLMODE,                           -- 12: LCD Emulation
+                                             OPTM_G_LINE,                              -- 13
+                                             OPTM_G_SUBMENU,                           -- 14: Joystick Mode submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 15: Joystick Mode
+                                             OPTM_G_LINE,                              -- 16
+                                             OPTM_G_JOYMODE + OPTM_G_STDSEL,           -- 17: Standard, Fire=A, default
+                                             OPTM_G_JOYMODE,                           -- 18: Standard, Fire=B
+                                             OPTM_G_JOYMODE,                           -- 19: Up=A, Fire=B
+                                             OPTM_G_JOYMODE,                           -- 20: Up=B, Fire=A
+                                             OPTM_G_LINE,                              -- 21
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 22: Joystick Mode submenu: END
+                                             OPTM_G_SUBMENU,                           -- 23: HDMI submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 24: HDMI Display Mode
+                                             OPTM_G_LINE,                              -- 25
+                                             OPTM_G_HDMI + OPTM_G_STDSEL,              -- 26: 720p 60 Hz, default
+                                             OPTM_G_HDMI,                              -- 27: 640x480 60 Hz
+                                             OPTM_G_HDMI,                              -- 28: 720x480 59.94 Hz
+                                             OPTM_G_HDMI,                              -- 29: 800x600 60 Hz
+                                             OPTM_G_LINE,                              -- 30
+                                             OPTM_G_HDMI_FF + OPTM_G_SINGLESEL +
+                                                              OPTM_G_STDSEL,           -- 31: Flicker-free, default on
+                                             OPTM_G_HDMI_ZOOM + OPTM_G_SINGLESEL +
+                                                                OPTM_G_STDSEL,         -- 32: Zoom-in, default on
+                                             OPTM_G_LINE,                              -- 33
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 34: HDMI submenu: END
+                                             OPTM_G_SUBMENU,                           -- 35: HDMI Filter submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 36: HDMI Filter
+                                             OPTM_G_LINE,                              -- 37
+                                             OPTM_G_HDMI_FLT,                          -- 38: No Filter
+                                             OPTM_G_HDMI_FLT,                          -- 39: Sharp Bilinear
+                                             OPTM_G_HDMI_FLT,                          -- 40: Bicubic
+                                             OPTM_G_HDMI_FLT,                          -- 41: Smooth
+                                             OPTM_G_HDMI_FLT + OPTM_G_STDSEL,          -- 42: Lanczos, default
+                                             OPTM_G_HDMI_FLT,                          -- 43: Scanlines
+                                             OPTM_G_HDMI_FLT,                          -- 44: CRT (S-Video)
+                                             OPTM_G_HDMI_FLT,                          -- 45: CRT (Composite)
+                                             OPTM_G_LINE,                              -- 46
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 47: HDMI Filter submenu: END
+                                             OPTM_G_SUBMENU,                           -- 48: VGA submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 49: VGA Display Mode
+                                             OPTM_G_LINE,                              -- 50
+                                             OPTM_G_VGA + OPTM_G_STDSEL,               -- 51: Standard, default
+                                             OPTM_G_LINE,                              -- 52
+                                             OPTM_G_TEXT,                              -- 53: Retro 15 kHz mode
+                                             OPTM_G_LINE,                              -- 54
+                                             OPTM_G_VGA,                               -- 55: 15 kHz with HS/VS
+                                             OPTM_G_VGA,                               -- 56: 15 kHz with CSYNC
+                                             OPTM_G_LINE,                              -- 57
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 58: VGA submenu: END
+                                             OPTM_G_AUDIO + OPTM_G_SINGLESEL,          -- 59: Audio Improvements
+                                             OPTM_G_LINE,                              -- 60
+                                             OPTM_G_ABOUT + OPTM_G_HELP,               -- 61: About & Help
+                                             OPTM_G_LINE,                              -- 62
+                                             OPTM_G_CLOSE                              -- 63: Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------
@@ -573,4 +643,3 @@ begin
 end process;
 
 end architecture beh;
-
