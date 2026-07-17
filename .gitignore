@@ -21,3 +21,9 @@ M2M/rom/*.lis
 M2M/rom/*.out
 M2M/rom/*.rom
 M2M/video_filters/*.out
+CORE/m2m-rom/osm_const.asm
+.DS_Store
+/site/
+/_site/
+doc/.venv/
+doc/.gbc-doc-requirements
