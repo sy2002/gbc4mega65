@@ -175,6 +175,11 @@ the VGA output offers a standard 31 kHz mode and two retro 15 kHz modes for
 CRT monitors, including composite sync (CSYNC) for RGB/SCART setups. Learn
 more in the [display documentation](doc/video_modes.md).
 
+Important: If you use a VGA display or an analog retro monitor, switch off
+"HDMI: Flicker-free" in the on-screen-menu. Flicker-free makes the sync
+frequency of the analog output step slightly, which analog displays
+dislike.
+
 Audio
 -----
 

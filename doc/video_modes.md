@@ -28,8 +28,9 @@ appears when a 59.7275 Hz core meets a 60 Hz display. One exception:
 the 800x600 mode runs at 60.32 Hz, which is above what the faster leg can
 reach, so a slow tear line can remain in this mode.
 
-Advice: Switch "HDMI: Flicker-free" off when you primarily use a CRT on the
-VGA output - the speed dithering is visible on analog.
+**Important:** Switch "HDMI: Flicker-free" off when you use a VGA display
+or an analog retro monitor. The dithering makes the sync frequency of the
+analog output step slightly, which analog displays dislike.
 
 ### HDMI: Zoom-in
 
@@ -65,3 +66,6 @@ The "VGA" submenu offers three modes:
 * **15 kHz with HS/VS**: for retro CRT monitors.
 * **15 kHz with CSYNC**: for retro CRT monitors; use CSYNC for RGB/SCART
   cables.
+
+**Important:** Whenever a display is connected to the VGA output, switch
+off "HDMI: Flicker-free" (see above).

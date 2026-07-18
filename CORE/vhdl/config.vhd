@@ -155,7 +155,7 @@ constant HELP_3 : string :=
    " image filters. Flicker-free\n" &
    " syncs the core to HDMI;\n" &
    " switch it off when using\n" &
-   " a retro CRT via VGA.\n" &
+   " the VGA output.\n" &
    " Zoom-in removes the black\n" &
    " border around the picture.\n\n" &
 
