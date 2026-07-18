@@ -58,7 +58,6 @@ PREFERRED_NAVIGATION = (
             ("Video modes and filters", "doc/video_modes.md"),
         ),
     ),
-    ("Releases", (("Work-in-progress builds", "doc/inofficial.md"),)),
     (
         "Development",
         (

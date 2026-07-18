@@ -35,20 +35,23 @@ See [AUTHORS](AUTHORS) for the complete list of credits.
 Features
 --------
 
-* Game Boy and Game Boy Color support (default is Game Boy Classic)
+* Game Boy and Game Boy Color support (the core starts in Game Boy Color
+  mode)
 * Convenient on-screen-menu and cartridge file browser which supports long
   filenames; all settings are saved to the SD card (via the settings file
   that is included in the release ZIP, see Installation)
-* [Joystick support](doc/joystick.md) including special mappings so that you
-  can for example play Super Mario Land via joystick
-* Optional [color grading](doc/colormodes.md) that desaturates the colors,
-  similarly to how they looked on the LCD display of the original
-  Game Boy Color hardware
+* [Joystick support](doc/joystick.md) in both ports including special
+  mappings so that you can for example play Super Mario Land via joystick
+* [Color grading](doc/colormodes.md) that reproduces how the colors looked
+  on the LCD display of the original Game Boy Color hardware - switchable
+  to fully saturated raw RGB colors
 * HDMI: four 60 Hz [display modes](doc/video_modes.md), eight image filters
   from razor sharp to CRT simulation, flicker-free HDMI and zoom
 * VGA: standard 31 kHz output plus two
   [retro 15 kHz modes](doc/video_modes.md) for CRT monitors and
   RGB/SCART setups
+* Audio on HDMI and on the 3.5 mm analog jack, with an optional filter
+  stage ("Audio Improvements")
 * Support for both MEGA65 SD card slots
 * Works out of the box: an Open Source Game Boy Color BIOS
   ([boot ROM](doc/bootroms.md)) is included
@@ -81,8 +84,8 @@ Installation
 Getting started
 ---------------
 
-After you start the core, you see a welcome screen that explains the
-keyboard mapping. Here are the most important hints:
+The core starts with a dark screen: it waits for you to load the first game
+cartridge. Here are the most important hints:
 
 * Press <kbd>Help</kbd> to open and to close the on-screen-menu. Load a
   cartridge via the menu item `Cartridge`: Choose a Game Boy ROM (normally
@@ -93,10 +96,11 @@ keyboard mapping. Here are the most important hints:
 * Use <kbd>Space</kbd> as the Game Boy's "Start" key and <kbd>Return</kbd>
   as the Game Boy's "Select" key. <kbd>Left Shift</kbd> is Game Boy's "A"
   and <kbd>Mega 65</kbd> is Game Boy's "B". The cursor keys of the MEGA65
-  are the Game Boy's joypad.
+  are the Game Boy's joypad. The menu item `About & Help` shows this
+  keyboard mapping at any time.
 
-* In the on-screen-menu you can switch between Game Boy Classic and Game Boy
-  Color, configure the [joystick mapping](doc/joystick.md), choose between
+* In the on-screen-menu you can switch between Game Boy Color and Game Boy
+  Classic, configure the [joystick mapping](doc/joystick.md), choose between
   two [color modes](doc/colormodes.md) and configure the
   [video output](doc/video_modes.md). The core remembers all your settings
   as soon as the settings file from the release ZIP is in the `/gbc` folder
@@ -118,11 +122,13 @@ such as BIOS ROMs or game ROMs.
 Game Boy Mode and cartridges
 ----------------------------
 
-The core starts in **Game Boy Classic** mode: games are rendered in the
-authentic grayscale look. Switch to **Game Boy Color** in the on-screen-menu
-to play Game Boy Color games (and Game Boy games that are Color enhanced) in
-color. A mode change takes effect when the next cartridge is loaded or when
-the core is reset (short press of the MEGA65 reset button).
+The core starts in **Game Boy Color** mode: Game Boy Color games and Color
+enhanced Game Boy games are rendered in color, and even pure Game Boy
+Classic games are colorized by the Game Boy Color BIOS - exactly as on the
+real hardware. Switch to **Game Boy Classic** in the on-screen-menu to play
+games in the authentic grayscale look. A mode change takes effect when the
+next cartridge is loaded or when the core is reset (short press of the
+MEGA65 reset button).
 
 The core checks each cartridge before loading it: the maximum supported
 cartridge (ROM) size is 1 MB and the cartridge needs to use one of the
@@ -145,18 +151,20 @@ Joystick usage and mapping
 --------------------------
 
 Basic usage: Just plug your joystick into port #1 or #2 of the MEGA65. Both
-ports work in parallel. By default the fire button of the joystick is mapped
-to the Game Boy's A button, which is fine for many games - and for games
-that jump with A or B (such as Super Mario Land or Castlevania) the
-on-screen-menu offers three more [mapping modes](doc/joystick.md).
+ports work in parallel - even while the on-screen-menu is open, so the game
+stays playable while you adjust settings. By default the fire button of the
+joystick is mapped to the Game Boy's A button, which is fine for many
+games - and for games that jump with A or B (such as Super Mario Land or
+Castlevania) the on-screen-menu offers three more
+[mapping modes](doc/joystick.md).
 
 Color Modes
 -----------
 
 For Game Boy Color games you can choose between two
-[color modes](doc/colormodes.md) in the on-screen-menu: "Fully Saturated"
-shows the raw colors and "LCD Emulation" performs a color grading to
-approximate the historical color LCD screen.
+[color modes](doc/colormodes.md) in the on-screen-menu: "LCD Emulation"
+(the default) performs a color grading that approximates the historical
+color LCD screen and "Fully Saturated" shows the raw, unprocessed colors.
 
 Video output
 ------------
@@ -166,6 +174,16 @@ display modes, eight image filters, a flicker-free mode and a zoom mode;
 the VGA output offers a standard 31 kHz mode and two retro 15 kHz modes for
 CRT monitors, including composite sync (CSYNC) for RGB/SCART setups. Learn
 more in the [display documentation](doc/video_modes.md).
+
+Audio
+-----
+
+Audio is available on HDMI and on the 3.5 mm analog jack simultaneously. By
+default you hear the raw output of the Game Boy's sound unit. Switch on
+"Audio Improvements" in the on-screen-menu to route the sound through a
+gentle low-pass filter chain (the MiSTer standard audio filter) that
+softens the raw square waves, comparable to the analog output stage of the
+original hardware.
 
 SD cards
 --------
@@ -186,6 +204,5 @@ For developers
 --------------
 
 gbc4mega65 is Open Source (GPL v3). Learn how to
-[build the core from source](doc/developers.md), have a look at the list of
-[work-in-progress builds](doc/inofficial.md) or read how the
+[build the core from source](doc/developers.md) or read how the
 [documentation website](doc/make_doc.md) is generated.

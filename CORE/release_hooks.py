@@ -186,13 +186,6 @@ def after_package(ctx):
         for source, destination in (RELEASE_DOCUMENTS | RELEASE_ASSETS).items()
     }
 
-    # make_release.py already puts doc/inofficial.md at the release root for
-    # alpha and beta packages. Let README.md link to that copy when present;
-    # for stable releases, the normal GitHub-link fallback remains in effect.
-    inofficial = ctx.out / "inofficial.md"
-    if inofficial.is_file():
-        local_files["doc/inofficial.md"] = "inofficial.md"
-
     # make_release.py has already copied VERSIONS.md according to release.toml.
     # Rewrite it here so the packaged copy has a release-specific heading and
     # its remaining repository-relative links work outside a checkout.

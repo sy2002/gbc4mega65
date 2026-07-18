@@ -10,13 +10,15 @@ The Game Boy core has been rebuilt on top of the [MiSTer2MEGA65](https://github.
 * HDMI submenu with four 60 Hz display modes: 720p (default), 640x480, 720x480 (59.94 Hz) and 800x600
 * HDMI Filter submenu with eight image filters, from "No Filter" via "Lanczos" (default) and "Scanlines" up to two CRT simulations
 * HDMI Flicker-free: the core is gently synchronized to the HDMI frame rate, eliminating the slowly wandering tear line (on by default)
-* HDMI Zoom-in: removes the black border around the Game Boy picture, resulting in a razor sharp 5x integer scaling at 720p (on by default)
+* HDMI Zoom-in: crops the black border around the Game Boy picture, resulting in a razor sharp 5x integer scaling at 720p (off by default)
 * VGA submenu: Standard (31 kHz) plus two retro 15 kHz modes (with HS/VS or with CSYNC) for CRT monitors and RGB/SCART setups
 * All settings are saved to the SD card and restored at the next start (put the settings file from the release ZIP into the /gbc folder)
 * The maximum cartridge size is now 1 MB on all supported machines, and the core checks the cartridge before loading it
 * The Game Boy Color BIOS can now be provided as cgb_boot.bin (in addition to the classic cgb_bios.bin) in the /gbc folder
 * Improved audio, including an optional audio filter chain ("Audio Improvements")
-* Default mode is now Game Boy Classic (switch to Game Boy Color in the menu)
+* Color Mode menu: the "LCD Emulation" color grading (on by default) approximates the historical LCD screen of the Game Boy Color; "Fully Saturated" shows the raw RGB colors
+* The core starts in Game Boy Color mode (switch to Game Boy Classic in the menu for the authentic grayscale look)
+* Joysticks work in both ports and stay active while the on-screen-menu is open, so the game remains playable while you adjust settings
 
 ### Known limitations
 

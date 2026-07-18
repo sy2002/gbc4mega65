@@ -62,20 +62,20 @@ python3 make_release.py <version> <output_folder>
 
 The script checks the given version against `CORE_VERSION` in
 `CORE/vhdl/config.vhd` and needs `coretool` or `bit2core` on the `PATH`.
-Alpha and beta versions additionally need a row in the
-[list of work-in-progress builds](inofficial.md).
 
 ## Architecture
 
 `M2M/` is a verbatim copy of MiSTer2MEGA65 V2.0.1 with one documented
-exception, see the [update and exception notes](m2m/exceptions.md).
+exception, see the
+[update and exception notes](https://github.com/sy2002/gbc4mega65/blob/develop/doc/m2m/exceptions.md).
 `CORE/GameBoy` is the vendored MiSTer Game Boy core of the proven V0.8
 release. `CORE/vhdl` wires them together: `clk.vhd` contains the
 flicker-free clocks, `main.vhd` is the machine wrapper, `mega65.vhd`
 implements the QNICE devices including the 1 MB cartridge BRAM, and
 `config.vhd` defines the on-screen-menu. `CORE/m2m-rom` is the QNICE
-firmware. The repository-root [AGENTS.md](../AGENTS.md) contains the deep
-technical guide.
+firmware. The repository-root
+[AGENTS.md](https://github.com/sy2002/gbc4mega65/blob/develop/AGENTS.md)
+contains the deep technical guide.
 
 One discipline to keep in mind when changing the on-screen-menu: the
 `C_MENU_*` constants in `mega65.vhd` must match the `OPTM_ITEMS` order in

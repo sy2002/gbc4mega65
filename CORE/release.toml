@@ -22,7 +22,7 @@ filename = "gbc4mega65-{version}.cfg"
 versions_md = "required"
 
 [alpha]
-inofficial_md = "required"
+inofficial_md = "skip"
 
 [cleanup]
 stale_files = []

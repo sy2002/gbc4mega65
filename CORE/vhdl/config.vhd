@@ -230,7 +230,7 @@ constant RESET_COUNTER     : natural := 100;
 constant OPTM_PAUSE        : boolean := false;
 
 -- show the welcome screen in general
-constant WELCOME_ACTIVE    : boolean := true;
+constant WELCOME_ACTIVE    : boolean := false;
 
 -- shall the welcome screen also be shown after the core is reset?
 -- (only relevant if WELCOME_ACTIVE is true)
@@ -242,8 +242,8 @@ constant JOY_1_AT_RESET    : boolean := false;
 constant JOY_2_AT_RESET    : boolean := false;
 
 constant KEYBOARD_AT_OSD   : boolean := false;
-constant JOY_1_AT_OSD      : boolean := false;
-constant JOY_2_AT_OSD      : boolean := false;
+constant JOY_1_AT_OSD      : boolean := true;
+constant JOY_2_AT_OSD      : boolean := true;
 
 -- Avalon Scaler settings (see ascal.vhd, used for HDMI output only)
 -- 0=set ascal mode (via QNICE's ascal_mode_o) to the value of the config.vhd constant ASCAL_MODE
@@ -359,13 +359,13 @@ constant OPTM_ITEMS        : string :=
    "\n"                        &    --  3
    " Game Boy Mode\n"          &    --  4: headline
    "\n"                        &    --  5
-   " Classic\n"                &    --  6: default
-   " Color\n"                  &    --  7
+   " Classic\n"                &    --  6
+   " Color\n"                  &    --  7: default
    "\n"                        &    --  8
    " Color Mode\n"             &    --  9: headline
    "\n"                        &    -- 10
-   " Fully Saturated\n"        &    -- 11: default
-   " LCD Emulation\n"          &    -- 12
+   " Fully Saturated\n"        &    -- 11
+   " LCD Emulation\n"          &    -- 12: default
    "\n"                        &    -- 13
    " Joystick Mode\n"          &    -- 14: submenu
    " Joystick Mode\n"          &    -- 15: headline
@@ -385,7 +385,7 @@ constant OPTM_ITEMS        : string :=
    " 800x600 60 Hz\n"          &    -- 29
    "\n"                        &    -- 30
    " HDMI: Flicker-free\n"     &    -- 31: default on
-   " HDMI: Zoom-in\n"          &    -- 32: default on
+   " HDMI: Zoom-in\n"          &    -- 32: default off
    "\n"                        &    -- 33
    " Back to main menu\n"      &    -- 34
    " HDMI: %s\n"               &    -- 35: submenu (%s = current filter)
@@ -448,13 +448,13 @@ constant OPTM_GROUPS       : OPTM_GTYPE := ( OPTM_G_TEXT + OPTM_G_HEADLINE,     
                                              OPTM_G_LINE,                              --  3
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,            --  4: Game Boy Mode
                                              OPTM_G_LINE,                              --  5
-                                             OPTM_G_GBMODE + OPTM_G_STDSEL,            --  6: Classic, default
-                                             OPTM_G_GBMODE,                            --  7: Color
+                                             OPTM_G_GBMODE,                            --  6: Classic
+                                             OPTM_G_GBMODE + OPTM_G_STDSEL,            --  7: Color, default
                                              OPTM_G_LINE,                              --  8
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,            --  9: Color Mode
                                              OPTM_G_LINE,                              -- 10
-                                             OPTM_G_COLMODE + OPTM_G_STDSEL,           -- 11: Fully Saturated, default
-                                             OPTM_G_COLMODE,                           -- 12: LCD Emulation
+                                             OPTM_G_COLMODE,                           -- 11: Fully Saturated
+                                             OPTM_G_COLMODE + OPTM_G_STDSEL,           -- 12: LCD Emulation, default
                                              OPTM_G_LINE,                              -- 13
                                              OPTM_G_SUBMENU,                           -- 14: Joystick Mode submenu: START
                                              OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 15: Joystick Mode
@@ -475,8 +475,7 @@ constant OPTM_GROUPS       : OPTM_GTYPE := ( OPTM_G_TEXT + OPTM_G_HEADLINE,     
                                              OPTM_G_LINE,                              -- 30
                                              OPTM_G_HDMI_FF + OPTM_G_SINGLESEL +
                                                               OPTM_G_STDSEL,           -- 31: Flicker-free, default on
-                                             OPTM_G_HDMI_ZOOM + OPTM_G_SINGLESEL +
-                                                                OPTM_G_STDSEL,         -- 32: Zoom-in, default on
+                                             OPTM_G_HDMI_ZOOM + OPTM_G_SINGLESEL,      -- 32: Zoom-in, default off
                                              OPTM_G_LINE,                              -- 33
                                              OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 34: HDMI submenu: END
                                              OPTM_G_SUBMENU,                           -- 35: HDMI Filter submenu: START

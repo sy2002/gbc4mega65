@@ -2,7 +2,9 @@
 
 Playing with a joystick is as simple as it gets: Plug your joystick into
 port #1 or port #2 of the MEGA65. Both ports work in parallel, so you do not
-need to remember which one is the "right" one.
+need to remember which one is the "right" one. The joysticks even stay
+active while the on-screen-menu is open: the game keeps running and remains
+playable while you adjust settings.
 
 The joystick's directions are mapped to the Game Boy's d-pad and the fire
 button is mapped to the Game Boy's A button by default. This default mode is

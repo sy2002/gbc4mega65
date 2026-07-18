@@ -33,10 +33,11 @@ VGA output - the speed dithering is visible on analog.
 
 ### HDMI: Zoom-in
 
-"HDMI: Zoom-in" is switched on by default. It crops the black border so that
-the 160x144 Game Boy picture fills the height of the screen. At 720p this
-results in a razor-sharp 5x integer scaling. Switch it off to see the
-picture centered in the Super-Game-Boy-style 256x224 frame.
+"HDMI: Zoom-in" is switched off by default, so you see the picture centered
+in the Super-Game-Boy-style 256x224 frame. Switch it on to crop the black
+border so that the 160x144 Game Boy picture fills the height of the screen:
+at 720p this results in a razor-sharp 5x integer scaling - the way the
+classic V0.8 release of this core displayed the picture.
 
 ## HDMI filters
 
