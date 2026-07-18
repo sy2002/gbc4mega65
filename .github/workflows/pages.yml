@@ -3,6 +3,7 @@ name: Documentation
 on:
   push:
     branches:
+      - master
       - develop
     paths:
       - README.md
@@ -10,6 +11,7 @@ on:
       - .github/workflows/pages.yml
   pull_request:
     branches:
+      - master
       - develop
     paths:
       - README.md
