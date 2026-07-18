@@ -1,5 +1,5 @@
-Version 1.0 - NOT YET RELEASED (work in progress)
-=================================================
+Version 1.0 - July 19, 2026
+===========================
 
 The Game Boy core has been rebuilt on top of the [MiSTer2MEGA65](https://github.com/sy2002/MiSTer2MEGA65) framework V2.0.1 - the framework whose creation was originally inspired by this very core. It still plays the same games with the same great compatibility as V0.8, but it now feels and behaves like a modern MEGA65 core.
 

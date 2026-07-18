@@ -59,26 +59,17 @@ Features
 Installation
 ------------
 
-1. Download the ZIP file that contains the bitstream and the core file from
-   the [releases page](https://github.com/sy2002/gbc4mega65/releases) and
-   unpack it.
-2. Choose the right `.cor` file (or `.bit` file) for your MEGA65 model:
-   `R3` (also for R3A), `R4`, `R5` or `R6`. If you are not sure which model
-   you have: The MEGA65s delivered since 2022 are R3/R3A machines, later
-   batches are R4 to R6.
-3. Either use MEGA65's <kbd>No Scroll</kbd> boot menu to install the `.cor`
-   file or use [MEGA65's bitstream utility](https://github.com/MEGA65/mega65-tools)
-   (`m65 -q yourbitstream.bit`) to run the `.bit` file. Please have a look at
-   the [MEGA65 Starter Guide](https://files.mega65.org/news/MEGA65-Starter-Guide.pdf)
-   to learn more.
-4. The core needs a FAT32 formatted SD card to load game cartridges (ROMs).
-5. If you put your ROMs into a folder called `/gbc`, then the file browser
+1. Download the ZIP file that contains the core from the
+   [MEGA65 FileHost](https://files.mega65.org?id=03b68172-d6ff-49f0-971e-15bea2c6ad9a)
+2. [Install the core](https://kugelblitz360.github.io/m65-altcores/how-to-use-alternative-cores.html)
+3. The core needs a FAT32 formatted SD card to load game cartridges (ROMs).
+4. If you put your ROMs into a folder called `/gbc`, then the file browser
    will display this folder on startup. The core supports `.gb` (Game Boy)
    and `.gbc` (Game Boy Color) files up to 1 MB.
-6. Copy the settings file from the ZIP (for example
+5. Copy the settings file from the ZIP (for example
    `gbc4mega65-V1.0.cfg`) into the `/gbc` folder of your SD card: it
    enables the core to remember all your on-screen-menu settings.
-7. The core includes an Open Source Game Boy Color BIOS. For more
+6. The core includes an Open Source Game Boy Color BIOS. For more
    authenticity, learn [here](doc/bootroms.md) how to use an original BIOS.
 
 Getting started
@@ -141,11 +132,14 @@ core is switched off (exactly as in V0.8).
 Boot ROMs (BIOS)
 ----------------
 
-The core includes the Open Source Game Boy and Game Boy Color boot ROMs from
-the [SameBoy](https://github.com/LIJI32/SameBoy) project, so it works out of
-the box. For more authenticity you can put the original Game Boy Color BIOS
-into the `/gbc` folder of your SD card; the core loads it automatically at
-startup. Learn more in the [boot ROM documentation](doc/bootroms.md).
+The core works out of the box: Game Boy Color mode uses the included Open
+Source boot ROM (BIOS) from the
+[SameBoy](https://github.com/LIJI32/SameBoy) project and Game Boy Classic
+mode uses the boot ROM that is built into the MiSTer Game Boy core. For
+more authenticity you can put the original Game Boy Color BIOS into the
+`/gbc` folder of your SD card; the core loads it automatically at startup.
+The Classic boot ROM is part of the core itself and cannot be replaced.
+Learn more in the [boot ROM documentation](doc/bootroms.md).
 
 Joystick usage and mapping
 --------------------------
