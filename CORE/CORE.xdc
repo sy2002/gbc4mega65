@@ -36,6 +36,17 @@ create_generated_clock -name video_clk [get_pins CORE/clk_gen/i_clk_fast/CLKOUT0
 create_generated_clock -name main_clk  [get_pins CORE/clk_gen/i_clk_fast/CLKOUT1]
 # Add more clocks here, if needed
 
+## The 4 KB Game Boy Color BIOS must be a block RAM. Left to its own devices,
+## Vivado maps this small dual-clock array to distributed LUTRAM, which turns the
+## Game Boy side read port into an ASYNCHRONOUS read: that creates real
+## qnice_clk -> main_clk timing paths from the LUTRAM cells (written on the QNICE
+## clock) straight into the Game Boy CPU - they failed timing by more than 9 ns
+## on R3. As RAMB36, both ports are synchronous and no inter-port path is timed.
+## Same pin-name discipline as above: if get_cells matches nothing, this
+## silently no-ops - verify after synthesis that the BIOS is in block RAM
+## (report_utilization or: llength [get_cells -hier -filter {PRIMITIVE_TYPE =~ BMEM.*} CORE/bios/*] > 0).
+set_property RAM_STYLE BLOCK [get_cells CORE/bios/i_tdp_ram/ram_reg*]
+
 ## ascal asynchronous FIFO data crossings (framework paths, constrained here
 ## because M2M/common.xdc must not be modified - candidate for upstreaming;
 ## the same constraints are used by the AExp core).

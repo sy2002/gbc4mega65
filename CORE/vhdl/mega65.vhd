@@ -335,7 +335,6 @@ signal qnice_cart_loaded      : std_logic;
 signal qnice_cart_loading     : std_logic;    -- data is being streamed into the cartridge RAM
 signal qnice_cart_data_we     : std_logic;    -- write to the cartridge RAM (data windows)
 signal qnice_cart_csr_we      : std_logic;    -- write to the CSR register block
-signal qnice_cart_data_read   : std_logic_vector(7 downto 0);
 
 -- Cartridge header flags, snooped while the Shell streams the file into the device
 signal qnice_cf_cgb           : std_logic_vector(7 downto 0);
@@ -347,7 +346,6 @@ signal qnice_cf_oldlicensee   : std_logic_vector(7 downto 0);
 
 -- BIOS device
 signal qnice_bios_we          : std_logic;
-signal qnice_bios_data_read   : std_logic_vector(7 downto 0);
 
 ---------------------------------------------------------------------------------------------
 -- hr_clk (HyperRAM clock domain)
@@ -653,16 +651,22 @@ begin
                   when others => null;
                end case;
             elsif qnice_dev_addr_i(27 downto 20) = x"00" then
-               -- data windows 0x0000 .. 0x00FF: 1 MB cartridge RAM, one byte per address
+               -- data windows 0x0000 .. 0x00FF: 1 MB cartridge RAM, one byte per address.
+               -- The windows are write-only from the QNICE side: the Shell only streams
+               -- data in and never reads it back. Omitting the read-back keeps the huge
+               -- 1 MB BRAM array out of the half-period QNICE read path (the falling-edge
+               -- BRAM output would otherwise need to traverse 256 block RAMs plus the
+               -- device mux within 10 ns - this exact path failed timing on R3).
                qnice_cart_data_we <= qnice_dev_ce_i and qnice_dev_we_i;
-               qnice_dev_data_o   <= x"00" & qnice_cart_data_read;
+               qnice_dev_data_o   <= x"0000";
             end if;
 
-         -- 4 KB Game Boy Color BIOS
+         -- 4 KB Game Boy Color BIOS (write-only from the QNICE side, see above:
+         -- the auto-loader only streams data in and never reads it back)
          when C_DEV_GB_BIOS =>
             if qnice_dev_addr_i(27 downto 12) = x"0000" then
                qnice_bios_we    <= qnice_dev_ce_i and qnice_dev_we_i;
-               qnice_dev_data_o <= x"00" & qnice_bios_data_read;
+               qnice_dev_data_o <= x"0000";
             end if;
 
          when others => null;
@@ -754,7 +758,7 @@ begin
          address_b         => qnice_dev_addr_i(19 downto 0),
          data_b            => qnice_dev_data_i(7 downto 0),
          wren_b            => qnice_cart_data_we,
-         q_b               => qnice_cart_data_read
+         q_b               => open
       ); -- cartrom
 
    -- 128 KB cartridge RAM
@@ -791,7 +795,7 @@ begin
          address_b         => qnice_dev_addr_i(11 downto 0),
          data_b            => qnice_dev_data_i(7 downto 0),
          wren_b            => qnice_bios_we,
-         q_b               => qnice_bios_data_read
+         q_b               => open
       ); -- bios
 
    ---------------------------------------------------------------------------------------------

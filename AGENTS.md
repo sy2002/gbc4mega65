@@ -107,7 +107,10 @@ NOT arithmetic, NOT minus-0x8000 (both crackle; verified in the old core).
 ### QNICE devices (`CORE/vhdl/mega65.vhd`, ids in `globals.vhd`)
 
 - `C_DEV_GB_CART` (0x0100): 1 MB cartridge BRAM. Data = 4k windows 0x00–0xFF, one byte
-  per 16-bit word address (the Shell's streaming format). CSR block at window 0xFFFF
+  per 16-bit word address (the Shell's streaming format). The data windows are
+  **write-only** from QNICE (reads return 0): the Shell never reads them back, and the
+  read-back path (falling-edge output of 256 BRAMs through the device mux into the CPU
+  within a 10 ns half period) failed timing on R3. Same for the BIOS device. CSR block at window 0xFFFF
   implements the CRT/ROM protocol (`CRTROM_CSR_*` in `M2M/rom/sysdef.asm`); there is no
   hardware parser — `PARSEST` reports OK as soon as the Shell writes status OK, because
   all checks already ran in the firmware (`PREP_LOAD_IMAGE`). While streaming, the device
@@ -196,9 +199,11 @@ No-hardware verification that MUST stay green after changes:
 5. **Cart ROM BRAM needs `LATCH_ADDR_A => true`** with `do_latch_addr_a => cartrom_rd`
    (gb core read timing). QNICE side is falling-edge.
 6. **CORE.xdc pin-name discipline**: `set_case_analysis` on `CORE/hr_core_speed_reg[0]/Q`
-   + generated clocks on `i_clk_fast/CLKOUT0/1` silently no-op if instances are renamed —
-   after synthesis, verify both `get_pins` match and the clocks show the fast periods
-   (~14.822/29.644 ns). Keep the leaf names `i_clk_fast` and `hr_core_speed`.
+   + generated clocks on `i_clk_fast/CLKOUT0/1` + `RAM_STYLE BLOCK` on
+   `CORE/bios/i_tdp_ram/ram_reg*` silently no-op if instances are renamed — after
+   synthesis, verify all `get_pins`/`get_cells` match, the clocks show the fast periods
+   (~14.822/29.644 ns) and the BIOS sits in block RAM (as LUTRAM its async read creates
+   qnice→main paths into the GB CPU that fail timing by ~9 ns).
 7. **Keep all four .xpr files in sync** (same file set modulo board top, XDC, max10 on
    R3, PDM-vs-I2S audio driver).
 8. **gb.v/speedcontrol use both clock edges and gated clocks** — intentional MiSTer
