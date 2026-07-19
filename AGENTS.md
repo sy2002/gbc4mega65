@@ -188,7 +188,12 @@ No-hardware verification that MUST stay green after changes:
 1. **Menu index sync**: `C_MENU_*` (mega65.vhd) are flat 0-based line indices into
    `OPTM_ITEMS` (config.vhd); inserting a line shifts everything below. `make_rom.sh`
    scrapes them for the firmware — keep the constants single-line. Changing `OPTM_SIZE`
-   invalidates distributed settings files (`gbc4mega65-<version>.cfg`).
+   invalidates distributed settings files (`gbc4mega65-<version>.cfg`). Growing the
+   menu also grows the OSM heap demand: check `MENU_HEAP_SIZE` in
+   `CORE/m2m-rom/m2m-rom.asm` (sizing formula in the comment there; both `HEAP_SIZE`
+   values must deduct it). A too-small value is a runtime FATAL
+   ("Heap corruption: Hint: OPTM_HEAP", error code = words of overrun) when the OSM
+   opens. Keep the reserve small: menu heap directly reduces file-browser capacity.
 2. **GameBoy VHDL is VHDL-93 in the Vivado projects** (no SFType in the .xpr):
    `bus_savestates.vhd` has a record field named `default` — reserved in VHDL-2008.
    `CORE/vhdl` files are VHDL-2008. Do not flip either direction.

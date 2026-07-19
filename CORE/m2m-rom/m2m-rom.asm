@@ -592,9 +592,17 @@ END_OF_ROM      .DW 0
 ; The On-Screen-Menu uses the heap for several data structures. This heap
 ; is located before the main system heap in memory.
 ; You need to deduct MENU_HEAP_SIZE from the actual heap size below.
-; Example: If your HEAP_SIZE would be 29696, then you write 29696-1280=28416
+; Example: If your HEAP_SIZE would be 29696, then you write 29696-1344=28352
 ; instead, but when doing the sanity check calculations, you use 29696
-MENU_HEAP_SIZE  .EQU 1280
+;
+; Sizing (see the two checks in M2M/rom/options.asm): the OSM needs
+; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (777 for
+; the 78-line menu) plus four arrays of OPTM_SIZE words (312) plus the
+; percent-s scratch area: (OPTM_DX+2) x (submenus + CRT/ROM items + 1),
+; which is 25 x 7 = 175 with five submenus. Total 1284; 1344 keeps a small
+; reserve without stealing more file browser heap than necessary (every
+; word spent here is one word less for sorted directory entries).
+MENU_HEAP_SIZE  .EQU 1344
 
 #ifndef RELEASE
 
@@ -602,14 +610,14 @@ MENU_HEAP_SIZE  .EQU 1280
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 5888                       ; 7168 - 1280 = 5888
+HEAP_SIZE       .EQU 5824                       ; 7168 - 1344 = 5824
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 28416                      ; 29696 - 1280 = 28416
+HEAP_SIZE       .EQU 28352                      ; 29696 - 1344 = 28352
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract
