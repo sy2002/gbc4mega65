@@ -68,7 +68,11 @@ constant VGA_DX               : natural := 512;
 constant VGA_DY               : natural := 448;
 
 --    FONT_*  size of one OSM character
-constant FONT_FILE            : string  := "../font/Anikki-16x16-m2m.rom";
+-- The OSM canvas keeps its 16x16 logical cell (FONT_DX/DY), but the glyphs are
+-- stored as a native 8x8 strike: vga_osm.vhd expands them to 2x2 blocks at 100%
+-- OSM scaling and renders the smaller cell sizes with sharpened bilinear
+-- coverage (the AExp OSM Scaling renderer, see doc/m2m/exceptions.md).
+constant FONT_FILE            : string  := "../font/Anikki-8x8-m2m.rom";
 constant FONT_DX              : natural := 16;
 constant FONT_DY              : natural := 16;
 

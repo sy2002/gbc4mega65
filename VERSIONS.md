@@ -19,6 +19,7 @@ The Game Boy core has been rebuilt on top of the [MiSTer2MEGA65](https://github.
 * Color Mode menu: the "LCD Emulation" color grading (on by default) approximates the historical LCD screen of the Game Boy Color; "Fully Saturated" shows the raw RGB colors
 * The core starts in Game Boy Color mode (switch to Game Boy Classic in the menu for the authentic grayscale look)
 * Joysticks work in both ports and stay active while the on-screen-menu is open, so the game remains playable while you adjust settings
+* OSM Scaling menu: shrink the on-screen-menu in nine steps from 100% down to 50% - particularly useful on the analog outputs, where the menu otherwise covers almost the whole picture
 
 ### Known limitations
 

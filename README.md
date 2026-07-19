@@ -75,8 +75,9 @@ Installation
 Getting started
 ---------------
 
-The core starts with a dark screen: it waits for you to load the first game
-cartridge. Here are the most important hints:
+After you start the core, a welcome screen explains the keyboard mapping;
+the picture stays dark until you load the first game cartridge. Here are
+the most important hints:
 
 * Press <kbd>Help</kbd> to open and to close the on-screen-menu. Load a
   cartridge via the menu item `Cartridge`: Choose a Game Boy ROM (normally

@@ -161,6 +161,14 @@ architecture synthesis of main is
    signal video_ce_pix_dly       : std_logic_vector(6 downto 0) := (others => '0');
    signal video_retro15kHz       : std_logic_vector(1 downto 0) := (others => '0');
 
+   -- overlay grid for the scandoubled (Standard VGA) mode: locked to the scandoubled
+   -- output line, see the comment at p_ce_ovl below. One lcd.v line is 4256 video
+   -- clocks, so one scandoubled output line is half of that.
+   constant C_SD_LINE            : natural := 4256 / 2;
+   signal video_sd_cnt           : natural range 0 to C_SD_LINE - 1 := 0;
+   signal video_sd_phase         : natural range 0 to 4 := 0;
+   signal video_hblank_dly       : std_logic := '1';
+
    -- constants necessary due to Verilog in VHDL embedding
    -- otherwise, when wiring constants directly to the entity, then Vivado throws an error
    constant c_fast_boot          : std_logic := '0';
@@ -342,21 +350,29 @@ begin
    video_ce_o <= video_ce_pix;
 
    -- video_ce_ovl_o: pixel clock enable for the on-screen-menu overlay and for sampling
-   -- the core's output on the analog output. The rate must be chosen such that the
-   -- VGA_DX = 512 overlay ticks (globals.vhd) span exactly the visible picture:
+   -- the core's output on the analog output (the framework re-registers the video
+   -- INCLUDING hsync/vsync on this enable in vga_recover_counters). The rate must be
+   -- chosen such that the VGA_DX = 512 overlay ticks (globals.vhd) span exactly the
+   -- visible picture, and the PHASE must be locked to the pixel grid of the video
+   -- that is being sampled:
    --
-   --   * Standard VGA (scandoubler on, the default): the scandoubler halves the line
-   --     duration, so the visible 256 pixels pass in 1280 video clocks - the overlay
-   --     needs 4x the native pixel rate (~26.84 MHz, one tick every 2.5 clocks,
-   --     realized as the uneven but DE-covering pattern 0/2/5/7 within each 10-clock
-   --     pixel; same approach as the ce_x4 grid inside MiSTer's scandoubler).
-   --   * Retro 15 kHz modes (no scandoubler): the visible 256 pixels pass in 2560
-   --     video clocks - the overlay needs 2x the native pixel rate (~13.42 MHz);
-   --     the framework doubles the overlay rows in these modes.
-   --
-   -- All taps are phase-locked to lcd.v's pixel enable: the visible portion of a
-   -- scanline uses an exact 1-of-10 pixel enable (the one stretched 16-clock pixel
-   -- per line sits inside the horizontal blanking).
+   --   * Retro 15 kHz modes (no scandoubler): the video pixels change on lcd.v's
+   --     1-of-10 pixel enable, so the overlay grid is built from phase-locked taps
+   --     of that enable - 2x the native pixel rate (~13.42 MHz); the framework
+   --     doubles the overlay rows in these modes.
+   --   * Standard VGA (scandoubler on, the default): MiSTer's scandoubler locks its
+   --     output pixels (5 clocks each) and its 2x-rate hsync to a free-running
+   --     half-line counter that restarts at the falling edge of the INPUT hblank -
+   --     4256/2 = 2128 clocks per output line. 2128 is not a multiple of 10, so a
+   --     grid derived from lcd.v's pixel enable beats against the scandoubled video:
+   --     the sampling phase rotates from output line to output line, which displaces
+   --     alternating lines horizontally (visible as a comb/ripple pattern) and, much
+   --     worse, quantizes the resampled hsync differently per line - the sync period
+   --     then alternates by +/-40 ns and analog displays lose their lock/calibration
+   --     (verified in simulation against video_mixer.sv with lcd.v-exact timing).
+   --     Therefore this mode uses its own grid, locked to the same reference as the
+   --     scandoubler output: a half-line counter restarted at the hblank falling
+   --     edge, with 2 ticks per 5-clock output pixel -> 512 ticks per visible line.
    p_ce_ovl : process (clk_video_i)
    begin
       if rising_edge(clk_video_i) then
@@ -364,13 +380,27 @@ begin
 
          -- synchronize the quasi-static menu selection into the video clock domain
          video_retro15kHz <= video_retro15kHz(0) & video_retro15kHz_i;
+
+         -- half-line counter locked to the scandoubler's output line schedule
+         video_hblank_dly <= video_hblank_o;
+         if (video_hblank_dly = '1' and video_hblank_o = '0') or video_sd_cnt = C_SD_LINE - 1 then
+            video_sd_cnt   <= 0;
+            video_sd_phase <= 0;
+         else
+            video_sd_cnt <= video_sd_cnt + 1;
+            if video_sd_phase = 4 then
+               video_sd_phase <= 0;
+            else
+               video_sd_phase <= video_sd_phase + 1;
+            end if;
+         end if;
       end if;
    end process;
 
    video_ce_ovl_o <= video_ce_pix or video_ce_pix_dly(4)
-                        when video_retro15kHz(1) = '1' else       -- 2x: retro 15 kHz
-                     video_ce_pix or video_ce_pix_dly(1) or
-                        video_ce_pix_dly(4) or video_ce_pix_dly(6); -- 4x: scandoubled
+                        when video_retro15kHz(1) = '1' else          -- 2x: retro 15 kHz
+                     '1' when video_sd_phase = 1 or video_sd_phase = 3 else -- scandoubled
+                     '0';
 
    -- Convert the Game Boy's unsigned audio to M2M's signed PCM format.
    -- gbc_snd's output is unsigned and NOT centered around 0x8000 (the center drifts with

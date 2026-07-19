@@ -51,7 +51,9 @@ MiSTer2MEGA65
 
 The `M2M` folder is a verbatim copy of the official MiSTer2MEGA65 release
 V2.0.1 (git tag `V2.0.1` of https://github.com/sy2002/MiSTer2MEGA65, linked
-as git remote `upstream`) with exactly one modified file:
+as git remote `upstream`) with the modifications documented below - one
+Game Boy specific change (crop.vhd) and the OSM Scaling feature set adopted
+from the AExp core (candidates for upstreaming into M2M V2.1):
 
 ### M2M/vhdl/av_pipeline/crop.vhd: Game Boy crop window
 
@@ -74,6 +76,41 @@ constant BOTTOM_BORDER_NEW : natural := 0;
 
 When updating M2M: re-apply this change (the file also carries an
 "Updating notes" block in its header).
+
+### OSM Scaling (adopted 1:1 from the AExp core)
+
+The "OSM: %s" menu (9 scaling steps, 100% down to 50%) uses the AExp
+implementation of the framework's OSM scaling - the stock V2.0.1 scaler had
+timing closure problems, AExp replaced it with a pipelined renderer that
+stores the font as a native 8x8 strike and expands it to the 16x16 logical
+cell (exact 2x2 blocks at 100%, sharpened bilinear coverage for the smaller
+sizes). A welcome side effect for the Game Boy core: at 100% the analog OSM
+no longer contains single-column (37 ns) features in the scandoubled
+Standard mode, which makes the OSM much friendlier to LCD monitors that
+resample the VGA signal. The following files were taken from AExp (state of
+2026-07-19) or changed accordingly:
+
+* `M2M/vhdl/av_pipeline/vga_osm.vhd` - the new renderer (copied 1:1)
+* `M2M/vhdl/av_pipeline/video_overlay.vhd` - 11-stage delay pipeline to
+  match the longer renderer latency (copied 1:1)
+* `M2M/vhdl/tdp_ram.vhd`, `M2M/vhdl/2port2clk_ram.vhd` - new generic
+  `RAM_STYLE_SELECT` ("auto"/"block"/"distributed"), used by the new
+  vga_osm for its font LUTROM (copied 1:1)
+* `M2M/vhdl/av_pipeline/ascal.vhd` - `ram_style "distributed"` attributes
+  on the shallow `i_dpram`/`o_dpram` CDC buffers so that rising BRAM
+  pressure can never push them into block RAM (hunks applied; AExp's
+  unrelated `i_interlaced` output was NOT taken)
+* `M2M/font/Anikki-8x8-m2m.rom` + `.c` added, `Anikki-16x16-m2m.rom` +
+  `.c` removed, `M2M/font/README.md` updated (all 1:1 from AExp);
+  `FONT_FILE` in `CORE/vhdl/globals.vhd` points to the 8x8 ROM while
+  `FONT_DX`/`FONT_DY` stay 16 (the logical OSM cell size)
+* All four Vivado projects use the implementation strategy
+  `Performance_ExplorePostRoutePhysOpt` (AExp measure against the routing
+  pressure of the scaling pipeline)
+
+When updating M2M: check whether the target release already contains the
+AExp OSM Scaling renderer; if yes, drop these local copies, if no,
+re-apply them.
 
 ### Backported from M2M V2.1: M2M$LOAD_POLYPHASE
 

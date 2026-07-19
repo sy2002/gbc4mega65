@@ -69,3 +69,12 @@ The "VGA" submenu offers three modes:
 
 **Important:** Whenever a display is connected to the VGA output, switch
 off "HDMI: Flicker-free" (see above).
+
+## OSM Scaling
+
+On the analog outputs the on-screen-menu covers almost the whole picture -
+especially in the 15 kHz modes. The "OSM" submenu scales the menu in nine
+steps from 100% down to 50% while the picture stays untouched. The menu is
+rendered from a native 8x8 font, so it stays sharp at every step: 100%
+shows the classic look and 50% is a pixel-perfect quarter-size menu. The
+setting applies to the HDMI menu as well.

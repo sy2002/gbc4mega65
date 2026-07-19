@@ -5,7 +5,6 @@ CORE/*.sim
 CORE/.Xil
 CORE/build_*.jou
 CORE/build_*.log
-CORE/build_*.out
 CORE/vivado*.jou
 CORE/vivado*.log
 CORE/vivado_pid*
@@ -31,3 +30,4 @@ CORE/m2m-rom/osm_const.asm
 doc/.venv/
 doc/.gbc-doc-requirements
 __pycache__/
+build_*.out

@@ -265,7 +265,12 @@ constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 45;
 constant C_MENU_VGA_STD       : natural := 51;
 constant C_MENU_VGA_15KHZHSVS : natural := 55;
 constant C_MENU_VGA_15KHZCS   : natural := 56;
-constant C_MENU_IMPROVE_AUDIO : natural := 59;
+constant C_MENU_IMPROVE_AUDIO : natural := 73;
+
+-- OSM Scaling radio (AExp pattern): line 62 (100%, the default) maps to bit 0 of
+-- the 9-bit slice and line 70 (50%) maps to bit 8; the framework decodes the
+-- one-hot vector with first_nonzero_bit (M2M/vhdl/av_pipeline/av_pipeline.vhd)
+subtype C_MENU_OSM_SCALING is natural range 70 downto 62;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -575,7 +580,7 @@ begin
    qnice_retro15kHz_o         <= qnice_osm_control_i(C_MENU_VGA_15KHZHSVS) or
                                  qnice_osm_control_i(C_MENU_VGA_15KHZCS);
    qnice_csync_o              <= qnice_osm_control_i(C_MENU_VGA_15KHZCS);
-   qnice_osm_cfg_scaling_o    <= (others => '1');
+   qnice_osm_cfg_scaling_o    <= qnice_osm_control_i(C_MENU_OSM_SCALING);
 
    -- ASCAL_USAGE = 1 (AUSE_CUSTOM) in config.vhd: the HDMI Filter menu is implemented by
    -- the QNICE firmware (LOAD_HDMI_FILTER in CORE/m2m-rom/m2m-rom.asm), which drives
