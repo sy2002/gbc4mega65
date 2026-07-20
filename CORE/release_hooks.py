@@ -29,12 +29,18 @@ RELEASE_DOCUMENTS = {
 
 RELEASE_ASSETS = {
     Path("doc/gb-and-gbc.jpg"): Path("doc/gb-and-gbc.jpg"),
-    Path("doc/gbc01.jpg"): Path("doc/gbc01.jpg"),
-    Path("doc/gbc02.jpg"): Path("doc/gbc02.jpg"),
-    Path("doc/gbc03.jpg"): Path("doc/gbc03.jpg"),
-    Path("doc/gbc04.jpg"): Path("doc/gbc04.jpg"),
-    Path("doc/gbc05.jpg"): Path("doc/gbc05.jpg"),
-    Path("doc/gbc06.jpg"): Path("doc/gbc06.jpg"),
+    Path("doc/00-main.jpg"): Path("doc/00-main.jpg"),
+    Path("doc/01-game-boy-tetris.png"): Path("doc/01-game-boy-tetris.png"),
+    Path("doc/02-game-boy-super-mario-land.png"): Path("doc/02-game-boy-super-mario-land.png"),
+    Path("doc/03-game-boy-color-yoshis-cookie.png"): Path(
+        "doc/03-game-boy-color-yoshis-cookie.png"
+    ),
+    Path("doc/04-game-boy-color-castlevania-the-adventure.png"): Path(
+        "doc/04-game-boy-color-castlevania-the-adventure.png"
+    ),
+    Path("doc/05-game-boy-color-elmo-in-grouchland.png"): Path(
+        "doc/05-game-boy-color-elmo-in-grouchland.png"
+    ),
     Path("doc/gbc07.jpg"): Path("doc/gbc07.jpg"),
     Path("doc/gbc08.jpg"): Path("doc/gbc08.jpg"),
     Path("doc/gbc09.jpg"): Path("doc/gbc09.jpg"),

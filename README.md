@@ -103,11 +103,11 @@ the most important hints:
 Some demo pictures
 ------------------
 
-| ![gbc01](doc/gbc01.jpg)      | ![gbc02](doc/gbc02.jpg)     | ![gbc03](doc/gbc03.jpg)       |
-|:----------------------------:|:---------------------------:|:-----------------------------:|
-| *MEGA65 Core Selection*      | *Game Boy Core: Start*      | *Game Boy Core: File Browser* |
-| ![gbc04](doc/gbc04.jpg)      | ![gbc05](doc/gbc05.jpg)     | ![gbc06](doc/gbc06.jpg)       |
-| *Game Boy Color Boot Screen* | *Super Mario Start Screen*  | *Super Mario Gameplay Screen* |
+| [![Game Boy for MEGA65 on-screen menu](doc/00-main.jpg)](doc/00-main.jpg) | [![Tetris for Game Boy](doc/01-game-boy-tetris.png)](doc/01-game-boy-tetris.png) | [![Super Mario Land for Game Boy](doc/02-game-boy-super-mario-land.png)](doc/02-game-boy-super-mario-land.png) |
+|:------------------------------------------------------:|:------------------------------------------------:|:--------------------------------------------------------------------:|
+| *Game Boy for MEGA65 menu*                             | *Tetris*                                         | *Super Mario Land*                                                   |
+| [![Yoshi's Cookie in Game Boy Color mode](doc/03-game-boy-color-yoshis-cookie.png)](doc/03-game-boy-color-yoshis-cookie.png) | [![Castlevania: The Adventure for Game Boy Color](doc/04-game-boy-color-castlevania-the-adventure.png)](doc/04-game-boy-color-castlevania-the-adventure.png) | [![Elmo in Grouchland for Game Boy Color](doc/05-game-boy-color-elmo-in-grouchland.png)](doc/05-game-boy-color-elmo-in-grouchland.png) |
+| *Yoshi's Cookie in Color mode*                                                   | *Castlevania: The Adventure*                                                                      | *Elmo in Grouchland*                                                             |
 
 Clarification: These screenshots are just for illustration purposes.
 This repository does not contain any copyrighted ROMs
