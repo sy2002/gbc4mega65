@@ -49,11 +49,10 @@ out), `sdram.sv`, `ddram.sv`, `spram.vhd` (Altera), `pll.v`, `pll.qip`,
 MiSTer2MEGA65
 -------------
 
-The `M2M` folder is a verbatim copy of the official MiSTer2MEGA65 release
-V2.0.1 (git tag `V2.0.1` of https://github.com/sy2002/MiSTer2MEGA65, linked
-as git remote `upstream`) with the modifications documented below - one
-Game Boy specific change (crop.vhd) and the OSM Scaling feature set adopted
-from the AExp core (candidates for upstreaming into M2M V2.1):
+The `M2M` folder is based on the official MiSTer2MEGA65 release V2.0.1
+(git tag `V2.0.1` of https://github.com/sy2002/MiSTer2MEGA65, linked as git
+remote `upstream`) with the Game Boy-specific crop and the focused framework
+backports documented below.
 
 ### M2M/vhdl/av_pipeline/crop.vhd: Game Boy crop window
 
@@ -111,6 +110,41 @@ resample the VGA signal. The following files were taken from AExp (state of
 When updating M2M: check whether the target release already contains the
 AExp OSM Scaling renderer; if yes, drop these local copies, if no,
 re-apply them.
+
+### Backported from M2M V2.1: optional VGA Standard sync reshaper
+
+The analog Standard-mode timing generated from `lcd.v` has an approximately
+2.38 us HS pulse and six-line VS pulse. That resembles CEA 480p closely enough
+that some VGA monitors select fixed consumer-video processing instead of their
+adjustable PC-VGA path. M2M V2.1 commits
+`f702fd8424981873938410513c53d20024a449fa` and
+`b5c185a4bc3783e80504c94d63e8eee7228be892` add a generalized,
+record-configured sync reshaper and its clean core-configuration interface. The
+following framework files are copied exactly from the latter commit:
+
+* `M2M/vhdl/av_pipeline/video_modes_pkg.vhd`
+* `M2M/vhdl/av_pipeline/vga_sync_reshaper.vhd`
+* `M2M/vhdl/av_pipeline/analog_pipeline.vhd`
+* `M2M/vhdl/av_pipeline/av_pipeline.vhd`
+* `M2M/vhdl/framework.vhd`
+
+`framework.vhd` reads the core-owned `VGA_STD_SYNC` record directly from
+`CORE/vhdl/globals.vhd`; the M2M V2.1 template exposes the same constant with an
+OFF default. No board-top modification is needed. gbc4mega65 defines the native
+`VIDEO_CLK_SPEED` as twice `CORE_CLK_SPEED`, then uses
+`make_vga_sync_reshaper_cfg(C_VGA_SYNC_DMT_640X480_60, VIDEO_CLK_SPEED)`.
+The helper evaluates to the hardware-proven profile: a 256-video-clock HS
+pulse, a two-line VS pulse and negative polarity for both. The four Vivado
+projects include the new reshaper source.
+
+The profile replaces only pulse widths and output polarity; it does not change
+RGB, active geometry, line length or frame length. The module sits after the
+analog/digital split and is enabled only in scandoubled Standard mode, so HDMI,
+both retro-15 kHz modes and CSYNC retain their original sync behavior.
+
+When updating to an M2M release containing both commits above, drop the exact
+framework copies but retain the Game Boy `VIDEO_CLK_SPEED`/`VGA_STD_SYNC`
+constants and the reshaper source entries in all four Vivado projects.
 
 ### Backported from M2M V2.1: M2M$LOAD_POLYPHASE
 

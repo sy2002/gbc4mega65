@@ -29,9 +29,10 @@ Boy machine, new framework.
    V0.8 release. Do not "upgrade" it casually; see `doc/m2m/exceptions.md`.
 2. **The cartridge lives in BRAM** (1 MB maximum, checked by the firmware *before*
    loading). No HyperRAM usage by the core at all.
-3. **`M2M/` is the official V2.0.1 release** (git remote `upstream` = sy2002/MiSTer2MEGA65,
-   merge of tag `V2.0.1`) with exactly one modified file (`crop.vhd`) — documented in
-   `doc/m2m/exceptions.md`. Treat `M2M/` as read-only otherwise.
+3. **`M2M/` is based on the official V2.0.1 release** (git remote `upstream` =
+   sy2002/MiSTer2MEGA65, merge of tag `V2.0.1`) with the Game Boy crop plus focused
+   V2.1/AExp backports. Every changed framework file is documented in
+   `doc/m2m/exceptions.md`; treat `M2M/` as read-only otherwise.
 
 ---
 
@@ -47,7 +48,7 @@ Boy machine, new framework.
 ├── rom/bin2rom.sh       .bin → .rom converter (one binary octet string per line; ROM_PRELOAD format)
 ├── doc/                 *.md doc pages, gbc*.jpg screenshots, make_doc.py + theme/ (website),
 │   └── m2m/exceptions.md   the authoritative list of deviations from upstream MiSTer/M2M
-├── M2M/                 MiSTer2MEGA65 V2.0.1 (read-only except crop.vhd; M2M/QNICE = submodule)
+├── M2M/                 MiSTer2MEGA65 V2.0.1 + documented backports (M2M/QNICE = submodule)
 └── CORE/
     ├── GameBoy/         vendored MiSTer core (gb.v, video.v = the PPU, lcd.v, T80/, ...)
     ├── vhdl/            the port: clk.vhd, main.vhd, mega65.vhd, config.vhd, globals.vhd,
@@ -91,6 +92,13 @@ inside lcd.v's 425×264 timing. This canvas is what makes the M2M on-screen-menu
   scandoubler (pattern 0/2/5/7 within each 10-clock pixel) and **2×** `ce_pix` in the
   retro-15 kHz modes (the framework doubles OSM rows there). All taps are phase-locked
   delays of `ce_pix` (the per-line 16-cycle stretch sits in blanking).
+- Analog **VGA: Standard** uses M2M V2.1's optional `vga_sync_reshaper`: the core-owned
+  `VGA_STD_SYNC` constant in `globals.vhd` selects the 640x480@60 VESA DMT pulse preset,
+  converted with `VIDEO_CLK_SPEED` to 256-video-clock HS pulses plus two-line VS pulses
+  with negative polarity. It preserves RGB, every source sync leading edge and the
+  complete raster period, making monitors classify the otherwise CEA-like timing as PC
+  VGA. The feature is downstream of the HDMI split and runtime-bypassed in both retro-15
+  kHz modes; no framework board-top customization is involved.
 - GBC color grading ("LCD Emulation" vs "Fully Saturated") is lcd.v's `originalcolors`
   input; DMG grayscale is lcd.v's default (tint=0).
 - "HDMI: Zoom-in" = the framework crop (`M2M/vhdl/av_pipeline/crop.vhd`, constants changed
@@ -159,10 +167,11 @@ No-hardware verification that MUST stay green after changes:
   `CORE/GameBoy`) against unisim/xpm/gb/mbc/lcd_wrapper stubs — a check harness with the
   stubs is easy to rebuild: analyze M2M packages (`tools.vhd`, `types_pkg`,
   `video_modes_pkg`, `tdp_ram`, `2port2clk_ram`, `cdc_stable`) first
-- `iverilog -g2012 -i` over all .v/.sv (lcd.v needs SystemVerilog)
+- `iverilog -g2012 -i` over the .v/.sv files included by the Vivado projects
+  (`lcd.v` needs SystemVerilog; exclude the unused MiSTer files listed in §3)
 - a menu-consistency check: `OPTM_SIZE` == #OPTM_ITEMS lines == #OPTM_GROUPS entries,
   every `C_MENU_*` index points at the intended label, main view rows == `OPTM_DY`
-- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=64) bytes
+- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=78) bytes
 
 ---
 

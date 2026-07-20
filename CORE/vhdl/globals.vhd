@@ -49,6 +49,10 @@ constant QNICE_FIRMWARE           : string  := QNICE_FIRMWARE_M2M;
 -- higher average frequency while it is active, see clk.vhd).
 constant CORE_CLK_SPEED       : natural := 33_556_548;
 
+-- lcd.v runs at exactly twice the machine clock on both clock-generator legs.
+-- This is the native-leg reference frequency used by static video profiles.
+constant VIDEO_CLK_SPEED      : natural := 2 * CORE_CLK_SPEED;
+
 -- System clock speed (crystal that is driving the FPGA) and QNICE clock speed
 -- !!! Do not touch !!!
 constant BOARD_CLK_SPEED      : natural := 100_000_000;
@@ -66,6 +70,13 @@ constant QNICE_CLK_SPEED      : natural := 50_000_000;   -- a change here has de
 -- output is 512x448. This is also the raster for the on-screen-menu: 32x28 characters.
 constant VGA_DX               : natural := 512;
 constant VGA_DY               : natural := 448;
+
+-- The native scandoubled raster is close enough to CEA 480p that some analog
+-- VGA monitors select their fixed consumer-video processing path. Preserve all
+-- source edge positions and the raster period, but present VESA-like sync pulse
+-- widths and negative polarity so Standard mode is classified as PC VGA.
+constant VGA_STD_SYNC         : vga_sync_reshaper_cfg_t :=
+   make_vga_sync_reshaper_cfg(C_VGA_SYNC_DMT_640X480_60, VIDEO_CLK_SPEED);
 
 --    FONT_*  size of one OSM character
 -- The OSM canvas keeps its 16x16 logical cell (FONT_DX/DY), but the glyphs are

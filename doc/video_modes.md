@@ -62,7 +62,8 @@ scanlines.
 
 The "VGA" submenu offers three modes:
 
-* **Standard** (default): 31 kHz scandoubled output for VGA monitors.
+* **Standard** (default): 31 kHz scandoubled output with PC-VGA sync pulses.
+  The Game Boy pixels, picture geometry and authentic frame timing are unchanged.
 * **15 kHz with HS/VS**: for retro CRT monitors.
 * **15 kHz with CSYNC**: for retro CRT monitors; use CSYNC for RGB/SCART
   cables.

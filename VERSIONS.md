@@ -12,6 +12,7 @@ The Game Boy core has been rebuilt on top of the [MiSTer2MEGA65](https://github.
 * HDMI Flicker-free: the core is gently synchronized to the HDMI frame rate, eliminating the slowly wandering tear line (on by default)
 * HDMI Zoom-in: crops the black border around the Game Boy picture, resulting in a razor sharp 5x integer scaling at 720p (off by default)
 * VGA submenu: Standard (31 kHz) plus two retro 15 kHz modes (with HS/VS or with CSYNC) for CRT monitors and RGB/SCART setups
+* VGA Standard now presents PC-VGA sync pulses, preventing compatible analog LCD monitors from misclassifying the signal as consumer 480p video
 * All settings are saved to the SD card and restored at the next start (put the settings file from the release ZIP into the /gbc folder)
 * The maximum cartridge size is now 1 MB on all supported machines, and the core checks the cartridge before loading it
 * The Game Boy Color BIOS can now be provided as cgb_boot.bin (in addition to the classic cgb_bios.bin) in the /gbc folder

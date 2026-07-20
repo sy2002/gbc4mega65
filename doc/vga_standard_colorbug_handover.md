@@ -258,14 +258,40 @@ the digital colors are clean and hsync period is a constant 21280 ns.
 
 ---
 
-## 10. Pointers into the code
+## 10. Resolution (2026-07-20)
+
+The localization test identified monitor mode classification as the remaining
+cause. In the original Standard mode the BenQ GL2780 reported `480p@60`,
+disabled its analog Auto Adjustment/Pixel Clock/Phase controls and displayed
+the Game Boy picture with a magenta cast. C64MEGA65 and AExp on the same input
+were correctly treated as PC VGA.
+
+Changing polarity alone had no effect. Preserving the complete GBC raster and
+all RGB data while reshaping HS from 160 to 256 video clocks, VS from six to
+two lines and using negative polarity fixed the problem on hardware. The BenQ
+now reports `640x480 at 60Hz`; the image is crisp, clean and correctly colored.
+There is no pixel stretching or geometry change.
+
+The generalized implementation was committed upstream to MiSTer2MEGA65
+`develop` as `f702fd8424981873938410513c53d20024a449fa`, followed by the clean
+core-globals interface in `b5c185a4bc3783e80504c94d63e8eee7228be892`.
+gbc4mega65 selects the 640x480@60 DMT pulse preset in
+`CORE/vhdl/globals.vhd`; at `VIDEO_CLK_SPEED` it evaluates to the tested
+`256 / 2 / negative` profile. Selection occurs only after the analog/digital
+split and only in scandoubled Standard mode; HDMI, both 15 kHz modes and CSYNC
+remain unchanged.
+
+---
+
+## 11. Pointers into the code
 
 - `CORE/vhdl/main.vhd` — `video_ce_ovl_o` grid (the committed fix; `C_SD_LINE`,
   `video_sd_phase`).
 - `M2M/vhdl/av_pipeline/analog_pipeline.vhd` — VGA out: `vga_data_enable`
   (blanking black-out), `phase_shift_vga_signals` (falling-edge VDAC phase),
   `vdac_syncn_o <= '0'`, `vdac_blankn_o <= '1'`, `vdac_clk_o <= video_clk_i`.
-  Sync polarity is passed straight through (positive from `lcd.v`).
+- `M2M/vhdl/av_pipeline/vga_sync_reshaper.vhd` — optional record-configured
+  pulse-width/polarity replacement; compile-time OFF is an exact wire-through.
 - `M2M/vhdl/av_pipeline/vga_recover_counters.vhd` — re-registers video + syncs
   on `video_ce_ovl_o`; this is why the grid phase matters.
 - `M2M/vhdl/controllers/MiSTer/scandoubler.v` — the line-doubler; output line
@@ -276,12 +302,12 @@ the digital colors are clean and hsync period is a constant 21280 ns.
 - `CORE/vhdl/mega65.vhd` — `qnice_scandoubler_o` / `qnice_retro15kHz_o` /
   `qnice_csync_o` selection (which mode drives which path).
 
-## 11. What NOT to do
+## 12. What NOT to do
 
 - Do not touch the 15 kHz branch or the HDMI path; both are confirmed good on
   hardware. The remaining fix is Standard-mode-only.
 - Do not edit `CORE/GameBoy/lcd.v`.
 - Do not re-derive that the digital pixels are clean; that is already
   established (section 4). Start at the analog boundary and the monitor.
-- Do not ship a signal-distorting hack to satisfy one monitor before running
-  the section-7 localization test.
+- Do not alter the now hardware-proven `256 / 2 / negative` Standard-mode
+  profile without rerunning the same-monitor C64/AExp comparison.

@@ -869,7 +869,8 @@ begin
          G_VGA_DY                => VGA_DY,
          G_FONT_FILE             => FONT_FILE,
          G_FONT_DX               => FONT_DX,
-         G_FONT_DY               => FONT_DY
+         G_FONT_DY               => FONT_DY,
+         G_VGA_STD_SYNC          => VGA_STD_SYNC
       )
       port map (
          -- Input from Core
@@ -1051,4 +1052,3 @@ begin
    audio_scl_io <= '0' when scl_out(5) = '0' else 'Z';
 
 end architecture synthesis;
-
