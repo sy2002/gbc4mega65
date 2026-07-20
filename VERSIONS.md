@@ -10,7 +10,7 @@ The Game Boy core has been rebuilt on top of the [MiSTer2MEGA65](https://github.
 * HDMI submenu with four 60 Hz display modes: 720p (default), 640x480, 720x480 (59.94 Hz) and 800x600
 * HDMI Filter submenu with eight image filters, from "No Filter" via "Lanczos" (default) and "Scanlines" up to two CRT simulations
 * HDMI Flicker-free: the core is gently synchronized to the HDMI frame rate, eliminating the slowly wandering tear line (on by default)
-* HDMI Aspect Ratio menu: Handheld LCD (10:9, default) crops the black border and gives a razor-sharp 5x integer scale at 720p; TV-style (4:3) retains the complete Super Game Boy canvas
+* HDMI Aspect Ratio menu: three borderless Handheld LCD sizes preserve the original 10:9 shape (Small is the default; Medium and Full give exact 4x and 5x scaling at 720p), while TV-style (4:3) retains the complete Super Game Boy canvas
 * VGA submenu: Standard (31 kHz) plus two retro 15 kHz modes (with HS/VS or with CSYNC) for CRT monitors and RGB/SCART setups
 * VGA Standard now presents PC-VGA sync pulses, preventing compatible analog LCD monitors from misclassifying the signal as consumer 480p video
 * All settings are saved to the SD card and restored at the next start (put the settings file from the release ZIP into the /gbc folder)

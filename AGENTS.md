@@ -101,11 +101,12 @@ inside lcd.v's 425×264 timing. This canvas is what makes the M2M on-screen-menu
   kHz modes; no framework board-top customization is involved.
 - GBC color grading ("LCD Emulation" vs "Fully Saturated") is lcd.v's `originalcolors`
   input; DMG grayscale is lcd.v's default (tint=0).
-- The HDMI submenu has an **Aspect Ratio** radio group. **Handheld LCD (10:9)** (default)
-  uses the framework crop (`M2M/vhdl/av_pipeline/crop.vhd`, constants changed to the GB
-  geometry) and M2M V2.1's core-configurable HDMI fitting to remove the border and preserve
-  the Game Boy LCD shape. At 720p the resulting 800×720 rectangle is an exact 5× integer
-  scale. **TV-style (4:3)** retains the complete 256×224 Super Game Boy canvas in a 4:3
+- The HDMI submenu has an **Aspect Ratio** radio group. **Handheld LCD Small (10:9)**
+  (default), **Medium** and **Full** use the framework crop
+  (`M2M/vhdl/av_pipeline/crop.vhd`, constants changed to the GB geometry) and M2M V2.1's
+  core-configurable HDMI fitting to remove the border and preserve the Game Boy LCD shape.
+  At 720p their centered rectangles are 514×463, 640×576 (exact 4×) and 800×720 (exact
+  5×). **TV-style (4:3)** retains the complete 256×224 Super Game Boy canvas in a 4:3
   region. The fit mechanism is in the digital pipeline only; analog geometry is unaffected.
 - HDMI modes offered: 720p60 (default), 640×480@60, 720×480@59.94, 800×600@60. Note
   800×600 runs at 60.317 Hz — above the fast leg, so flicker-free cannot fully lock there.
@@ -179,7 +180,7 @@ No-hardware verification that MUST stay green after changes:
   (`lcd.v` needs SystemVerilog; exclude the unused MiSTer files listed in §3)
 - a menu-consistency check: `OPTM_SIZE` == #OPTM_ITEMS lines == #OPTM_GROUPS entries,
   every `C_MENU_*` index points at the intended label, main view rows == `OPTM_DY`
-- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=82) bytes
+- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=84) bytes
 
 ---
 

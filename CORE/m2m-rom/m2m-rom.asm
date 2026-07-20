@@ -721,17 +721,17 @@ LOADED_CART_KIND .BLOCK 1
 ; The On-Screen-Menu uses the heap for several data structures. This heap
 ; is located before the main system heap in memory.
 ; You need to deduct MENU_HEAP_SIZE from the actual heap size below.
-; Example: If your HEAP_SIZE would be 29696, then you write 29696-1408=28288
+; Example: If your HEAP_SIZE would be 29696, then you write 29696-1504=28192
 ; instead, but when doing the sanity check calculations, you use 29696
 ;
 ; Sizing (see the two checks in M2M/rom/options.asm): the OSM needs
-; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (814 for
-; the 82-line menu) plus four arrays of OPTM_SIZE words (328) plus the
+; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (889 for
+; the 84-line menu) plus four arrays of OPTM_SIZE words (336) plus the
 ; percent-s scratch area: (OPTM_DX+2) x (submenus + CRT/ROM items + 1),
-; which is 29 x 7 = 203 with five submenus. Total 1364; 1408 keeps a small
-; reserve without stealing more file browser heap than necessary (every
+; which is 30 x 7 = 210 with five submenus. Total 1454; 1504 keeps a small
+; 50-word reserve without stealing more file browser heap than necessary (every
 ; word spent here is one word less for sorted directory entries).
-MENU_HEAP_SIZE  .EQU 1408
+MENU_HEAP_SIZE  .EQU 1504
 
 #ifndef RELEASE
 
@@ -739,14 +739,14 @@ MENU_HEAP_SIZE  .EQU 1408
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 5760                       ; 7168 - 1408 = 5760
+HEAP_SIZE       .EQU 5664                       ; 7168 - 1504 = 5664
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 28288                      ; 29696 - 1408 = 28288
+HEAP_SIZE       .EQU 28192                      ; 29696 - 1504 = 28192
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract

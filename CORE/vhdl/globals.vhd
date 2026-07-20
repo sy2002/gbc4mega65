@@ -79,10 +79,19 @@ constant VGA_STD_SYNC         : vga_sync_reshaper_cfg_t :=
    make_vga_sync_reshaper_cfg(C_VGA_SYNC_DMT_640X480_60, VIDEO_CLK_SPEED);
 
 -- The Aspect Ratio menu selects between the complete Super Game Boy canvas
--- fitted to a 4:3 television and the borderless 160x144 picture preserving
--- the physical 10:9 aspect ratio of the original Game Boy LCD.
+-- fitted to a 4:3 television and three sizes of the borderless 160x144
+-- picture preserving the physical 10:9 aspect ratio of the original Game
+-- Boy LCD. qnice_hdmi_view_size_o indexes the four cropped-size slots below:
+-- slot 0 is Full, slot 1 is Small, slot 2 is Medium and slot 3 is a safe
+-- full-size fallback.
 constant HDMI_VIEW            : hdmi_view_cfg_t :=
-   make_hdmi_view_cfg(C_HDMI_FIT_4_3, C_HDMI_FIT_10_9);
+   make_hdmi_view_cfg(
+      C_HDMI_FIT_4_3,
+      C_HDMI_FIT_10_9,
+      (0 => C_HDMI_SCALE_FULL,
+       1 => make_hdmi_scale(9, 14),
+       2 => make_hdmi_scale(4, 5),
+       3 => C_HDMI_SCALE_FULL));
 
 --    FONT_*  size of one OSM character
 -- The OSM canvas keeps its 16x16 logical cell (FONT_DX/DY), but the glyphs are

@@ -41,6 +41,7 @@ port (
    qnice_audio_mute_o      : out std_logic;
    qnice_audio_filter_o    : out std_logic;
    qnice_zoom_crop_o       : out std_logic;
+   qnice_hdmi_view_size_o  : out std_logic_vector(1 downto 0) := (others => '0');
    qnice_ascal_mode_o      : out std_logic_vector(1 downto 0);
    qnice_ascal_polyphase_o : out std_logic;
    qnice_ascal_triplebuf_o : out std_logic;
@@ -253,24 +254,27 @@ constant C_MENU_HDMI_640_60   : natural := 27;
 constant C_MENU_HDMI_480_5994 : natural := 28;
 constant C_MENU_HDMI_800_60   : natural := 29;
 constant C_MENU_HDMI_FF       : natural := 31;
-constant C_MENU_HDMI_HANDHELD : natural := 35;
-constant C_MENU_HDMI_FLT_NO_FILTER     : natural := 42;
-constant C_MENU_HDMI_FLT_SHARP         : natural := 43;
-constant C_MENU_HDMI_FLT_BICUBIC       : natural := 44;
-constant C_MENU_HDMI_FLT_SMOOTH        : natural := 45;
-constant C_MENU_HDMI_FLT_LANCZOS       : natural := 46;
-constant C_MENU_HDMI_FLT_SCANLINES     : natural := 47;
-constant C_MENU_HDMI_FLT_CRT_SVIDEO    : natural := 48;
-constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 49;
-constant C_MENU_VGA_STD       : natural := 55;
-constant C_MENU_VGA_15KHZHSVS : natural := 59;
-constant C_MENU_VGA_15KHZCS   : natural := 60;
-constant C_MENU_IMPROVE_AUDIO : natural := 77;
+constant C_MENU_HDMI_HANDHELD_SMALL  : natural := 35;
+constant C_MENU_HDMI_HANDHELD_MEDIUM : natural := 36;
+constant C_MENU_HDMI_HANDHELD_FULL   : natural := 37;
+constant C_MENU_HDMI_TV              : natural := 38;
+constant C_MENU_HDMI_FLT_NO_FILTER     : natural := 44;
+constant C_MENU_HDMI_FLT_SHARP         : natural := 45;
+constant C_MENU_HDMI_FLT_BICUBIC       : natural := 46;
+constant C_MENU_HDMI_FLT_SMOOTH        : natural := 47;
+constant C_MENU_HDMI_FLT_LANCZOS       : natural := 48;
+constant C_MENU_HDMI_FLT_SCANLINES     : natural := 49;
+constant C_MENU_HDMI_FLT_CRT_SVIDEO    : natural := 50;
+constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 51;
+constant C_MENU_VGA_STD       : natural := 57;
+constant C_MENU_VGA_15KHZHSVS : natural := 61;
+constant C_MENU_VGA_15KHZCS   : natural := 62;
+constant C_MENU_IMPROVE_AUDIO : natural := 79;
 
--- OSM Scaling radio (AExp pattern): line 66 (100%, the default) maps to bit 0 of
--- the 9-bit slice and line 74 (50%) maps to bit 8; the framework decodes the
+-- OSM Scaling radio (AExp pattern): line 68 (100%, the default) maps to bit 0 of
+-- the 9-bit slice and line 76 (50%) maps to bit 8; the framework decodes the
 -- one-hot vector with first_nonzero_bit (M2M/vhdl/av_pipeline/av_pipeline.vhd)
-subtype C_MENU_OSM_SCALING is natural range 74 downto 66;
+subtype C_MENU_OSM_SCALING is natural range 76 downto 68;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -568,7 +572,13 @@ begin
    qnice_dvi_o                <= '0';                                         -- 0=HDMI (with sound), 1=DVI (no sound)
    qnice_audio_mute_o         <= '0';                                         -- audio is not muted
    qnice_audio_filter_o       <= qnice_osm_control_i(C_MENU_IMPROVE_AUDIO);   -- 0 = raw audio, 1 = use filters from globals.vhd
-   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_HANDHELD);   -- Handheld LCD (10:9); low selects TV-style (4:3)
+   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_HANDHELD_SMALL) or
+                                 qnice_osm_control_i(C_MENU_HDMI_HANDHELD_MEDIUM) or
+                                 qnice_osm_control_i(C_MENU_HDMI_HANDHELD_FULL);
+   qnice_hdmi_view_size_o     <= "10" when qnice_osm_control_i(C_MENU_HDMI_HANDHELD_MEDIUM) = '1' else
+                                 "00" when qnice_osm_control_i(C_MENU_HDMI_HANDHELD_FULL) = '1' else
+                                 "01" when qnice_osm_control_i(C_MENU_HDMI_HANDHELD_SMALL) = '1' else
+                                 "00"; -- TV-style ignores this selector; keep the neutral value
 
    -- VGA output modes, see also the VGA submenu in config.vhd:
    --    "Standard VGA":                      scandoubler on,  retro15kHz off, csync off

@@ -34,14 +34,27 @@ analog output step slightly, which analog displays dislike.
 
 ### HDMI Aspect Ratio
 
-The **Aspect Ratio** group offers two picture presentations:
+The **Aspect Ratio** group offers three borderless Handheld LCD sizes plus the
+complete television-style canvas:
 
-* **Handheld LCD (10:9)** (default) crops the black border and fits the
-  160x144 picture at the physical aspect ratio of the Game Boy LCD. In the
-  default 720p mode it occupies a centered 800x720 rectangle: every Game Boy
-  pixel becomes an exact 5x5 block, with pillarboxing on a 16:9 display.
+* **Handheld LCD Small (10:9)** (default) is approximately as tall as the game
+  content in TV-style mode. At 720p it occupies a centered 514x463 rectangle.
+* **Handheld LCD Medium (10:9)** occupies 640x576 at 720p, so every Game Boy
+  pixel becomes an exact 4x4 block.
+* **Handheld LCD Full (10:9)** occupies 800x720 at 720p, so every Game Boy
+  pixel becomes an exact 5x5 block and fills the display height.
 * **TV-style (4:3)** retains the complete Super-Game-Boy-style 256x224 canvas
   and presents it as it would appear on a traditional television.
+
+All three Handheld choices crop the black border and preserve the physical
+10:9 aspect ratio of the original LCD. Their centered output sizes are:
+
+| HDMI mode | Small | Medium | Full |
+| --- | ---: | ---: | ---: |
+| 1280x720 | 514x463 | 640x576 | 800x720 |
+| 640x480 | 343x309 | 426x384 | 533x480 |
+| 720x480 (physical 4:3) | 386x309 | 480x384 | 600x480 |
+| 800x600 | 429x386 | 534x480 | 667x600 |
 
 This setting changes only the HDMI output; all three analog VGA modes keep
 their existing picture geometry.

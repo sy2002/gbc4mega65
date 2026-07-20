@@ -6,9 +6,9 @@
 -- Updating notes: gbc4mega65 changed the crop window constants below from the
 -- framework's C64 geometry (320x200 image inside a 720x576 frame) to the Game Boy
 -- geometry: the 160x144 Game Boy picture sits centered in a 256x224 active area
--- (Super Game Boy screen geometry, black border), and the "Handheld LCD (10:9)" menu
--- item crops away the complete border. At 720p the picture fills the output
--- height as a crisp 5x integer scaling (800x720 pixels).
+-- (Super Game Boy screen geometry, black border), and the three "Handheld LCD"
+-- menu sizes crop away the complete border. At 720p the Full size fills the
+-- output height as a crisp 5x integer scaling (800x720 pixels).
 -- This deviation from the original M2M V2.0.1 file is documented in
 -- doc/m2m/exceptions.md.
 --

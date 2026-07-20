@@ -47,7 +47,7 @@ Features
   to fully saturated raw RGB colors
 * HDMI: four 60 Hz [display modes](doc/video_modes.md), eight image filters
   from razor sharp to CRT simulation, flicker-free HDMI and selectable
-  Handheld LCD (10:9) or TV-style (4:3) picture geometry
+  Small, Medium and Full Handheld LCD (10:9) sizes or TV-style (4:3) geometry
 * VGA: standard 31 kHz output plus two
   [retro 15 kHz modes](doc/video_modes.md) for CRT monitors and
   RGB/SCART setups
@@ -172,8 +172,8 @@ Video output
 ------------
 
 HDMI and VGA are active simultaneously. The HDMI output offers four 60 Hz
-display modes, eight image filters, a flicker-free mode and Handheld LCD
-(10:9) or TV-style (4:3) aspect choices;
+display modes, eight image filters, a flicker-free mode, three Handheld LCD
+(10:9) picture sizes and a TV-style (4:3) choice;
 the VGA output offers a standard 31 kHz mode and two retro 15 kHz modes for
 CRT monitors, including composite sync (CSYNC) for RGB/SCART setups. Learn
 more in the [display documentation](doc/video_modes.md).
