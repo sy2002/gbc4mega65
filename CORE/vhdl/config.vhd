@@ -383,19 +383,19 @@ constant OPTM_ITEMS        : string :=
    " HDMI: %s\n"               &    -- 23: submenu (%s = current display mode)
    " HDMI Display Mode\n"      &    -- 24: headline
    "\n"                        &    -- 25
-   " 16:9 720p 60 Hz\n"        &    -- 26: default
-   " 640x480 60 Hz\n"          &    -- 27
-   " 720x480 59.94 Hz\n"       &    -- 28
-   " 800x600 60 Hz\n"          &    -- 29
+   " 720p    60 Hz   16:9\n"   &    -- 26: default
+   " 640x480 60 Hz    4:3\n"   &    -- 27
+   " 720x480 59.94 Hz 3:2\n"   &    -- 28
+   " 800x600 60 Hz    4:3\n"   &    -- 29
    "\n"                        &    -- 30
    " HDMI: Flicker-free\n"     &    -- 31: default on
    "\n"                        &    -- 32
-   " Aspect Ratio\n"           &    -- 33: headline
+   " Aspect Ratio & Size\n"    &    -- 33: headline
    "\n"                        &    -- 34
-   " Handheld LCD Small  (10:9)\n" & -- 35: default
-   " Handheld LCD Medium (10:9)\n" & -- 36
-   " Handheld LCD Full   (10:9)\n" & -- 37
-   " TV-style             (4:3)\n" & -- 38
+   " Handheld LCD Small  10:9\n" &  -- 35: default
+   " Handheld LCD Medium 10:9\n" &  -- 36
+   " Handheld LCD Full   10:9\n" &  -- 37
+   " Super Game Boy Style 4:3\n" &  -- 38
    "\n"                        &    -- 39
    " Back to main menu\n"      &    -- 40
    " HDMI: %s\n"               &    -- 41: submenu (%s = current filter)
