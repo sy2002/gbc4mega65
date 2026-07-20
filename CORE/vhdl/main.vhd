@@ -11,8 +11,9 @@
 -- The video output is the classic Super Game Boy screen geometry: the 160x144
 -- Game Boy picture centered in a 256x224 active area with a black border, at the
 -- authentic frame rate of 59.7275 Hz. The border makes the M2M on-screen-menu
--- usable on the analog output; for HDMI the framework's zoom/crop feature can
--- crop back to the pure 160x144 picture (5x integer scaling at 720p).
+-- usable on the analog output. HDMI Aspect Ratio offers either the pure
+-- 160x144 picture at the original LCD's physical 10:9 aspect ratio (5x integer
+-- scaling at 720p) or the complete canvas in a TV-style 4:3 region.
 --
 -- This machine is based on Gameboy_MiSTer
 -- Powered by MiSTer2MEGA65

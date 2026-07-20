@@ -101,8 +101,12 @@ inside lcd.v's 425×264 timing. This canvas is what makes the M2M on-screen-menu
   kHz modes; no framework board-top customization is involved.
 - GBC color grading ("LCD Emulation" vs "Fully Saturated") is lcd.v's `originalcolors`
   input; DMG grayscale is lcd.v's default (tint=0).
-- "HDMI: Zoom-in" = the framework crop (`M2M/vhdl/av_pipeline/crop.vhd`, constants changed
-  to the GB geometry): crops the border → 5× integer scaling at 720p, like V0.8 looked.
+- The HDMI submenu has an **Aspect Ratio** radio group. **Handheld LCD (10:9)** (default)
+  uses the framework crop (`M2M/vhdl/av_pipeline/crop.vhd`, constants changed to the GB
+  geometry) and M2M V2.1's core-configurable HDMI fitting to remove the border and preserve
+  the Game Boy LCD shape. At 720p the resulting 800×720 rectangle is an exact 5× integer
+  scale. **TV-style (4:3)** retains the complete 256×224 Super Game Boy canvas in a 4:3
+  region. The fit mechanism is in the digital pipeline only; analog geometry is unaffected.
 - HDMI modes offered: 720p60 (default), 640×480@60, 720×480@59.94, 800×600@60. Note
   800×600 runs at 60.317 Hz — above the fast leg, so flicker-free cannot fully lock there.
 
@@ -138,11 +142,15 @@ NOT arithmetic, NOT minus-0x8000 (both crackle; verified in the old core).
 
 ### Firmware (`CORE/m2m-rom/m2m-rom.asm`)
 
-Standard V2.0.1 Shell callbacks only (no framework patches):
-`FILTER_FILES` (only .gb/.gbc), `PREP_LOAD_IMAGE` (size 0x150..1 MB, MBC allow-list,
-ROM/RAM size codes ≤ 5 — checks run BEFORE streaming; reads the header via the file
-handle and seeks back to 0), `PREP_START` + `OSM_SEL_POST` → `LOAD_HDMI_FILTER`
-(8-option ascal filter dispatch; `ASCAL_USAGE=1`), `CUSTOM_MSG` (empty-folder text).
+Standard V2.0.1 Shell callbacks only (no framework patches): `FILTER_FILES` shows .gb
+in both machine modes but .gbc only in Color mode; an allowed mode change invalidates
+the cached browser listing. `PREP_LOAD_IMAGE` checks size 0x150..1 MB, the MBC allow-list,
+ROM/RAM size codes ≤ 5 and the CGB flag before streaming, seeks back to 0, and remembers
+whether the last accepted cartridge is DMG-compatible or CGB-only. `OSM_SEL_PRE` reverts
+an attempt to enter Classic with a CGB-only cartridge loaded; `OSM_SEL_POST` pulses the
+framework soft reset after allowed Classic/Color changes (cartridge retained).
+`PREP_START` + `OSM_SEL_POST` → `LOAD_HDMI_FILTER` implements the 8-option ascal filter
+dispatch (`ASCAL_USAGE=1`). `CUSTOM_MSG` provides mode-specific empty-folder text.
 `M2M$LOAD_POLYPHASE` is a V2.1 backport (delete on framework upgrade). Menu constants
 are **auto-generated**: `make_rom.sh` scrapes `C_MENU_*` (mega65.vhd) → `GBC_OSM_*` and
 `OPTM_G_*` (config.vhd) → `GBC_OPTM_G_*` into `osm_const.asm` (gitignored).
@@ -171,7 +179,7 @@ No-hardware verification that MUST stay green after changes:
   (`lcd.v` needs SystemVerilog; exclude the unused MiSTer files listed in §3)
 - a menu-consistency check: `OPTM_SIZE` == #OPTM_ITEMS lines == #OPTM_GROUPS entries,
   every `C_MENU_*` index points at the intended label, main view rows == `OPTM_DY`
-- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=78) bytes
+- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=82) bytes
 
 ---
 

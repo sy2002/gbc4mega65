@@ -31,3 +31,4 @@ doc/.venv/
 doc/.gbc-doc-requirements
 __pycache__/
 build_*.out
+.codex

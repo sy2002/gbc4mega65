@@ -56,11 +56,12 @@ backports documented below.
 
 ### M2M/vhdl/av_pipeline/crop.vhd: Game Boy crop window
 
-The crop window constants (used by the "HDMI: Zoom-in" menu item) are
+The crop window constants (used by the "Handheld LCD (10:9)" aspect option) are
 hardcoded in the framework for the C64 geometry. They were changed to the
 Game Boy geometry: the input stream is the 160x144 Game Boy picture centered
-in a 256x224 active area, and zooming in crops the complete black border
-away (5x integer scaling at 720p):
+in a 256x224 active area, and Handheld LCD crops the complete black border
+away. The HDMI output fitting backport documented below then produces exact
+5x integer scaling at 720p:
 
 ```vhdl
 constant LEFT_BORDER_IN    : natural := 48;
@@ -119,14 +120,18 @@ that some VGA monitors select fixed consumer-video processing instead of their
 adjustable PC-VGA path. M2M V2.1 commits
 `f702fd8424981873938410513c53d20024a449fa` and
 `b5c185a4bc3783e80504c94d63e8eee7228be892` add a generalized,
-record-configured sync reshaper and its clean core-configuration interface. The
-following framework files are copied exactly from the latter commit:
+record-configured sync reshaper and its clean core-configuration interface.
+The backport affects these framework files:
 
-* `M2M/vhdl/av_pipeline/video_modes_pkg.vhd`
 * `M2M/vhdl/av_pipeline/vga_sync_reshaper.vhd`
 * `M2M/vhdl/av_pipeline/analog_pipeline.vhd`
 * `M2M/vhdl/av_pipeline/av_pipeline.vhd`
 * `M2M/vhdl/framework.vhd`
+* `M2M/vhdl/av_pipeline/video_modes_pkg.vhd`
+
+The last three are shared with the later HDMI output fitting backport and are
+therefore copied exactly from commit `627446dc50b1234aa5c87a412c9c76116241601c`,
+which contains both changes.
 
 `framework.vhd` reads the core-owned `VGA_STD_SYNC` record directly from
 `CORE/vhdl/globals.vhd`; the M2M V2.1 template exposes the same constant with an
@@ -142,9 +147,36 @@ RGB, active geometry, line length or frame length. The module sits after the
 analog/digital split and is enabled only in scandoubled Standard mode, so HDMI,
 both retro-15 kHz modes and CSYNC retain their original sync behavior.
 
-When updating to an M2M release containing both commits above, drop the exact
-framework copies but retain the Game Boy `VIDEO_CLK_SPEED`/`VGA_STD_SYNC`
-constants and the reshaper source entries in all four Vivado projects.
+### Backported from M2M V2.1: core-configurable HDMI output fitting
+
+M2M V2.1 commit `627446dc50b1234aa5c87a412c9c76116241601c` adds a
+core-owned `HDMI_VIEW` configuration record and generalized digital output
+fitting. These framework files are copied exactly from that commit:
+
+* `M2M/vhdl/av_pipeline/video_modes_pkg.vhd`
+* `M2M/vhdl/av_pipeline/digital_pipeline.vhd`
+* `M2M/vhdl/av_pipeline/av_pipeline.vhd`
+* `M2M/vhdl/framework.vhd`
+
+`CORE/vhdl/globals.vhd` configures
+`make_hdmi_view_cfg(C_HDMI_FIT_4_3, C_HDMI_FIT_10_9)`. The existing crop
+signal is presented as a two-choice **Aspect Ratio** radio group: TV-style
+(4:3) retains the full 256x224 canvas, while Handheld LCD (10:9, the default)
+selects a borderless Game Boy picture at the physical handheld aspect.
+The latter produces centered output rectangles of 800x720, 533x480, 600x480
+and 667x600 in the four offered HDMI modes, respectively. Both rectangle
+tables are calculated at elaboration time; runtime hardware only selects a
+precalculated rectangle by HDMI mode and crop bit.
+
+This mechanism is wholly inside the digital pipeline, after the analog/HDMI
+split. It cannot alter RGB, timing or geometry on VGA Standard or either 15 kHz
+mode. The stock M2M default remains `C_HDMI_VIEW_LEGACY`, so cores that do not
+opt into the feature retain bit-for-bit-compatible output placement.
+
+When updating to an M2M release containing all three commits above, drop the
+exact framework copies but retain the Game Boy `VIDEO_CLK_SPEED`,
+`VGA_STD_SYNC` and `HDMI_VIEW` constants, the Game Boy crop constants, and the
+reshaper source entries in all four Vivado projects.
 
 ### Backported from M2M V2.1: M2M$LOAD_POLYPHASE
 

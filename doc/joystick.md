@@ -14,7 +14,7 @@ called "Standard, Fire=A" and it works fine for many games.
 
 The Game Boy has two action buttons, A and B, and different games use them
 differently. This is why the on-screen-menu (press <kbd>Help</kbd> to open
-it) offers a "Joystick Mode" submenu with four modes:
+it) offers a "Joystick: <current mapping>" submenu with four modes:
 
 | Joystick Mode      | Fire button | Joystick up               |
 |--------------------|-------------|---------------------------|

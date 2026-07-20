@@ -46,7 +46,8 @@ Features
   on the LCD display of the original Game Boy Color hardware - switchable
   to fully saturated raw RGB colors
 * HDMI: four 60 Hz [display modes](doc/video_modes.md), eight image filters
-  from razor sharp to CRT simulation, flicker-free HDMI and zoom
+  from razor sharp to CRT simulation, flicker-free HDMI and selectable
+  Handheld LCD (10:9) or TV-style (4:3) picture geometry
 * VGA: standard 31 kHz output plus two
   [retro 15 kHz modes](doc/video_modes.md) for CRT monitors and
   RGB/SCART setups
@@ -65,7 +66,8 @@ Installation
 3. The core needs a FAT32 formatted SD card to load game cartridges (ROMs).
 4. If you put your ROMs into a folder called `/gbc`, then the file browser
    will display this folder on startup. The core supports `.gb` (Game Boy)
-   and `.gbc` (Game Boy Color) files up to 1 MB.
+   and `.gbc` (Game Boy Color) files up to 1 MB. In Game Boy Classic mode,
+   the browser deliberately shows only `.gb` files.
 5. Copy the settings file from the ZIP (for example
    `gbc4mega65-V1.0.cfg`) into the `/gbc` folder of your SD card: it
    enables the core to remember all your on-screen-menu settings.
@@ -118,14 +120,19 @@ The core starts in **Game Boy Color** mode: Game Boy Color games and Color
 enhanced Game Boy games are rendered in color, and even pure Game Boy
 Classic games are colorized by the Game Boy Color BIOS - exactly as on the
 real hardware. Switch to **Game Boy Classic** in the on-screen-menu to play
-games in the authentic grayscale look. A mode change takes effect when the
-next cartridge is loaded or when the core is reset (short press of the
-MEGA65 reset button).
+games in the authentic grayscale look. Changing this mode automatically
+resets the Game Boy machine so the selected boot ROM and mode take effect
+immediately; the loaded cartridge remains available and starts again. A
+Color-only cartridge cannot be loaded in Classic mode, and while one is
+running the menu prevents switching from Color to Classic. Ordinary Game
+Boy and dual-compatible Color-enhanced cartridges may switch either way.
 
 The core checks each cartridge before loading it: the maximum supported
 cartridge (ROM) size is 1 MB and the cartridge needs to use one of the
 supported Memory Bank Controllers (ROM only, MBC1, MBC2, MBC3 and MBC5,
-which covers the vast majority of all games ever released).
+which covers the vast majority of all games ever released). Compatibility
+is taken from the cartridge header, so merely renaming a Color-only ROM to
+`.gb` cannot bypass the Classic-mode safeguard.
 
 There are no savegames yet: highscores and game states are lost when the
 core is switched off (exactly as in V0.8).
@@ -165,7 +172,8 @@ Video output
 ------------
 
 HDMI and VGA are active simultaneously. The HDMI output offers four 60 Hz
-display modes, eight image filters, a flicker-free mode and a zoom mode;
+display modes, eight image filters, a flicker-free mode and Handheld LCD
+(10:9) or TV-style (4:3) aspect choices;
 the VGA output offers a standard 31 kHz mode and two retro 15 kHz modes for
 CRT monitors, including composite sync (CSYNC) for RGB/SCART setups. Learn
 more in the [display documentation](doc/video_modes.md).

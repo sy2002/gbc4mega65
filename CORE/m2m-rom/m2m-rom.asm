@@ -40,7 +40,9 @@
 
                 ; Run the Shell: This is where you could put your own system
                 ; instead of the shell
-START_FIRMWARE  RBRA    START_SHELL, 1
+START_FIRMWARE  MOVE    LOADED_CART_KIND, R0
+                MOVE    CART_KIND_NONE, @R0
+                RBRA    START_SHELL, 1
 
 ; ----------------------------------------------------------------------------
 ; Core specific callback functions: Submenus
@@ -77,8 +79,8 @@ SUBMENU_SUMMARY XOR     R8, R8                  ; R8 = 0 = no custom string
 ; Called by the file- and directory browser. Used to make sure that the
 ; browser is only showing valid files and directories.
 ;
-; The Game Boy core only shows *.gb and *.gbc files when the user loads
-; a cartridge. Directories are always shown.
+; The Game Boy core shows *.gb files in both machine modes. *.gbc files are
+; shown only in Color mode. Directories are always shown.
 ;
 ; Input:
 ;   R8: Name of the file in capital letters
@@ -89,6 +91,7 @@ SUBMENU_SUMMARY XOR     R8, R8                  ; R8 = 0 = no custom string
 ;   R8: 0=do not filter file, i.e. show file
 FILTER_FILES    INCRB
                 MOVE    R9, R0
+                MOVE    R8, R1                  ; preserve filename pointer
 
                 CMP     1, R9                   ; do not filter directories
                 RBRA    _FFILES_RET_0, Z
@@ -100,11 +103,17 @@ FILTER_FILES    INCRB
                 RSUB    M2M$CHK_EXT, 1          ; preserves R8/R9/R10
                 RBRA    _FFILES_RET_0, C        ; extension matched: show it
 
+                MOVE    GBC_OSM_GB_CLASSIC, R8  ; hide *.gbc in Classic mode
+                RSUB    M2M$GET_SETTING, 1
+                CMP     1, R9
+                RBRA    _FFILES_FILTER, Z
+
+                MOVE    R1, R8                  ; restore filename pointer
                 MOVE    GBC_FILE_EXT, R9        ; show *.gbc files
                 RSUB    M2M$CHK_EXT, 1
                 RBRA    _FFILES_RET_0, C        ; extension matched: show it
 
-                MOVE    1, R8                   ; no match: filter it
+_FFILES_FILTER  MOVE    1, R8                   ; no match: filter it
                 RBRA    _FFILES_RET, 1
 
 _FFILES_RET_0   XOR     R8, R8                  ; R8 = 0 = do not filter file
@@ -126,13 +135,15 @@ _FFILES_RET     MOVE    R0, R9
 ;   1. The file size must be at least 0x150 bytes (i.e. the file contains
 ;      a complete cartridge header), otherwise it is not a valid cartridge.
 ;   2. The file size must not exceed 1 MB (0x00100000 bytes).
-;   3. The Memory Bank Controller (MBC) type (header byte 0x0147) must be
+;   3. A Color-only cartridge (CGB flag 0xC0 at header byte 0x0143) may
+;      only be loaded while the machine is in Color mode.
+;   4. The Memory Bank Controller (MBC) type (header byte 0x0147) must be
 ;      supported by mbc.sv: everything but MMM01 (0x0B..0x0D), MBC6 (0x20),
 ;      MBC7 (0x22), Pocket Camera (0xFC), Bandai TAMA5 (0xFD), HuC3 (0xFE)
 ;      and HuC1 (0xFF) is accepted (i.e. ROM only, MBC1, MBC2, MBC3, MBC5
 ;      incl. their battery/RTC variants).
-;   4. The ROM size code (header byte 0x0148) must be 5 or less (max 1 MB).
-;   5. The RAM size code (header byte 0x0149) must be 5 or less (max 128 KB).
+;   5. The ROM size code (header byte 0x0148) must be 5 or less (max 1 MB).
+;   6. The RAM size code (header byte 0x0149) must be 5 or less (max 128 KB).
 ;
 ; The header bytes are read via the file handle and afterwards the read
 ; pointer is moved back to the start of the file, so that the Shell streams
@@ -179,12 +190,25 @@ _PLI_CHKMIN     CMP     0, R2                   ; high word zero?
                 RBRA    _PLI_NOTVALID, N        ; yes: no cartridge header
 
                 ; ------------------------------------------------------------
-                ; Check 3, 4 and 5: cartridge header
-                ; read the three header bytes 0x0147 (MBC type),
-                ; 0x0148 (ROM size code) and 0x0149 (RAM size code)
+                ; Check 3 through 6: cartridge header. Read the CGB flag at
+                ; 0x0143 followed by the MBC type and size codes at
+                ; 0x0147 through 0x0149.
                 ; ------------------------------------------------------------
 
 _PLI_HEADER     MOVE    R0, R8
+                MOVE    0x0143, R9              ; seek to the CGB flag byte
+                XOR     R10, R10
+                SYSCALL(f32_fseek, 1)
+                CMP     0, R9
+                RBRA    _PLI_NOTVALID, !Z
+
+                MOVE    R0, R8                  ; read CGB compatibility flag
+                SYSCALL(f32_fread, 1)
+                CMP     0, R10
+                RBRA    _PLI_NOTVALID, !Z
+                MOVE    R9, R6                  ; R6: CGB flag
+
+                MOVE    R0, R8
                 MOVE    0x0147, R9              ; seek to the MBC type byte
                 XOR     R10, R10
                 SYSCALL(f32_fseek, 1)
@@ -244,8 +268,29 @@ _PLI_HEADER     MOVE    R0, R8
 
                 ; RAM size code must be 5 (= max 128 KB in mbc.sv) or less
 _PLI_CHKRAM     CMP     0x0005, R5
-                RBRA    _PLI_OK, Z
+                RBRA    _PLI_CLASSIFY, Z
                 RBRA    _PLI_BADRAM, !N         ; code > 5: RAM too large
+
+                ; Remember the successfully validated cartridge by its
+                ; authoritative header compatibility, not by its filename.
+                ; A 0xC0 CGB flag means Color-only. 0x80 is dual-compatible
+                ; and therefore remains valid in either machine mode.
+_PLI_CLASSIFY   MOVE    R6, R1
+                AND     0x00C0, R1
+                CMP     0x00C0, R1
+                RBRA    _PLI_CGB_ONLY, Z
+
+                MOVE    CART_KIND_DMG_COMPAT, R1
+                RBRA    _PLI_REMEMBER, 1
+
+_PLI_CGB_ONLY   MOVE    GBC_OSM_GB_CLASSIC, R8
+                RSUB    M2M$GET_SETTING, 1
+                CMP     1, R9                   ; Classic mode active?
+                RBRA    _PLI_WRONG_MODE, Z      ; yes: reject Color-only cart
+                MOVE    CART_KIND_CGB_ONLY, R1
+
+_PLI_REMEMBER   MOVE    LOADED_CART_KIND, R2
+                MOVE    R1, @R2                 ; failed loads never overwrite it
 
 _PLI_OK         XOR     R8, R8                  ; no errors
                 XOR     R9, R9                  ; image type hardcoded to 0
@@ -269,6 +314,11 @@ _PLI_TOOLARGE   MOVE    3, R8
 
 _PLI_BADRAM     MOVE    4, R8
                 MOVE    WRN_RAM_SIZE, R9
+                DECRB
+                RET
+
+_PLI_WRONG_MODE MOVE    5, R8
+                MOVE    WRN_COLOR_ONLY, R9
                 DECRB
                 RET
 
@@ -298,6 +348,26 @@ PREP_START      INCRB
                 DECRB
                 RET
 
+; RESET_CORE helper:
+;
+; Pulse M2M$CSR bit 0 long enough to pass cleanly through the framework CDC
+; and reset the Game Boy machine. This is the proven C64MEGA65 firmware
+; pattern: the delay avoids the too-short pulse produced by a bare OR/AND
+; pair. It resets only the core; the loaded cartridge remains available and
+; the selected Classic/Color machine starts it again.
+;
+; Input:  none
+; Output: none (callers clear R8/R9 themselves)
+RESET_CORE      INCRB
+                MOVE    M2M$CSR, R0
+                OR      M2M$CSR_RESET, @R0      ; assert soft reset
+                MOVE    64, R1                  ; widen pulse across the CDC
+_RC_DELAY       SUB     1, R1
+                RBRA    _RC_DELAY, !Z
+                AND     M2M$CSR_UN_RESET, @R0   ; release soft reset
+                DECRB
+                RET
+
 ; OSM_SEL_POST callback function:
 ;
 ; Called each time the user selects something in the on-screen-menu (OSM),
@@ -310,8 +380,11 @@ PREP_START      INCRB
 ; basic semantics but you are able to add core specific additional
 ; "intelligent" semantics and behaviors.
 ;
-; The Game Boy core applies a newly selected HDMI Filter live: no core reset,
-; the next frame already shows the new filter.
+; The Game Boy core applies a newly selected HDMI Filter live. An allowed
+; Classic/Color change invalidates the file-browser cache and soft-resets the
+; core so the new mode starts from a clean boot while the cartridge remains
+; in memory. OSM_SEL_PRE reverts an unsafe switch to Classic, in which case
+; this callback deliberately skips both actions.
 ;
 ; Input:
 ;   R8: selected menu group (as defined in config.vhd)
@@ -324,9 +397,22 @@ PREP_START      INCRB
 ;   R9: 0=OK, else error code
 OSM_SEL_POST    INCRB
 
+                CMP     GBC_OPTM_G_GBMODE, R8   ; Classic/Color changed?
+                RBRA    _OSMSP_GBMODE, Z
+
                 CMP     GBC_OPTM_G_HDMI_FLT, R8 ; HDMI Filter changed?
                 RBRA    _OSMSP_RET, !Z
-                RSUB    LOAD_HDMI_FILTER, 1     ; yes: apply it live
+                RSUB    LOAD_HDMI_FILTER, 1      ; yes: apply it live
+                RBRA    _OSMSP_RET, 1
+
+_OSMSP_GBMODE   CMP     0, R9                   ; requested Classic?
+                RBRA    _OSMSP_MODE_OK, !Z      ; no: Color is always safe
+                MOVE    LOADED_CART_KIND, R0
+                CMP     CART_KIND_CGB_ONLY, @R0 ; PRE reverted this request?
+                RBRA    _OSMSP_RET, Z            ; yes: do not reset
+
+_OSMSP_MODE_OK  RSUB    FB_RE_INIT, 1           ; rebuild mode-dependent list
+                RSUB    RESET_CORE, 1
 
 _OSMSP_RET      XOR     R8, R8
                 XOR     R9, R9
@@ -339,7 +425,22 @@ _OSMSP_RET      XOR     R8, R8
 ; called before the functionality and semantics associated with a certain
 ; menu item has been handled by the framework.
 OSM_SEL_PRE     INCRB
-                XOR     R8, R8
+
+                CMP     GBC_OPTM_G_GBMODE, R8   ; Classic/Color selection?
+                RBRA    _OSMPRE_RET, !Z
+                CMP     0, R9                   ; switching to Classic?
+                RBRA    _OSMPRE_RET, !Z
+                MOVE    LOADED_CART_KIND, R0
+                CMP     CART_KIND_CGB_ONLY, @R0 ; Color-only cart loaded?
+                RBRA    _OSMPRE_RET, !Z
+
+                ; Repaint and restore the Color item before the framework
+                ; copies the menu state to the core-facing control register.
+                MOVE    GBC_OSM_GB_COLOR, R8
+                MOVE    1, R9
+                RSUB    M2M$FORCE_MENU, 1
+
+_OSMPRE_RET     XOR     R8, R8
                 XOR     R9, R9
                 DECRB
                 RET
@@ -365,7 +466,15 @@ CUSTOM_MSG      INCRB
                 RBRA    _CMSG_RET_0, !Z
                 CMP     CTX_LOAD_ROM, R9        ; while loading a cartridge?
                 RBRA    _CMSG_RET_0, !Z
+
+                MOVE    GBC_OSM_GB_CLASSIC, R8
+                RSUB    M2M$GET_SETTING, 1
+                CMP     1, R9
+                RBRA    _CMSG_CLASSIC, Z
                 MOVE    WRN_NO_GB_FILES, R8
+                RBRA    _CMSG_RET, 1
+
+_CMSG_CLASSIC   MOVE    WRN_NO_CLASSIC_FILES, R8
                 RBRA    _CMSG_RET, 1
 
 _CMSG_RET_0     XOR     R8, R8
@@ -536,6 +645,13 @@ M2M$LOAD_POLYPHASE  SYSCALL(enter, 1)
 GB_FILE_EXT     .ASCII_W ".GB"
 GBC_FILE_EXT    .ASCII_W ".GBC"
 
+; Type of the cartridge that survived PREP_LOAD_IMAGE validation. The header
+; is authoritative: CGB flag 0xC0 means Color-only, while ordinary and 0x80
+; dual-compatible cartridges may run in Classic mode.
+CART_KIND_NONE       .EQU 0
+CART_KIND_DMG_COMPAT .EQU 1
+CART_KIND_CGB_ONLY   .EQU 2
+
 ; Cartridge check warnings, shown by the Shell together with an error code.
 ; The screen of the Game Boy core is 32x28 characters, so keep all lines
 ; at a maximum of 30 characters. The wording is based on the original
@@ -562,9 +678,21 @@ WRN_RAM_SIZE    .ASCII_P "\nCannot run this cartridge!\n\n"
                 .ASCII_P "RAM size: 128 KB\n\n"
                 .ASCII_W "Press SPACE to continue.\n"
 
+WRN_COLOR_ONLY  .ASCII_P "\nCannot run this cartridge!\n\n"
+                .ASCII_P "This cartridge requires Game\n"
+                .ASCII_P "Boy Color mode. Switch to\n"
+                .ASCII_P "Color and load it again.\n\n"
+                .ASCII_W "Press SPACE to continue.\n"
+
 WRN_NO_GB_FILES .ASCII_P "This folder does not contain\n"
                 .ASCII_P "any Game Boy cartridges\n"
                 .ASCII_P "(*.gb or *.gbc files)\n\n"
+                .ASCII_W "Press SPACE to continue"
+
+WRN_NO_CLASSIC_FILES
+                .ASCII_P "This folder does not contain\n"
+                .ASCII_P "any Game Boy cartridges\n"
+                .ASCII_P "for Classic mode (*.gb)\n\n"
                 .ASCII_W "Press SPACE to continue"
 
 ; This needs to be the last thing before the "Variables" sections starts
@@ -579,8 +707,9 @@ END_OF_ROM      .DW 0
 #endif
 
 ;
-; add your own variables here
-;
+; Last successfully validated cartridge. A rejected load leaves this value
+; unchanged because the previously running cartridge also remains intact.
+LOADED_CART_KIND .BLOCK 1
 
 ; M2M Shell variables (only include, if you included "shell.asm" above)
 #include "../../M2M/rom/shell_vars.asm"
@@ -592,17 +721,17 @@ END_OF_ROM      .DW 0
 ; The On-Screen-Menu uses the heap for several data structures. This heap
 ; is located before the main system heap in memory.
 ; You need to deduct MENU_HEAP_SIZE from the actual heap size below.
-; Example: If your HEAP_SIZE would be 29696, then you write 29696-1344=28352
+; Example: If your HEAP_SIZE would be 29696, then you write 29696-1408=28288
 ; instead, but when doing the sanity check calculations, you use 29696
 ;
 ; Sizing (see the two checks in M2M/rom/options.asm): the OSM needs
-; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (777 for
-; the 78-line menu) plus four arrays of OPTM_SIZE words (312) plus the
+; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (814 for
+; the 82-line menu) plus four arrays of OPTM_SIZE words (328) plus the
 ; percent-s scratch area: (OPTM_DX+2) x (submenus + CRT/ROM items + 1),
-; which is 25 x 7 = 175 with five submenus. Total 1284; 1344 keeps a small
+; which is 29 x 7 = 203 with five submenus. Total 1364; 1408 keeps a small
 ; reserve without stealing more file browser heap than necessary (every
 ; word spent here is one word less for sorted directory entries).
-MENU_HEAP_SIZE  .EQU 1344
+MENU_HEAP_SIZE  .EQU 1408
 
 #ifndef RELEASE
 
@@ -610,14 +739,14 @@ MENU_HEAP_SIZE  .EQU 1344
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 5824                       ; 7168 - 1344 = 5824
+HEAP_SIZE       .EQU 5760                       ; 7168 - 1408 = 5760
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 28352                      ; 29696 - 1344 = 28352
+HEAP_SIZE       .EQU 28288                      ; 29696 - 1408 = 28288
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract

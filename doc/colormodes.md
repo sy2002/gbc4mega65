@@ -7,13 +7,13 @@ looked exactly right on the real hardware.
 
 This is why the on-screen-menu offers a "Color Mode" section with two modes:
 
-* **Fully Saturated**: The raw RGB values of the Game Boy Color are shown
-  without any processing.
-
 * **LCD Emulation** (default): A color grading is applied that approximates
   how the colors looked on the historical LCD screen. It is based on the
   well-known color-correction used by MiSTer. Because most games were
   designed with that screen in mind, this is the default.
+
+* **Fully Saturated**: The raw RGB values of the Game Boy Color are shown
+  without any processing.
 
 ## Comparison
 

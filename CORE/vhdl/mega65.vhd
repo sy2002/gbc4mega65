@@ -242,8 +242,8 @@ signal video_rst              : std_logic;
 
 constant C_MENU_GB_CLASSIC    : natural := 6;
 constant C_MENU_GB_COLOR      : natural := 7;
-constant C_MENU_COL_SATURATED : natural := 11;
-constant C_MENU_COL_LCDEMU    : natural := 12;
+constant C_MENU_COL_LCDEMU    : natural := 11;
+constant C_MENU_COL_SATURATED : natural := 12;
 constant C_MENU_JOY_STD_A     : natural := 17;
 constant C_MENU_JOY_STD_B     : natural := 18;
 constant C_MENU_JOY_UP_A      : natural := 19;
@@ -253,24 +253,24 @@ constant C_MENU_HDMI_640_60   : natural := 27;
 constant C_MENU_HDMI_480_5994 : natural := 28;
 constant C_MENU_HDMI_800_60   : natural := 29;
 constant C_MENU_HDMI_FF       : natural := 31;
-constant C_MENU_HDMI_ZOOM     : natural := 32;
-constant C_MENU_HDMI_FLT_NO_FILTER     : natural := 38;
-constant C_MENU_HDMI_FLT_SHARP         : natural := 39;
-constant C_MENU_HDMI_FLT_BICUBIC       : natural := 40;
-constant C_MENU_HDMI_FLT_SMOOTH        : natural := 41;
-constant C_MENU_HDMI_FLT_LANCZOS       : natural := 42;
-constant C_MENU_HDMI_FLT_SCANLINES     : natural := 43;
-constant C_MENU_HDMI_FLT_CRT_SVIDEO    : natural := 44;
-constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 45;
-constant C_MENU_VGA_STD       : natural := 51;
-constant C_MENU_VGA_15KHZHSVS : natural := 55;
-constant C_MENU_VGA_15KHZCS   : natural := 56;
-constant C_MENU_IMPROVE_AUDIO : natural := 73;
+constant C_MENU_HDMI_HANDHELD : natural := 35;
+constant C_MENU_HDMI_FLT_NO_FILTER     : natural := 42;
+constant C_MENU_HDMI_FLT_SHARP         : natural := 43;
+constant C_MENU_HDMI_FLT_BICUBIC       : natural := 44;
+constant C_MENU_HDMI_FLT_SMOOTH        : natural := 45;
+constant C_MENU_HDMI_FLT_LANCZOS       : natural := 46;
+constant C_MENU_HDMI_FLT_SCANLINES     : natural := 47;
+constant C_MENU_HDMI_FLT_CRT_SVIDEO    : natural := 48;
+constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 49;
+constant C_MENU_VGA_STD       : natural := 55;
+constant C_MENU_VGA_15KHZHSVS : natural := 59;
+constant C_MENU_VGA_15KHZCS   : natural := 60;
+constant C_MENU_IMPROVE_AUDIO : natural := 77;
 
--- OSM Scaling radio (AExp pattern): line 62 (100%, the default) maps to bit 0 of
--- the 9-bit slice and line 70 (50%) maps to bit 8; the framework decodes the
+-- OSM Scaling radio (AExp pattern): line 66 (100%, the default) maps to bit 0 of
+-- the 9-bit slice and line 74 (50%) maps to bit 8; the framework decodes the
 -- one-hot vector with first_nonzero_bit (M2M/vhdl/av_pipeline/av_pipeline.vhd)
-subtype C_MENU_OSM_SCALING is natural range 70 downto 62;
+subtype C_MENU_OSM_SCALING is natural range 74 downto 66;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -568,7 +568,7 @@ begin
    qnice_dvi_o                <= '0';                                         -- 0=HDMI (with sound), 1=DVI (no sound)
    qnice_audio_mute_o         <= '0';                                         -- audio is not muted
    qnice_audio_filter_o       <= qnice_osm_control_i(C_MENU_IMPROVE_AUDIO);   -- 0 = raw audio, 1 = use filters from globals.vhd
-   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_ZOOM);       -- crop the black border on HDMI
+   qnice_zoom_crop_o          <= qnice_osm_control_i(C_MENU_HDMI_HANDHELD);   -- Handheld LCD (10:9); low selects TV-style (4:3)
 
    -- VGA output modes, see also the VGA submenu in config.vhd:
    --    "Standard VGA":                      scandoubler on,  retro15kHz off, csync off

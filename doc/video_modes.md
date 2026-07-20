@@ -32,13 +32,19 @@ reach, so a slow tear line can remain in this mode.
 or an analog retro monitor. The dithering makes the sync frequency of the
 analog output step slightly, which analog displays dislike.
 
-### HDMI: Zoom-in
+### HDMI Aspect Ratio
 
-"HDMI: Zoom-in" is switched off by default, so you see the picture centered
-in the Super-Game-Boy-style 256x224 frame. Switch it on to crop the black
-border so that the 160x144 Game Boy picture fills the height of the screen:
-at 720p this results in a razor-sharp 5x integer scaling - the way the
-classic V0.8 release of this core displayed the picture.
+The **Aspect Ratio** group offers two picture presentations:
+
+* **Handheld LCD (10:9)** (default) crops the black border and fits the
+  160x144 picture at the physical aspect ratio of the Game Boy LCD. In the
+  default 720p mode it occupies a centered 800x720 rectangle: every Game Boy
+  pixel becomes an exact 5x5 block, with pillarboxing on a 16:9 display.
+* **TV-style (4:3)** retains the complete Super-Game-Boy-style 256x224 canvas
+  and presents it as it would appear on a traditional television.
+
+This setting changes only the HDMI output; all three analog VGA modes keep
+their existing picture geometry.
 
 ## HDMI filters
 
