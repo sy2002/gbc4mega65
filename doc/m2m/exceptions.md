@@ -54,6 +54,42 @@ The `M2M` folder is based on the official MiSTer2MEGA65 release V2.0.1
 remote `upstream`) with the Game Boy-specific crop and the focused framework
 backports documented below.
 
+### Upstream M2M fix: restore HyperRAM placement pblock
+
+The four-word HyperRAM receive FIFO is implemented as distributed RAM, and
+`M2M/common.xdc` deliberately requires the paths from the input IDDRs to this
+FIFO to stay below 2 ns. Without a physical placement constraint, unrelated
+netlist changes can let the placer move the FIFO away from the fixed HyperRAM
+I/O bank and violate this interface requirement.
+
+The permanent upstream fix restores the historical HyperRAM placement pblock
+in all four board constraint files, without changing the 2 ns timing
+constraint or any framework interface:
+
+```tcl
+# Place HyperRAM close to I/O pins
+create_pblock pblock_i_hyperram
+add_cells_to_pblock pblock_i_hyperram [get_cells [list i_framework/i_hyperram]]
+resize_pblock pblock_i_hyperram -add {SLICE_X0Y200:SLICE_X7Y224}
+```
+
+Affected files:
+
+* `M2M/MEGA65-R3.xdc`
+* `M2M/MEGA65-R4.xdc`
+* `M2M/MEGA65-R5.xdc`
+* `M2M/MEGA65-R6.xdc`
+
+On R3, a controlled place-and-route experiment from the same optimized
+checkpoint improved the `hr_rwds` WNS from -0.180 ns (six failing endpoints)
+to +0.430 ns, with overall WNS +0.219 ns. The receive FIFO moved from
+X10/X14, Y195-196 to X2, Y207-210 next to the HyperRAM I/O, reducing the worst
+IDDR-to-FIFO routing delay from 1.474 ns to 0.864 ns.
+
+When updating M2M: drop this local backport once the target framework release
+contains the same placement constraint; otherwise re-apply it to all four
+board files.
+
 ### M2M/vhdl/av_pipeline/crop.vhd: Game Boy crop window
 
 The crop window constants (used by the "Handheld LCD (10:9)" aspect option) are
