@@ -98,7 +98,7 @@ the most important hints:
   two [color modes](doc/colormodes.md) and configure the
   [video output](doc/video_modes.md). The core remembers all your settings
   as soon as the settings file from the release ZIP is in the `/gbc` folder
-  (Installation, step 6).
+  (Installation, step 5).
 
 Some demo pictures
 ------------------
