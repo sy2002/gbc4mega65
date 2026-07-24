@@ -249,43 +249,43 @@ constant C_MENU_JOY_STD_A     : natural := 17;
 constant C_MENU_JOY_STD_B     : natural := 18;
 constant C_MENU_JOY_UP_A      : natural := 19;
 constant C_MENU_JOY_UP_B      : natural := 20;
-constant C_MENU_ASSIST_OFF    : natural := 23;
-constant C_MENU_ASSIST_SOFT   : natural := 24;
-constant C_MENU_ASSIST_FULL   : natural := 25;
-constant C_MENU_HDMI_720P_60  : natural := 31;
-constant C_MENU_HDMI_640_60   : natural := 32;
-constant C_MENU_HDMI_480_5994 : natural := 33;
-constant C_MENU_HDMI_800_60   : natural := 34;
-constant C_MENU_HDMI_FF       : natural := 36;
-constant C_MENU_HDMI_HANDHELD_SMALL  : natural := 40;
-constant C_MENU_HDMI_HANDHELD_MEDIUM : natural := 41;
-constant C_MENU_HDMI_HANDHELD_FULL   : natural := 42;
-constant C_MENU_HDMI_TV              : natural := 43;
-constant C_MENU_HDMI_FLT_NO_FILTER     : natural := 49;
-constant C_MENU_HDMI_FLT_SHARP         : natural := 50;
-constant C_MENU_HDMI_FLT_BICUBIC       : natural := 51;
-constant C_MENU_HDMI_FLT_SMOOTH        : natural := 52;
-constant C_MENU_HDMI_FLT_LANCZOS       : natural := 53;
-constant C_MENU_HDMI_FLT_SCANLINES     : natural := 54;
-constant C_MENU_HDMI_FLT_CRT_SVIDEO    : natural := 55;
-constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 56;
-constant C_MENU_VGA_STD       : natural := 62;
-constant C_MENU_VGA_15KHZHSVS : natural := 66;
-constant C_MENU_VGA_15KHZCS   : natural := 67;
-constant C_MENU_IMPROVE_AUDIO : natural := 110;
+constant C_MENU_ASSIST_OFF    : natural := 24;
+constant C_MENU_ASSIST_SOFT   : natural := 25;
+constant C_MENU_ASSIST_FULL   : natural := 26;
+constant C_MENU_HDMI_720P_60  : natural := 32;
+constant C_MENU_HDMI_640_60   : natural := 33;
+constant C_MENU_HDMI_480_5994 : natural := 34;
+constant C_MENU_HDMI_800_60   : natural := 35;
+constant C_MENU_HDMI_FF       : natural := 37;
+constant C_MENU_HDMI_HANDHELD_SMALL  : natural := 41;
+constant C_MENU_HDMI_HANDHELD_MEDIUM : natural := 42;
+constant C_MENU_HDMI_HANDHELD_FULL   : natural := 43;
+constant C_MENU_HDMI_TV              : natural := 44;
+constant C_MENU_HDMI_FLT_NO_FILTER     : natural := 50;
+constant C_MENU_HDMI_FLT_SHARP         : natural := 51;
+constant C_MENU_HDMI_FLT_BICUBIC       : natural := 52;
+constant C_MENU_HDMI_FLT_SMOOTH        : natural := 53;
+constant C_MENU_HDMI_FLT_LANCZOS       : natural := 54;
+constant C_MENU_HDMI_FLT_SCANLINES     : natural := 55;
+constant C_MENU_HDMI_FLT_CRT_SVIDEO    : natural := 56;
+constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 57;
+constant C_MENU_VGA_STD       : natural := 63;
+constant C_MENU_VGA_15KHZHSVS : natural := 67;
+constant C_MENU_VGA_15KHZCS   : natural := 68;
+constant C_MENU_IMPROVE_AUDIO : natural := 111;
 
--- OSM Scaling radio (AExp pattern): line 73 (100%, the default) maps to bit 0 of
--- the 9-bit slice and line 81 (50%) maps to bit 8; the framework decodes the
+-- OSM Scaling radio (AExp pattern): line 74 (100%, the default) maps to bit 0 of
+-- the 9-bit slice and line 82 (50%) maps to bit 8; the framework decodes the
 -- one-hot vector with first_nonzero_bit (M2M/vhdl/av_pipeline/av_pipeline.vhd)
-subtype C_MENU_OSM_SCALING is natural range 81 downto 73;
+subtype C_MENU_OSM_SCALING is natural range 82 downto 74;
 
 -- Volume submenu (master volume slider, 5% steps): a 21-way radio group decoded
 -- into main_volume (see volume_decode_proc below) and applied as a perceptual
--- attenuation in main.vhd (C_VOL_LUT). Line 87 (100%, the default) is
--- C_MENU_VOLUME'low, line 107 (0%/mute) is C_MENU_VOLUME'high. Like
+-- attenuation in main.vhd (C_VOL_LUT). Line 88 (100%, the default) is
+-- C_MENU_VOLUME'low, line 108 (0%/mute) is C_MENU_VOLUME'high. Like
 -- C_MENU_OSM_SCALING this is HDL-only and is deliberately not scraped into the
 -- firmware (the make_rom.sh awk scraper matches "constant C_MENU_", not subtypes).
-subtype C_MENU_VOLUME is natural range 107 downto 87;
+subtype C_MENU_VOLUME is natural range 108 downto 88;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -504,7 +504,7 @@ begin
       main_volume <= 20;                                        -- default 100%
       for b in C_MENU_VOLUME'low to C_MENU_VOLUME'high loop
          if main_osm_control_i(b) = '1' then
-            main_volume <= C_MENU_VOLUME'high - b;              -- bit 87 -> 20 (100%) .. bit 107 -> 0 (0%)
+            main_volume <= C_MENU_VOLUME'high - b;              -- bit 88 -> 20 (100%) .. bit 108 -> 0 (0%)
          end if;
       end loop;
    end process volume_decode_proc;

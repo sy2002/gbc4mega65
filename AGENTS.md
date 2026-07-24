@@ -194,7 +194,7 @@ No-hardware verification that MUST stay green after changes:
   (`lcd.v` needs SystemVerilog; exclude the unused MiSTer files listed in §3)
 - a menu-consistency check: `OPTM_SIZE` == #OPTM_ITEMS lines == #OPTM_GROUPS entries,
   every `C_MENU_*` index points at the intended label, main view rows == `OPTM_DY`
-- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=115) bytes
+- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=116) bytes
 
 ---
 

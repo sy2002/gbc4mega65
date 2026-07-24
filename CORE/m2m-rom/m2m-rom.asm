@@ -725,12 +725,12 @@ LOADED_CART_KIND .BLOCK 1
 ; instead, but when doing the sanity check calculations, you use 29696
 ;
 ; Sizing (the two checks in M2M/rom/options.asm): heap 1 holds the menu itself -
-; OPTM_STRUCTSIZE (20) plus the OPTM_ITEMS string incl. terminator (1222 for the
-; 115-line menu) plus four OPTM_SIZE-word arrays (groups, selectors, lines,
-; dependencies = 4 x 115 = 460) plus 1, i.e. 1703. Heap 2 (OPTM_HEAP) holds the
+; OPTM_STRUCTSIZE (20) plus the OPTM_ITEMS string incl. terminator (1224 for the
+; 116-line menu) plus four OPTM_SIZE-word arrays (groups, selectors, lines,
+; dependencies = 4 x 116 = 464) plus 1, i.e. 1709. Heap 2 (OPTM_HEAP) holds the
 ; "%s" scratch strings: (OPTM_DX+2) x (VDRIVES_NUM + submenus + CRT/ROM items + 1)
-; = 30 x (0 + 6 + 1 + 1) = 240 with six submenus. Total 1943; 1984 keeps a small
-; ~41-word reserve without stealing more file browser heap than necessary (every
+; = 30 x (0 + 6 + 1 + 1) = 240 with six submenus. Total 1949; 1984 keeps a small
+; ~35-word reserve without stealing more file browser heap than necessary (every
 ; word spent here is one word less for sorted directory entries). Since M2M V2.1.0
 ; the dependency array (OPTM_IR_DEPS) is reserved unconditionally, even when no
 ; OPTM_DEP() is declared, hence the fourth OPTM_SIZE-word array above.
