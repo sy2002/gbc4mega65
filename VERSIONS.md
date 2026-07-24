@@ -9,8 +9,7 @@ WIP
 * New "Jump & Run Improvements" in the Joystick Mode menu: when jumping with
   the stick (mappings "Up=A, Fire=B" and "Up=B, Fire=A"), the core now
   preserves the forward momentum and the jump height that quick stick flicks
-  would otherwise lose. Three settings: Off, Soft (default) and Full.
-  See doc/jumpnrun.md for the full story.
+  would otherwise lose.
 
 Version 1.0 - July 21, 2026
 ===========================
