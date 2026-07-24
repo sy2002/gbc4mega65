@@ -44,6 +44,11 @@ entity main is
       gb_joy_map_i            : in  std_logic_vector(1 downto 0); -- joystick mapping, see keyboard.vhd
       gb_saturated_colors_i   : in  std_logic;              -- 1 = fully saturated GBC colors, 0 = LCD emulation
 
+      -- Master volume from the OSM "Volume" slider (5% steps): 0..20 = 0%..100%.
+      -- Applied as a perceptual, loudness-linear attenuation to the audio output
+      -- below, so it affects the HDMI and the analog audio path equally.
+      audio_volume_i          : in  natural range 0 to 20;
+
       -- 1 = the analog output runs in one of the retro 15 kHz modes (no scandoubler);
       -- needed to generate the correct overlay clock enable, see p_ce_ovl below
       video_retro15kHz_i      : in  std_logic;
@@ -156,6 +161,18 @@ architecture synthesis of main is
    -- audio: gbc_snd delivers 16-bit UNSIGNED audio that is not centered around 0x8000
    signal main_audio_l           : std_logic_vector(15 downto 0);
    signal main_audio_r           : std_logic_vector(15 downto 0);
+
+   -- Master-volume LUT (used by audio_volume_proc): perceptual, loudness-linear
+   -- attenuation for the OSM "Volume" slider. Each 5% step is a 5 percentage-point
+   -- change in *perceived* loudness, so 50% sounds half as loud as 100% (-10 dB),
+   -- 25% a quarter (-20 dB), and so on. The amplitude gain therefore follows
+   -- (percent/100)^1.661, stored here as unsigned Q15 (0x8000 = gain 1.0).
+   -- Index 0 = 0% (mute) .. index 20 = 100% (bit-transparent).
+   type vol_lut_t is array (0 to 20) of unsigned(15 downto 0);
+   constant C_VOL_LUT : vol_lut_t := (
+      x"0000", x"00E2", x"02CB", x"057B", x"08D6", x"0CCD", x"1154", x"1662",
+      x"1BF1", x"21FB", x"287A", x"2F6C", x"36CB", x"3E96", x"46C8", x"4F60",
+      x"585C", x"61B8", x"6B73", x"758C", x"8000");
 
    -- video clock domain
    signal video_ce_pix           : std_logic;
@@ -403,14 +420,38 @@ begin
                      '1' when video_sd_phase = 1 or video_sd_phase = 3 else -- scandoubled
                      '0';
 
-   -- Convert the Game Boy's unsigned audio to M2M's signed PCM format.
-   -- gbc_snd's output is unsigned and NOT centered around 0x8000 (the center drifts with
-   -- the number of active voices), so we use a logical shift right by one - silence stays
-   -- at level 0 and the maximum stays in the positive range. Do not use an arithmetic
-   -- shift or a plain "minus 0x8000" conversion here: both lead to loud crackling
-   -- (verified in the original gbc4mega65 with Dig Dug and Super Mario Land 1).
-   audio_left_o  <= signed("0" & main_audio_l(15 downto 1));
-   audio_right_o <= signed("0" & main_audio_r(15 downto 1));
+   -- Convert the Game Boy's unsigned audio to M2M's signed PCM format and apply the
+   -- OSM master-volume attenuation in one registered step.
+   --
+   -- Conversion: gbc_snd's output is unsigned and NOT centered around 0x8000 (the center
+   -- drifts with the number of active voices), so we use a logical shift right by one -
+   -- silence stays at level 0 and the maximum stays in the positive range. Do not use an
+   -- arithmetic shift or a plain "minus 0x8000" conversion here: both lead to loud
+   -- crackling (verified in the original gbc4mega65 with Dig Dug and Super Mario Land 1).
+   --
+   -- Volume: multiply the converted sample by the Q15 gain from C_VOL_LUT (audio_volume_i
+   -- selects the slider step). The gain is always <= 1.0 so the result can never clip, and
+   -- at 100% (0x8000) the multiply is bit-transparent (audio identical to the pre-volume
+   -- core). Registered on clk_main_i so Vivado maps the products to pipelined DSP48
+   -- slices; the one-cycle latency (~30 ns) is inaudible. This is the single point that
+   -- feeds both the HDMI and the analog audio path, so the slider works on both outputs.
+   audio_volume_proc : process (clk_main_i)
+      variable conv_l : signed(15 downto 0);
+      variable conv_r : signed(15 downto 0);
+      variable gain   : signed(16 downto 0);
+      variable prod_l : signed(32 downto 0);
+      variable prod_r : signed(32 downto 0);
+   begin
+      if rising_edge(clk_main_i) then
+         conv_l        := signed("0" & main_audio_l(15 downto 1));
+         conv_r        := signed("0" & main_audio_r(15 downto 1));
+         gain          := signed('0' & std_logic_vector(C_VOL_LUT(audio_volume_i)));
+         prod_l        := conv_l * gain;         -- signed(16) * signed(17) = signed(33)
+         prod_r        := conv_r * gain;
+         audio_left_o  <= prod_l(30 downto 15);  -- arithmetic >>15: back to signed(16)
+         audio_right_o <= prod_r(30 downto 15);
+      end if;
+   end process audio_volume_proc;
 
    -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
    -- both MEGA65 joystick ports work in parallel (exactly like the original gbc4mega65)

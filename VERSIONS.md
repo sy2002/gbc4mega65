@@ -1,3 +1,11 @@
+Version WIP-V2-A1 - MONTH DAY, YEAR
+===================================
+
+WIP
+
+* Adjust the audio volume via the OSM. Implemented as a perceptual,
+  loudness-linear attenuation: 50% means half as loud as 100%.
+
 Version 1.0 - July 21, 2026
 ===========================
 
@@ -10,18 +18,18 @@ output and many quality-of-life improvements.
 
 Features:
 
-- Game Boy and Game Boy Color support with broad compatibility
+* Game Boy and Game Boy Color support with broad compatibility
   for game images up to 1 MB
-- MEGA65 R3/R3A, R4, R5 and R6 support
-- Included open-source SameBoy Color BIOS, plus easy switching between
+* MEGA65 R3/R3A, R4, R5 and R6 support
+* Included open-source SameBoy Color BIOS, plus easy switching between
   Classic and Color modes
-- Support for both joystick ports, with several useful button mappings
-- Four HDMI modes, flicker-free output, handheld-correct 10:9 or TV-style 4:3
+* Support for both joystick ports, with several useful button mappings
+* Four HDMI modes, flicker-free output, handheld-correct 10:9 or TV-style 4:3
   aspect ratio, and eight scaling filters
-- Standard 31 kHz VGA plus two retro 15 kHz modes
+* Standard 31 kHz VGA plus two retro 15 kHz modes
   for compatible displays and CRTs
-- Sound over HDMI and the MEGA65's 3.5 mm audio jack
-- Authentic Game Boy Color LCD grading or fully saturated colors
+* Sound over HDMI and the MEGA65's 3.5 mm audio jack
+* Authentic Game Boy Color LCD grading or fully saturated colors
 
 Please note: game images larger than 1 MB, battery-backed savegames,
 link-cable play, Super Game Boy features, save states and cheats

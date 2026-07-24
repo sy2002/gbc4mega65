@@ -269,12 +269,20 @@ constant C_MENU_HDMI_FLT_CRT_COMPOSITE : natural := 51;
 constant C_MENU_VGA_STD       : natural := 57;
 constant C_MENU_VGA_15KHZHSVS : natural := 61;
 constant C_MENU_VGA_15KHZCS   : natural := 62;
-constant C_MENU_IMPROVE_AUDIO : natural := 79;
+constant C_MENU_IMPROVE_AUDIO : natural := 105;
 
 -- OSM Scaling radio (AExp pattern): line 68 (100%, the default) maps to bit 0 of
 -- the 9-bit slice and line 76 (50%) maps to bit 8; the framework decodes the
 -- one-hot vector with first_nonzero_bit (M2M/vhdl/av_pipeline/av_pipeline.vhd)
 subtype C_MENU_OSM_SCALING is natural range 76 downto 68;
+
+-- Volume submenu (master volume slider, 5% steps): a 21-way radio group decoded
+-- into main_volume (see volume_decode_proc below) and applied as a perceptual
+-- attenuation in main.vhd (C_VOL_LUT). Line 82 (100%, the default) is
+-- C_MENU_VOLUME'low, line 102 (0%/mute) is C_MENU_VOLUME'high. Like
+-- C_MENU_OSM_SCALING this is HDL-only and is deliberately not scraped into the
+-- firmware (the make_rom.sh awk scraper matches "constant C_MENU_", not subtypes).
+subtype C_MENU_VOLUME is natural range 102 downto 82;
 
 ---------------------------------------------------------------------------------------------
 -- main_clk (MiSTer core's clock)
@@ -282,6 +290,10 @@ subtype C_MENU_OSM_SCALING is natural range 76 downto 68;
 
 -- Game Boy configuration from the on-screen-menu
 signal main_gb_joy_map        : std_logic_vector(1 downto 0);
+
+-- OSM "Volume" slider step: 0 = 0%/mute .. 20 = 100% (5% each), decoded from the
+-- C_MENU_VOLUME radio group and applied as an attenuation in main.vhd
+signal main_volume            : natural range 0 to 20;
 
 -- Cartridge state and header flags after clock domain crossing
 signal main_cart_loaded       : std_logic;
@@ -468,6 +480,22 @@ begin
                       "11" when main_osm_control_i(C_MENU_JOY_UP_B)  = '1' else
                       "00";
 
+   -- Master volume: the OSM "Volume" slider (C_MENU_VOLUME) is a 21-way radio group
+   -- in 5% steps. Its lowest bit (C_MENU_VOLUME'low) is 100% and its highest bit is
+   -- 0%, so translate the one-hot selection into a 0..20 step index (0 = 0%/mute,
+   -- 20 = 100%). Default to 100% if nothing is (yet) selected, so an all-zero config
+   -- file is safe. The perceptual attenuation itself is applied in main.vhd (C_VOL_LUT
+   -- there), so it affects the HDMI and the analog audio output alike.
+   volume_decode_proc : process (all)
+   begin
+      main_volume <= 20;                                        -- default 100%
+      for b in C_MENU_VOLUME'low to C_MENU_VOLUME'high loop
+         if main_osm_control_i(b) = '1' then
+            main_volume <= C_MENU_VOLUME'high - b;              -- bit 82 -> 20 (100%) .. bit 102 -> 0 (0%)
+         end if;
+      end loop;
+   end process volume_decode_proc;
+
    -- main.vhd contains the actual MiSTer core
    i_main : entity work.main
       generic map (
@@ -487,6 +515,9 @@ begin
          gb_color_i           => main_osm_control_i(C_MENU_GB_COLOR),
          gb_joy_map_i         => main_gb_joy_map,
          gb_saturated_colors_i => not main_osm_control_i(C_MENU_COL_LCDEMU),
+
+         -- Master volume (OSM "Volume" slider): 0..20 step index = 0%..100%
+         audio_volume_i       => main_volume,
 
          -- the overlay clock enable depends on whether the scandoubler is active
          video_retro15kHz_i   => main_osm_control_i(C_MENU_VGA_15KHZHSVS) or
