@@ -308,6 +308,7 @@ constant SEL_OPTM_SAVING_STR  : std_logic_vector(15 downto 0) := x"030A";
 constant SEL_OPTM_HELP        : std_logic_vector(15 downto 0) := x"0310";
 constant SEL_OPTM_CRTROM      : std_logic_vector(15 downto 0) := x"0311";
 constant SEL_OPTM_CRTROM_STR  : std_logic_vector(15 downto 0) := x"0312";
+constant SEL_OPTM_DEPS        : std_logic_vector(15 downto 0) := x"0313";
 
 -- !!! DO NOT TOUCH !!! Configuration constants for OPTM_GROUPS (shell.asm and menu.asm expect them to be like this)
 constant OPTM_G_TEXT       : integer := 16#00000#;         -- text that cannot be selected
@@ -324,8 +325,11 @@ constant OPTM_G_MOUNT_DRV  : integer := 16#08800#;        -- line item means: mo
 constant OPTM_G_HELP       : integer := 16#0A000#;        -- line item means: help screen; first occurance = WHS(1), second = WHS(2), ...
 constant OPTM_G_SUBMENU    : integer := 16#0C000#;        -- starts/ends a section that is treated as submenu
 constant OPTM_G_LOAD_ROM   : integer := 16#18000#;        -- line item means: load ROM; first occurance = rom 0, second = rom 1, ...
+constant OPTM_G_DEPENDENT  : integer := 16#20000000#;      -- dependent line (smart dependencies, see OPTM_DEP below): visible only
+                                                           -- while a specific item of a specific mother group is selected (bit 29)
 
-constant OPTM_GTC          : natural := 17;                -- Amount of significant bits in OPTM_G_* constants
+constant OPTM_GTC          : natural := 30;                -- Amount of significant bits in OPTM_G_* constants (max 30: 2**31 overflows
+                                                           -- the integer range expression below); was 17 before the smart-dependencies feature
 
 --------------------------------------------------------------------------------------------------------------------
 -- "Help" menu / Options menu: START YOUR CONFIGURATION BELOW THIS LINE
@@ -495,6 +499,12 @@ constant OPTM_G_VOLUME     : integer := 14;     -- Volume Control (decoded in me
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
+
+-- !!! DO NOT TOUCH THE FUNCTION DEFINITION IN THE NEXT FOUR LINES
+function OPTM_DEP(mother : natural; item : natural) return natural is
+begin
+   return OPTM_G_DEPENDENT + (item * 16#02000000#) + (mother * 16#00020000#);
+end function OPTM_DEP;
 
 -- define your menu groups: which menu items are belonging together to form a group?
 -- where are separator lines? which items should be selected by default?
@@ -744,6 +754,14 @@ begin
             when SEL_OPTM_CRTROM       => data_o <= x"000" & "000" & std_logic(to_unsigned(OPTM_GROUPS(index), OPTM_GTC)(16));
             when SEL_OPTM_ICOUNT       => data_o <= x"00" & std_logic_vector(to_unsigned(OPTM_SIZE, 8));
             when SEL_OPTM_DIMENSIONS   => data_o <= getDXDY(OPTM_DX, OPTM_DY, index);
+            when SEL_OPTM_DEPS         => if index = 4095 then               -- smart dependencies (OPTM_DEP):
+                                            data_o <= x"1DEF";               -- magic "DEPendency Format 1" feature probe
+                                          else                               -- per line: {000, flag(b29), item(b28..25), mother(b24..17)}
+                                            data_o <= "000" &
+                                                      std_logic(to_unsigned(OPTM_GROUPS(index), OPTM_GTC)(29)) &
+                                                      std_logic_vector(to_unsigned(OPTM_GROUPS(index), OPTM_GTC)(28 downto 25)) &
+                                                      std_logic_vector(to_unsigned(OPTM_GROUPS(index), OPTM_GTC)(24 downto 17));
+                                          end if;
 
             when others                => null;
          end case;

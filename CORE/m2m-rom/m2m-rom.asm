@@ -721,18 +721,20 @@ LOADED_CART_KIND .BLOCK 1
 ; The On-Screen-Menu uses the heap for several data structures. This heap
 ; is located before the main system heap in memory.
 ; You need to deduct MENU_HEAP_SIZE from the actual heap size below.
-; Example: If your HEAP_SIZE would be 29696, then you write 29696-1856=27840
+; Example: If your HEAP_SIZE would be 29696, then you write 29696-1984=27712
 ; instead, but when doing the sanity check calculations, you use 29696
 ;
 ; Sizing (the two checks in M2M/rom/options.asm): heap 1 holds the menu itself -
-; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (1222 for the
-; 115-line menu) plus three OPTM_SIZE-word arrays (groups, selectors, lines =
-; 3 x 115 = 345) plus 1, i.e. 1587. Heap 2 (OPTM_HEAP) holds the "%s" scratch
-; strings: (OPTM_DX+2) x (VDRIVES_NUM + submenus + CRT/ROM items + 1) =
-; 30 x (0 + 6 + 1 + 1) = 240 with six submenus. Total 1827; 1856 keeps a small
-; ~29-word reserve without stealing more file browser heap than necessary (every
-; word spent here is one word less for sorted directory entries).
-MENU_HEAP_SIZE  .EQU 1856
+; OPTM_STRUCTSIZE (20) plus the OPTM_ITEMS string incl. terminator (1222 for the
+; 115-line menu) plus four OPTM_SIZE-word arrays (groups, selectors, lines,
+; dependencies = 4 x 115 = 460) plus 1, i.e. 1703. Heap 2 (OPTM_HEAP) holds the
+; "%s" scratch strings: (OPTM_DX+2) x (VDRIVES_NUM + submenus + CRT/ROM items + 1)
+; = 30 x (0 + 6 + 1 + 1) = 240 with six submenus. Total 1943; 1984 keeps a small
+; ~41-word reserve without stealing more file browser heap than necessary (every
+; word spent here is one word less for sorted directory entries). Since M2M V2.1.0
+; the dependency array (OPTM_IR_DEPS) is reserved unconditionally, even when no
+; OPTM_DEP() is declared, hence the fourth OPTM_SIZE-word array above.
+MENU_HEAP_SIZE  .EQU 1984
 
 #ifndef RELEASE
 
@@ -740,14 +742,14 @@ MENU_HEAP_SIZE  .EQU 1856
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 5312                       ; 7168 - 1856 = 5312
+HEAP_SIZE       .EQU 5184                       ; 7168 - 1984 = 5184
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 27840                      ; 29696 - 1856 = 27840
+HEAP_SIZE       .EQU 27712                      ; 29696 - 1984 = 27712
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract

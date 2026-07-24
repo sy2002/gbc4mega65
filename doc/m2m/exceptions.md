@@ -239,19 +239,67 @@ which is part of the upcoming M2M V2.1 `M2M/rom/tools.asm`. The same
 backport is used by the AExp core. When updating to M2M V2.1 or later:
 delete the local copy - the assembler will flag the duplicate label.
 
-### Backported from M2M V2.1: OSM "%s" scanner fix
+### Menu component tracked forward to M2M V2.1.0 (sub-sub menus + smart dependencies)
 
-`M2M/rom/menu.asm` `_OPTM_HM_1A` scans each label for a `%s` placeholder. In
-the V2.0.1 stock code, when a `%` is found that is *not* followed by `s`, the
-scanner had already advanced past the `%` and then skipped the following
-character too - so a `%` at the very end of a label swallowed the backslash of
-the trailing `\n`, the newline check never fired, and the menu item counter
-desynced for every item below. The fix branches back to `_OPTM_HM_0` (re-examine
-the current character) instead of `_OPTM_HM_2` (skip it), leaving the `\n`
-intact. This surfaced when the Volume submenu added labels ending in `%`
-(`" 100%\n"` down to `" 0%\n"`). Ported from the same M2M V2.1.0 fix carried by
-the C64 and AExp cores (AExp commit `28298bc`); when updating to M2M V2.1 or
-later this fix is already upstream.
+The self-contained Options-Menu component was updated from the V2.0.1 snapshot
+to the M2M V2.1.0 version taken from the C64 core (the C64 core is, together
+with AExp, the development testbed for the upcoming M2M V2.1.0). This *reduces*
+the deviation from upstream rather than adding one. Two capabilities arrive:
+**arbitrary-depth submenus** ("regions") and **dependent menu items** ("smart
+dependencies", `OPTM_DEP`).
+
+Adopted 1:1 from the C64 core:
+
+* `M2M/rom/menu_struct.asm` (new) - the region (nestable submenu) engine
+  (`OPTM_STRUCT_BUILD` / `OPTM_STRUCT_VAL` / `OPTM_SUMM_SCAN`), `#include`d at
+  the end of `menu.asm`.
+* `M2M/rom/optm_deps.asm` (new) - the smart-dependency engine (`OPTM_DEP_OK` /
+  `OPTM_DEPS_AFFECTS` / `OPTM_DEPS_RESOLVE` / `OPTM_DEPS_VAL`), `#include`d at
+  the end of `menu.asm`.
+* `M2M/rom/menu.asm`, `menu_vars.asm`, `options.asm`, `strings.asm` - the
+  older single-level snapshots replaced by the V2.1.0 versions (no gbc-specific
+  content existed in these framework files). `menu_vars.asm` swaps the
+  single-level `OPTM_MAINSEL` for the nested `OPTM_LVL_PARENT` /
+  `OPTM_LVL_OPENER` / `OPTM_FOREGROUND` bookkeeping.
+
+This also brings the OSM `%s` scanner fix (`_OPTM_HM_1A` branches back to
+`_OPTM_HM_0`, so a `%` at the end of a label no longer swallows the trailing
+`\n` and desyncs the item counter) upstream: it now matches the C64/AExp cores
+(AExp commit `28298bc`) rather than being a local patch. It first surfaced when
+the Volume submenu added labels ending in `%` (`" 100%\n"` down to `" 0%\n"`).
+
+Surgical core-side changes to expose the feature:
+
+* `M2M/rom/sysdef.asm` - one new constant `M2M$CFG_OPTM_DEPS .EQU 0x0313` (the
+  next free config-device slot). The unrelated C64 `M2M$ASCAL_POLYPHASE`
+  comment reword is deliberately *not* taken (gbc keeps `M2M$LOAD_POLYPHASE`
+  local, see above).
+* `CORE/vhdl/config.vhd` - five additive edits: the `SEL_OPTM_DEPS := x"0313"`
+  selector, the `OPTM_G_DEPENDENT` flag (bit 29), the `OPTM_DEP(mother, item)`
+  helper, `OPTM_GTC` widened 17 -> 30 (so the packed dependency bits survive
+  `to_unsigned`; `OPTM_GTYPE` becomes `0 .. 2**30-1`, still a legal integer),
+  and the `SEL_OPTM_DEPS` read arm (probe magic `0x1DEF` at index 4095, else the
+  per-line dependency word). No `M2M/vhdl` change is involved; the config device
+  just serves the new address.
+* `CORE/m2m-rom/m2m-rom.asm` - `MENU_HEAP_SIZE` raised 1856 -> 1984 (both
+  `HEAP_SIZE` deductions updated). The dependency array (`OPTM_IR_DEPS`) is
+  reserved unconditionally and the init record grew one word
+  (`OPTM_STRUCTSIZE` 19 -> 20), pushing the OSM heap-1 budget from 1587 to 1703
+  words; without the bump the OSM would FATAL on open.
+
+**Graceful degradation:** gbc declares no `OPTM_DEP()` on any menu line, so the
+probe reports the feature present but every line resolves to always-visible -
+the existing 115-line menu behaves identically. The capability is available for
+future menu work (e.g. hiding Color-Mode options in Classic mode).
+
+Deliberately **not** adopted from the C64 core (independent C64 evolution, out of
+scope, and would break gbc's documented deviations or its proven file browser):
+`tools.asm` / `filters.asm` (C64 polyphase API - collides with gbc's local
+`M2M$LOAD_POLYPHASE`), `llist.asm` / `dirbrowse.asm` (C64 `SLL$APPEND`/`SLL$SORT`
+file-browser refactor - the menu component uses no `SLL$` API), and `shell.asm`
+(C64 `HANDLE_CORE_IO` callback and `LOAD_IMAGE_TYPE`, which gbc does not define).
+When updating to M2M V2.1 or later, delete these exception notes as the menu
+component becomes stock.
 
 QNICE
 -----

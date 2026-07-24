@@ -15,8 +15,13 @@ OPTM_DY         .BLOCK 1
 ; currently active (sub)menu level; 0 means main menu
 OPTM_MENULEVEL  .BLOCK 1
 
-; selected menu item in main menu before diving into a submenu
-OPTM_MAINSEL    .BLOCK 1
+; leave bookkeeping, written by _OPTM_STRUCT on every structure build:
+; region id of the parent of the current menu level (0 = main menu) and
+; flat index of the opener line of the current menu level. _OPTM_RUN_SM_L
+; uses them to pop exactly one menu level with the cursor landing on the
+; label of the (sub)menu the user came from.
+OPTM_LVL_PARENT .BLOCK 1
+OPTM_LVL_OPENER .BLOCK 1
 
 ; currently selected menu item (real-time)
 OPTM_CUR_SEL    .BLOCK 1
@@ -29,6 +34,11 @@ OPTM_SSMS       .BLOCK 1
 
 ; ptr to the _OPTM_STRUCT menu struct. (only valid while OPTM_RUN is running)
 OPTM_STRUCT     .BLOCK 1
+
+; 1 while the options menu owns the visible surface and background updates may
+; paint it directly; 0 while the menu is closed or a selection callback may be
+; showing a browser, help page or another temporary surface
+OPTM_FOREGROUND .BLOCK 1
 
 ; temporary variable
 OPTM_TEMP       .BLOCK 1
