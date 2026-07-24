@@ -721,18 +721,18 @@ LOADED_CART_KIND .BLOCK 1
 ; The On-Screen-Menu uses the heap for several data structures. This heap
 ; is located before the main system heap in memory.
 ; You need to deduct MENU_HEAP_SIZE from the actual heap size below.
-; Example: If your HEAP_SIZE would be 29696, then you write 29696-1792=27904
+; Example: If your HEAP_SIZE would be 29696, then you write 29696-1856=27840
 ; instead, but when doing the sanity check calculations, you use 29696
 ;
 ; Sizing (the two checks in M2M/rom/options.asm): heap 1 holds the menu itself -
-; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (1174 for the
-; 110-line menu) plus three OPTM_SIZE-word arrays (groups, selectors, lines =
-; 3 x 110 = 330) plus 1, i.e. 1524. Heap 2 (OPTM_HEAP) holds the "%s" scratch
+; OPTM_STRUCTSIZE (19) plus the OPTM_ITEMS string incl. terminator (1222 for the
+; 115-line menu) plus three OPTM_SIZE-word arrays (groups, selectors, lines =
+; 3 x 115 = 345) plus 1, i.e. 1587. Heap 2 (OPTM_HEAP) holds the "%s" scratch
 ; strings: (OPTM_DX+2) x (VDRIVES_NUM + submenus + CRT/ROM items + 1) =
-; 30 x (0 + 6 + 1 + 1) = 240 with six submenus. Total 1764; 1792 keeps a small
-; ~28-word reserve without stealing more file browser heap than necessary (every
+; 30 x (0 + 6 + 1 + 1) = 240 with six submenus. Total 1827; 1856 keeps a small
+; ~29-word reserve without stealing more file browser heap than necessary (every
 ; word spent here is one word less for sorted directory entries).
-MENU_HEAP_SIZE  .EQU 1792
+MENU_HEAP_SIZE  .EQU 1856
 
 #ifndef RELEASE
 
@@ -740,14 +740,14 @@ MENU_HEAP_SIZE  .EQU 1792
 ; this needs to be the last variable before the monitor variables as it is
 ; only defined as "BLOCK 1" to avoid a large amount of null-values in
 ; the ROM file
-HEAP_SIZE       .EQU 5376                       ; 7168 - 1792 = 5376
+HEAP_SIZE       .EQU 5312                       ; 7168 - 1856 = 5312
 HEAP            .BLOCK 1
 
 ; in RELEASE mode: 28k of heap which leads to a better user experience when
 ; it comes to folders with a lot of files
 #else
 
-HEAP_SIZE       .EQU 27904                      ; 29696 - 1792 = 27904
+HEAP_SIZE       .EQU 27840                      ; 29696 - 1856 = 27840
 HEAP            .BLOCK 1
 
 ; The monitor variables use 22 words, round to 32 for being safe and subtract

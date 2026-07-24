@@ -52,7 +52,8 @@ Boy machine, new framework.
 └── CORE/
     ├── GameBoy/         vendored MiSTer core (gb.v, video.v = the PPU, lcd.v, T80/, ...)
     ├── vhdl/            the port: clk.vhd, main.vhd, mega65.vhd, config.vhd, globals.vhd,
-    │                    keyboard.vhd, mbc.sv (from old MEGA65/Verilog), lcd_wrapper.v
+    │                    keyboard.vhd, joystick_assist.vhd, mbc.sv (from old MEGA65/Verilog),
+    │                    lcd_wrapper.v
     ├── m2m-rom/         QNICE firmware: m2m-rom.asm + make_rom.sh + video_filters/ blobs
     ├── CORE-R{3,4,5,6}.xpr  one Vivado project per board (keep all four in sync!)
     ├── CORE.xdc         core constraints (flicker-free clocks — see §6 pitfalls)
@@ -117,6 +118,19 @@ inside lcd.v's 425×264 timing. This canvas is what makes the M2M on-screen-menu
 signed PCM is a **logical** shift right by one (`signed("0" & x(15 downto 1))`) —
 NOT arithmetic, NOT minus-0x8000 (both crackle; verified in the old core).
 
+### Input
+
+`keyboard.vhd` merges the MEGA65 keyboard and the (framework-debounced, both-ports-
+merged) joystick into the Game Boy P54 joypad matrix; the four mapping modes live
+there. `joystick_assist.vhd` sits between the port merge and keyboard.vhd (instantiated
+in `main.vhd`): the OSM "Jump & Run Improvements" (Off/Soft/Full radio, default Soft,
+decoded in `mega65.vhd`, hard-gated to the Up=A/Up=B mappings). It is deterministic
+time-shaping of the joystick vector only — bridge the horizontal direction during
+up-flick gestures, guarantee a minimum press/release width of "up" — with zero added
+press latency and no synthesized inputs. Rationale, measured Super Mario Land numbers
+and the millisecond windows: `doc/jumpnrun.md` (deliberately NOT linked from README.md
+until the next release goes online).
+
 ### QNICE devices (`CORE/vhdl/mega65.vhd`, ids in `globals.vhd`)
 
 - `C_DEV_GB_CART` (0x0100): 1 MB cartridge BRAM. Data = 4k windows 0x00–0xFF, one byte
@@ -180,7 +194,7 @@ No-hardware verification that MUST stay green after changes:
   (`lcd.v` needs SystemVerilog; exclude the unused MiSTer files listed in §3)
 - a menu-consistency check: `OPTM_SIZE` == #OPTM_ITEMS lines == #OPTM_GROUPS entries,
   every `C_MENU_*` index points at the intended label, main view rows == `OPTM_DY`
-- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=84) bytes
+- `M2M/tools/make_config.sh <f> auto` must produce exactly `OPTM_SIZE` (=115) bytes
 
 ---
 

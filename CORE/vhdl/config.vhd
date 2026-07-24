@@ -341,7 +341,7 @@ constant OPTM_S_SAVING     : string := "<Saving>";          -- the internal writ
 --             Do use a lower case \n. If you forget one of them or if you use upper case, you will run into undefined behavior.
 --          2. Start each line that contains an actual menu item (multi- or single-select) with a Space character,
 --             otherwise you will experience visual glitches.
-constant OPTM_SIZE         : natural := 110; -- amount of items including empty lines:
+constant OPTM_SIZE         : natural := 115; -- amount of items including empty lines:
                                              -- needs to be equal to the number of lines in OPTM_ITEMS and amount of items in OPTM_GROUPS
                                              -- IMPORTANT: If SAVE_SETTINGS is true and OPTM_SIZE changes: Make sure to re-generate and
                                              -- and re-distribute the config file. You can make a new one using M2M/tools/make_config.sh
@@ -379,94 +379,99 @@ constant OPTM_ITEMS        : string :=
    " Up=A, Fire=B\n"           &    -- 19
    " Up=B, Fire=A\n"           &    -- 20
    "\n"                        &    -- 21
-   " Back to main menu\n"      &    -- 22
-   " HDMI: %s\n"               &    -- 23: submenu (%s = current display mode)
-   " HDMI Display Mode\n"      &    -- 24: headline
-   "\n"                        &    -- 25
-   " 720p    60 Hz   16:9\n"   &    -- 26: default
-   " 640x480 60 Hz    4:3\n"   &    -- 27
-   " 720x480 59.94 Hz 3:2\n"   &    -- 28
-   " 800x600 60 Hz    4:3\n"   &    -- 29
+   " Jump & Run Improvements\n" &  -- 22: headline
+   " Off\n"                    &    -- 23
+   " Soft\n"                   &    -- 24: default
+   " Full\n"                   &    -- 25
+   "\n"                        &    -- 26
+   " Back to main menu\n"      &    -- 27
+   " HDMI: %s\n"               &    -- 28: submenu (%s = current display mode)
+   " HDMI Display Mode\n"      &    -- 29: headline
    "\n"                        &    -- 30
-   " HDMI: Flicker-free\n"     &    -- 31: default on
-   "\n"                        &    -- 32
-   " Aspect Ratio & Size\n"    &    -- 33: headline
-   "\n"                        &    -- 34
-   " Handheld LCD Small  10:9\n" &  -- 35: default
-   " Handheld LCD Medium 10:9\n" &  -- 36
-   " Handheld LCD Full   10:9\n" &  -- 37
-   " Super Game Boy Style 4:3\n" &  -- 38
+   " 720p    60 Hz   16:9\n"   &    -- 31: default
+   " 640x480 60 Hz    4:3\n"   &    -- 32
+   " 720x480 59.94 Hz 3:2\n"   &    -- 33
+   " 800x600 60 Hz    4:3\n"   &    -- 34
+   "\n"                        &    -- 35
+   " HDMI: Flicker-free\n"     &    -- 36: default on
+   "\n"                        &    -- 37
+   " Aspect Ratio & Size\n"    &    -- 38: headline
    "\n"                        &    -- 39
-   " Back to main menu\n"      &    -- 40
-   " HDMI: %s\n"               &    -- 41: submenu (%s = current filter)
-   " HDMI Filter\n"            &    -- 42: headline
-   "\n"                        &    -- 43
-   " No Filter\n"              &    -- 44
-   " Sharp Bilinear\n"         &    -- 45
-   " Bicubic\n"                &    -- 46
-   " Smooth\n"                 &    -- 47
-   " Lanczos\n"                &    -- 48: default
-   " Scanlines\n"              &    -- 49
-   " CRT (S-Video)\n"          &    -- 50
-   " CRT (Composite)\n"        &    -- 51
-   "\n"                        &    -- 52
-   " Back to main menu\n"      &    -- 53
-   " VGA: %s\n"                &    -- 54: submenu (%s = current VGA mode)
-   " VGA Display Mode\n"       &    -- 55: headline
-   "\n"                        &    -- 56
-   " Standard\n"               &    -- 57: default
-   "\n"                        &    -- 58
-   " Retro 15 kHz mode\n"      &    -- 59: text
-   "\n"                        &    -- 60
-   " 15 kHz with HS/VS\n"      &    -- 61
-   " 15 kHz with CSYNC\n"      &    -- 62
+   " Handheld LCD Small  10:9\n" &  -- 40: default
+   " Handheld LCD Medium 10:9\n" &  -- 41
+   " Handheld LCD Full   10:9\n" &  -- 42
+   " Super Game Boy Style 4:3\n" &  -- 43
+   "\n"                        &    -- 44
+   " Back to main menu\n"      &    -- 45
+   " HDMI: %s\n"               &    -- 46: submenu (%s = current filter)
+   " HDMI Filter\n"            &    -- 47: headline
+   "\n"                        &    -- 48
+   " No Filter\n"              &    -- 49
+   " Sharp Bilinear\n"         &    -- 50
+   " Bicubic\n"                &    -- 51
+   " Smooth\n"                 &    -- 52
+   " Lanczos\n"                &    -- 53: default
+   " Scanlines\n"              &    -- 54
+   " CRT (S-Video)\n"          &    -- 55
+   " CRT (Composite)\n"        &    -- 56
+   "\n"                        &    -- 57
+   " Back to main menu\n"      &    -- 58
+   " VGA: %s\n"                &    -- 59: submenu (%s = current VGA mode)
+   " VGA Display Mode\n"       &    -- 60: headline
+   "\n"                        &    -- 61
+   " Standard\n"               &    -- 62: default
    "\n"                        &    -- 63
-   " Back to main menu\n"      &    -- 64
-   " OSM: %s\n"                &    -- 65: submenu (%s = current OSM scaling)
-   " OSM Scaling\n"            &    -- 66: headline
-   "\n"                        &    -- 67
-   " 100%\n"                   &    -- 68: default
-   " 94%\n"                    &    -- 69
-   " 88%\n"                    &    -- 70
-   " 81%\n"                    &    -- 71
-   " 75%\n"                    &    -- 72
-   " 69%\n"                    &    -- 73
-   " 63%\n"                    &    -- 74
-   " 56%\n"                    &    -- 75
-   " 50%\n"                    &    -- 76
-   "\n"                        &    -- 77
-   " Back to main menu\n"      &    -- 78: OSM Scaling submenu: END
-   " Volume: %s\n"             &    -- 79: submenu (%s = current volume)
-   " Volume Control\n"         &    -- 80: headline
-   "\n"                        &    -- 81
-   " 100%\n"                   &    -- 82: default
-   " 95%\n"                    &    -- 83
-   " 90%\n"                    &    -- 84
-   " 85%\n"                    &    -- 85
-   " 80%\n"                    &    -- 86
-   " 75%\n"                    &    -- 87
-   " 70%\n"                    &    -- 88
-   " 65%\n"                    &    -- 89
-   " 60%\n"                    &    -- 90
-   " 55%\n"                    &    -- 91
-   " 50%\n"                    &    -- 92
-   " 45%\n"                    &    -- 93
-   " 40%\n"                    &    -- 94
-   " 35%\n"                    &    -- 95
-   " 30%\n"                    &    -- 96
-   " 25%\n"                    &    -- 97
-   " 20%\n"                    &    -- 98
-   " 15%\n"                    &    -- 99
-   " 10%\n"                    &    -- 100
-   " 5%\n"                     &    -- 101
-   " 0%\n"                     &    -- 102
-   "\n"                        &    -- 103
-   " Back to main menu\n"      &    -- 104: Volume submenu: END
-   " Audio Improvements\n"     &    -- 105
-   "\n"                        &    -- 106
-   " About & Help\n"           &    -- 107
+   " Retro 15 kHz mode\n"      &    -- 64: text
+   "\n"                        &    -- 65
+   " 15 kHz with HS/VS\n"      &    -- 66
+   " 15 kHz with CSYNC\n"      &    -- 67
+   "\n"                        &    -- 68
+   " Back to main menu\n"      &    -- 69
+   " OSM: %s\n"                &    -- 70: submenu (%s = current OSM scaling)
+   " OSM Scaling\n"            &    -- 71: headline
+   "\n"                        &    -- 72
+   " 100%\n"                   &    -- 73: default
+   " 94%\n"                    &    -- 74
+   " 88%\n"                    &    -- 75
+   " 81%\n"                    &    -- 76
+   " 75%\n"                    &    -- 77
+   " 69%\n"                    &    -- 78
+   " 63%\n"                    &    -- 79
+   " 56%\n"                    &    -- 80
+   " 50%\n"                    &    -- 81
+   "\n"                        &    -- 82
+   " Back to main menu\n"      &    -- 83: OSM Scaling submenu: END
+   " Volume: %s\n"             &    -- 84: submenu (%s = current volume)
+   " Volume Control\n"         &    -- 85: headline
+   "\n"                        &    -- 86
+   " 100%\n"                   &    -- 87: default
+   " 95%\n"                    &    -- 88
+   " 90%\n"                    &    -- 89
+   " 85%\n"                    &    -- 90
+   " 80%\n"                    &    -- 91
+   " 75%\n"                    &    -- 92
+   " 70%\n"                    &    -- 93
+   " 65%\n"                    &    -- 94
+   " 60%\n"                    &    -- 95
+   " 55%\n"                    &    -- 96
+   " 50%\n"                    &    -- 97
+   " 45%\n"                    &    -- 98
+   " 40%\n"                    &    -- 99
+   " 35%\n"                    &    -- 100
+   " 30%\n"                    &    -- 101
+   " 25%\n"                    &    -- 102
+   " 20%\n"                    &    -- 103
+   " 15%\n"                    &    -- 104
+   " 10%\n"                    &    -- 105
+   " 5%\n"                     &    -- 106
+   " 0%\n"                     &    -- 107
    "\n"                        &    -- 108
-   " Close Menu\n";                 -- 109
+   " Back to main menu\n"      &    -- 109: Volume submenu: END
+   " Audio Improvements\n"     &    -- 110
+   "\n"                        &    -- 111
+   " About & Help\n"           &    -- 112
+   "\n"                        &    -- 113
+   " Close Menu\n";                 -- 114
 
 -- define your own constants here and choose meaningful names
 -- make sure that your first group uses the value 1 (0 means "no menu item", such as text and line),
@@ -477,15 +482,16 @@ constant OPTM_G_CART       : integer := 1;      -- cartridge loader
 constant OPTM_G_GBMODE     : integer := 2;      -- Game Boy Mode: Classic / Color
 constant OPTM_G_COLMODE    : integer := 3;      -- Color Mode: LCD Emulation / Fully Saturated
 constant OPTM_G_JOYMODE    : integer := 4;      -- Joystick Mode: the four mappings
-constant OPTM_G_HDMI       : integer := 5;      -- HDMI display modes
-constant OPTM_G_HDMI_FF    : integer := 6;      -- HDMI: Flicker-free
-constant OPTM_G_HDMI_ASPECT : integer := 7;     -- HDMI Aspect Ratio and handheld size
-constant OPTM_G_HDMI_FLT   : integer := 8;      -- HDMI Filter (read by the QNICE firmware)
-constant OPTM_G_VGA        : integer := 9;      -- VGA display modes
-constant OPTM_G_OSM_MODE   : integer := 10;     -- OSM Scaling radio (read in HDL, mega65.vhd)
-constant OPTM_G_AUDIO      : integer := 11;     -- Audio Improvements
-constant OPTM_G_ABOUT      : integer := 12;     -- About & Help
-constant OPTM_G_VOLUME     : integer := 13;     -- Volume Control (decoded in mega65.vhd, applied in main.vhd via C_VOL_LUT)
+constant OPTM_G_JUMPASSIST : integer := 5;      -- Jump & Run Improvements: Off / Soft / Full (decoded in mega65.vhd)
+constant OPTM_G_HDMI       : integer := 6;      -- HDMI display modes
+constant OPTM_G_HDMI_FF    : integer := 7;      -- HDMI: Flicker-free
+constant OPTM_G_HDMI_ASPECT : integer := 8;     -- HDMI Aspect Ratio and handheld size
+constant OPTM_G_HDMI_FLT   : integer := 9;      -- HDMI Filter (read by the QNICE firmware)
+constant OPTM_G_VGA        : integer := 10;     -- VGA display modes
+constant OPTM_G_OSM_MODE   : integer := 11;     -- OSM Scaling radio (read in HDL, mega65.vhd)
+constant OPTM_G_AUDIO      : integer := 12;     -- Audio Improvements
+constant OPTM_G_ABOUT      : integer := 13;     -- About & Help
+constant OPTM_G_VOLUME     : integer := 14;     -- Volume Control (decoded in mega65.vhd, applied in main.vhd via C_VOL_LUT)
 
 -- !!! DO NOT TOUCH !!!
 type OPTM_GTYPE is array (0 to OPTM_SIZE - 1) of integer range 0 to 2**OPTM_GTC- 1;
@@ -516,95 +522,100 @@ constant OPTM_GROUPS       : OPTM_GTYPE := ( OPTM_G_TEXT + OPTM_G_HEADLINE,     
                                              OPTM_G_JOYMODE,                           -- 19: Up=A, Fire=B
                                              OPTM_G_JOYMODE,                           -- 20: Up=B, Fire=A
                                              OPTM_G_LINE,                              -- 21
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 22: Joystick Mode submenu: END
-                                             OPTM_G_SUBMENU,                           -- 23: HDMI submenu: START
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 24: HDMI Display Mode
-                                             OPTM_G_LINE,                              -- 25
-                                             OPTM_G_HDMI + OPTM_G_STDSEL,              -- 26: 720p 60 Hz, default
-                                             OPTM_G_HDMI,                              -- 27: 640x480 60 Hz
-                                             OPTM_G_HDMI,                              -- 28: 720x480 59.94 Hz
-                                             OPTM_G_HDMI,                              -- 29: 800x600 60 Hz
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 22: Jump & Run Improvements
+                                             OPTM_G_JUMPASSIST,                        -- 23: Off
+                                             OPTM_G_JUMPASSIST + OPTM_G_STDSEL,        -- 24: Soft, default
+                                             OPTM_G_JUMPASSIST,                        -- 25: Full
+                                             OPTM_G_LINE,                              -- 26
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 27: Joystick Mode submenu: END
+                                             OPTM_G_SUBMENU,                           -- 28: HDMI submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 29: HDMI Display Mode
                                              OPTM_G_LINE,                              -- 30
+                                             OPTM_G_HDMI + OPTM_G_STDSEL,              -- 31: 720p 60 Hz, default
+                                             OPTM_G_HDMI,                              -- 32: 640x480 60 Hz
+                                             OPTM_G_HDMI,                              -- 33: 720x480 59.94 Hz
+                                             OPTM_G_HDMI,                              -- 34: 800x600 60 Hz
+                                             OPTM_G_LINE,                              -- 35
                                              OPTM_G_HDMI_FF + OPTM_G_SINGLESEL +
-                                                              OPTM_G_STDSEL,           -- 31: Flicker-free, default on
-                                             OPTM_G_LINE,                              -- 32
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 33: Aspect Ratio
-                                             OPTM_G_LINE,                              -- 34
-                                             OPTM_G_HDMI_ASPECT + OPTM_G_STDSEL,       -- 35: Handheld LCD Small (10:9), default
-                                             OPTM_G_HDMI_ASPECT,                       -- 36: Handheld LCD Medium (10:9)
-                                             OPTM_G_HDMI_ASPECT,                       -- 37: Handheld LCD Full (10:9)
-                                             OPTM_G_HDMI_ASPECT,                       -- 38: TV-style (4:3)
+                                                              OPTM_G_STDSEL,           -- 36: Flicker-free, default on
+                                             OPTM_G_LINE,                              -- 37
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 38: Aspect Ratio
                                              OPTM_G_LINE,                              -- 39
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 40: HDMI submenu: END
-                                             OPTM_G_SUBMENU,                           -- 41: HDMI Filter submenu: START
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 42: HDMI Filter
-                                             OPTM_G_LINE,                              -- 43
-                                             OPTM_G_HDMI_FLT,                          -- 44: No Filter
-                                             OPTM_G_HDMI_FLT,                          -- 45: Sharp Bilinear
-                                             OPTM_G_HDMI_FLT,                          -- 46: Bicubic
-                                             OPTM_G_HDMI_FLT,                          -- 47: Smooth
-                                             OPTM_G_HDMI_FLT + OPTM_G_STDSEL,          -- 48: Lanczos, default
-                                             OPTM_G_HDMI_FLT,                          -- 49: Scanlines
-                                             OPTM_G_HDMI_FLT,                          -- 50: CRT (S-Video)
-                                             OPTM_G_HDMI_FLT,                          -- 51: CRT (Composite)
-                                             OPTM_G_LINE,                              -- 52
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 53: HDMI Filter submenu: END
-                                             OPTM_G_SUBMENU,                           -- 54: VGA submenu: START
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 55: VGA Display Mode
-                                             OPTM_G_LINE,                              -- 56
-                                             OPTM_G_VGA + OPTM_G_STDSEL,               -- 57: Standard, default
-                                             OPTM_G_LINE,                              -- 58
-                                             OPTM_G_TEXT,                              -- 59: Retro 15 kHz mode
-                                             OPTM_G_LINE,                              -- 60
-                                             OPTM_G_VGA,                               -- 61: 15 kHz with HS/VS
-                                             OPTM_G_VGA,                               -- 62: 15 kHz with CSYNC
+                                             OPTM_G_HDMI_ASPECT + OPTM_G_STDSEL,       -- 40: Handheld LCD Small (10:9), default
+                                             OPTM_G_HDMI_ASPECT,                       -- 41: Handheld LCD Medium (10:9)
+                                             OPTM_G_HDMI_ASPECT,                       -- 42: Handheld LCD Full (10:9)
+                                             OPTM_G_HDMI_ASPECT,                       -- 43: TV-style (4:3)
+                                             OPTM_G_LINE,                              -- 44
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 45: HDMI submenu: END
+                                             OPTM_G_SUBMENU,                           -- 46: HDMI Filter submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 47: HDMI Filter
+                                             OPTM_G_LINE,                              -- 48
+                                             OPTM_G_HDMI_FLT,                          -- 49: No Filter
+                                             OPTM_G_HDMI_FLT,                          -- 50: Sharp Bilinear
+                                             OPTM_G_HDMI_FLT,                          -- 51: Bicubic
+                                             OPTM_G_HDMI_FLT,                          -- 52: Smooth
+                                             OPTM_G_HDMI_FLT + OPTM_G_STDSEL,          -- 53: Lanczos, default
+                                             OPTM_G_HDMI_FLT,                          -- 54: Scanlines
+                                             OPTM_G_HDMI_FLT,                          -- 55: CRT (S-Video)
+                                             OPTM_G_HDMI_FLT,                          -- 56: CRT (Composite)
+                                             OPTM_G_LINE,                              -- 57
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 58: HDMI Filter submenu: END
+                                             OPTM_G_SUBMENU,                           -- 59: VGA submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 60: VGA Display Mode
+                                             OPTM_G_LINE,                              -- 61
+                                             OPTM_G_VGA + OPTM_G_STDSEL,               -- 62: Standard, default
                                              OPTM_G_LINE,                              -- 63
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 64: VGA submenu: END
-                                             OPTM_G_SUBMENU,                           -- 65: OSM Scaling submenu: START
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 66: OSM Scaling
-                                             OPTM_G_LINE,                              -- 67
-                                             OPTM_G_OSM_MODE + OPTM_G_STDSEL,          -- 68: 100%, default
-                                             OPTM_G_OSM_MODE,                          -- 69: 94%
-                                             OPTM_G_OSM_MODE,                          -- 70: 88%
-                                             OPTM_G_OSM_MODE,                          -- 71: 81%
-                                             OPTM_G_OSM_MODE,                          -- 72: 75%
-                                             OPTM_G_OSM_MODE,                          -- 73: 69%
-                                             OPTM_G_OSM_MODE,                          -- 74: 63%
-                                             OPTM_G_OSM_MODE,                          -- 75: 56%
-                                             OPTM_G_OSM_MODE,                          -- 76: 50%
-                                             OPTM_G_LINE,                              -- 77
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 78: OSM Scaling submenu: END
-                                             OPTM_G_SUBMENU,                           -- 79: Volume submenu: START
-                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 80: Volume Control
-                                             OPTM_G_LINE,                              -- 81
-                                             OPTM_G_VOLUME + OPTM_G_STDSEL,            -- 82: 100%, default
-                                             OPTM_G_VOLUME,                            -- 83: 95%
-                                             OPTM_G_VOLUME,                            -- 84: 90%
-                                             OPTM_G_VOLUME,                            -- 85: 85%
-                                             OPTM_G_VOLUME,                            -- 86: 80%
-                                             OPTM_G_VOLUME,                            -- 87: 75%
-                                             OPTM_G_VOLUME,                            -- 88: 70%
-                                             OPTM_G_VOLUME,                            -- 89: 65%
-                                             OPTM_G_VOLUME,                            -- 90: 60%
-                                             OPTM_G_VOLUME,                            -- 91: 55%
-                                             OPTM_G_VOLUME,                            -- 92: 50%
-                                             OPTM_G_VOLUME,                            -- 93: 45%
-                                             OPTM_G_VOLUME,                            -- 94: 40%
-                                             OPTM_G_VOLUME,                            -- 95: 35%
-                                             OPTM_G_VOLUME,                            -- 96: 30%
-                                             OPTM_G_VOLUME,                            -- 97: 25%
-                                             OPTM_G_VOLUME,                            -- 98: 20%
-                                             OPTM_G_VOLUME,                            -- 99: 15%
-                                             OPTM_G_VOLUME,                            -- 100: 10%
-                                             OPTM_G_VOLUME,                            -- 101: 5%
-                                             OPTM_G_VOLUME,                            -- 102: 0%
-                                             OPTM_G_LINE,                              -- 103
-                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 104: Volume submenu: END
-                                             OPTM_G_AUDIO + OPTM_G_SINGLESEL,          -- 105: Audio Improvements
-                                             OPTM_G_LINE,                              -- 106
-                                             OPTM_G_ABOUT + OPTM_G_HELP,               -- 107: About & Help
+                                             OPTM_G_TEXT,                              -- 64: Retro 15 kHz mode
+                                             OPTM_G_LINE,                              -- 65
+                                             OPTM_G_VGA,                               -- 66: 15 kHz with HS/VS
+                                             OPTM_G_VGA,                               -- 67: 15 kHz with CSYNC
+                                             OPTM_G_LINE,                              -- 68
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 69: VGA submenu: END
+                                             OPTM_G_SUBMENU,                           -- 70: OSM Scaling submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 71: OSM Scaling
+                                             OPTM_G_LINE,                              -- 72
+                                             OPTM_G_OSM_MODE + OPTM_G_STDSEL,          -- 73: 100%, default
+                                             OPTM_G_OSM_MODE,                          -- 74: 94%
+                                             OPTM_G_OSM_MODE,                          -- 75: 88%
+                                             OPTM_G_OSM_MODE,                          -- 76: 81%
+                                             OPTM_G_OSM_MODE,                          -- 77: 75%
+                                             OPTM_G_OSM_MODE,                          -- 78: 69%
+                                             OPTM_G_OSM_MODE,                          -- 79: 63%
+                                             OPTM_G_OSM_MODE,                          -- 80: 56%
+                                             OPTM_G_OSM_MODE,                          -- 81: 50%
+                                             OPTM_G_LINE,                              -- 82
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 83: OSM Scaling submenu: END
+                                             OPTM_G_SUBMENU,                           -- 84: Volume submenu: START
+                                             OPTM_G_TEXT + OPTM_G_HEADLINE,            -- 85: Volume Control
+                                             OPTM_G_LINE,                              -- 86
+                                             OPTM_G_VOLUME + OPTM_G_STDSEL,            -- 87: 100%, default
+                                             OPTM_G_VOLUME,                            -- 88: 95%
+                                             OPTM_G_VOLUME,                            -- 89: 90%
+                                             OPTM_G_VOLUME,                            -- 90: 85%
+                                             OPTM_G_VOLUME,                            -- 91: 80%
+                                             OPTM_G_VOLUME,                            -- 92: 75%
+                                             OPTM_G_VOLUME,                            -- 93: 70%
+                                             OPTM_G_VOLUME,                            -- 94: 65%
+                                             OPTM_G_VOLUME,                            -- 95: 60%
+                                             OPTM_G_VOLUME,                            -- 96: 55%
+                                             OPTM_G_VOLUME,                            -- 97: 50%
+                                             OPTM_G_VOLUME,                            -- 98: 45%
+                                             OPTM_G_VOLUME,                            -- 99: 40%
+                                             OPTM_G_VOLUME,                            -- 100: 35%
+                                             OPTM_G_VOLUME,                            -- 101: 30%
+                                             OPTM_G_VOLUME,                            -- 102: 25%
+                                             OPTM_G_VOLUME,                            -- 103: 20%
+                                             OPTM_G_VOLUME,                            -- 104: 15%
+                                             OPTM_G_VOLUME,                            -- 105: 10%
+                                             OPTM_G_VOLUME,                            -- 106: 5%
+                                             OPTM_G_VOLUME,                            -- 107: 0%
                                              OPTM_G_LINE,                              -- 108
-                                             OPTM_G_CLOSE                              -- 109: Close Menu
+                                             OPTM_G_CLOSE + OPTM_G_SUBMENU,            -- 109: Volume submenu: END
+                                             OPTM_G_AUDIO + OPTM_G_SINGLESEL,          -- 110: Audio Improvements
+                                             OPTM_G_LINE,                              -- 111
+                                             OPTM_G_ABOUT + OPTM_G_HELP,               -- 112: About & Help
+                                             OPTM_G_LINE,                              -- 113
+                                             OPTM_G_CLOSE                              -- 114: Close Menu
                                            );
 
 --------------------------------------------------------------------------------------------------------------------

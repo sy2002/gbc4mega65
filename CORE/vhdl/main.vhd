@@ -6,7 +6,8 @@
 -- This is the actual Game Boy machine: gb.v plus the MiSTer modules speedcontrol
 -- (clock enables, pause) and lcd.v (LCD capture, double buffering, color grading,
 -- 59.7275 Hz video timing) plus the gbc4mega65 Memory Bank Controller (mbc.sv)
--- and the MEGA65 keyboard/joystick to Game Boy joypad adapter (keyboard.vhd).
+-- and the MEGA65 keyboard/joystick to Game Boy joypad adapter (keyboard.vhd) with
+-- the optional joystick assist (joystick_assist.vhd).
 --
 -- The video output is the classic Super Game Boy screen geometry: the 160x144
 -- Game Boy picture centered in a 256x224 active area with a black border, at the
@@ -23,6 +24,10 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+
+library work;
+use work.globals.CORE_CLK_SPEED;    -- selective on purpose: a full .all import would make
+                                    -- the "0" & slv concatenations below ambiguous
 
 entity main is
    generic (
@@ -42,6 +47,7 @@ entity main is
       -- Game Boy configuration (see also gbc4mega65's OSM in config.vhd)
       gb_color_i              : in  std_logic;              -- 0 = Game Boy Classic, 1 = Game Boy Color
       gb_joy_map_i            : in  std_logic_vector(1 downto 0); -- joystick mapping, see keyboard.vhd
+      gb_jump_assist_i        : in  std_logic_vector(1 downto 0); -- Jump & Run Improvements: 00 = Off, 01 = Soft, 10 = Full
       gb_saturated_colors_i   : in  std_logic;              -- 1 = fully saturated GBC colors, 0 = LCD emulation
 
       -- Master volume from the OSM "Volume" slider (5% steps): 0..20 = 0%..100%.
@@ -157,6 +163,7 @@ architecture synthesis of main is
    -- joystick vector: low active; bit order: 4=fire, 3=up, 2=down, 1=left, 0=right
    -- (both MEGA65 joystick ports are merged; the framework already debounced them)
    signal main_m65_joystick      : std_logic_vector(4 downto 0);
+   signal main_m65_joystick_asst : std_logic_vector(4 downto 0);   -- after the joystick assist
 
    -- audio: gbc_snd delivers 16-bit UNSIGNED audio that is not centered around 0x8000
    signal main_audio_l           : std_logic_vector(15 downto 0);
@@ -461,6 +468,22 @@ begin
                         (joy_1_left_n_i  and joy_2_left_n_i)  &
                         (joy_1_right_n_i and joy_2_right_n_i);
 
+   -- Joystick assist (OSM "Jump & Run Improvements"): pure time-shaping of the merged
+   -- joystick vector, see joystick_assist.vhd. Hard-gated to the two mappings that put
+   -- a Game Boy button on the sticks up direction (gb_joy_map_i = "10" or "11").
+   i_joystick_assist : entity work.joystick_assist
+      generic map (
+         G_CLK_FREQ              => CORE_CLK_SPEED
+      )
+      port map (
+         clk_main_i              => clk_main_i,
+         reset_i                 => reset_soft_i or reset_hard_i,
+         enable_i                => gb_joy_map_i(1) and (gb_jump_assist_i(0) or gb_jump_assist_i(1)),
+         full_i                  => gb_jump_assist_i(1),
+         joystick_i              => main_m65_joystick,
+         joystick_o              => main_m65_joystick_asst
+      ); -- i_joystick_assist
+
    -- MEGA65 keyboard and joystick to Game Boy joypad adapter
    i_keyboard : entity work.keyboard
       port map (
@@ -470,8 +493,8 @@ begin
          key_num_i               => kb_key_num_i,
          key_pressed_n_i         => kb_key_pressed_n_i,
 
-         -- MEGA65 joysticks (both ports merged) and the joystick mapping mode
-         joystick_i              => main_m65_joystick,
+         -- MEGA65 joysticks (both ports merged, joystick assist applied) and the mapping mode
+         joystick_i              => main_m65_joystick_asst,
          joy_map_i               => gb_joy_map_i,
 
          -- Game Boy joypad interface

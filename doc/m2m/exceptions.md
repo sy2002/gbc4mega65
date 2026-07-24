@@ -239,6 +239,20 @@ which is part of the upcoming M2M V2.1 `M2M/rom/tools.asm`. The same
 backport is used by the AExp core. When updating to M2M V2.1 or later:
 delete the local copy - the assembler will flag the duplicate label.
 
+### Backported from M2M V2.1: OSM "%s" scanner fix
+
+`M2M/rom/menu.asm` `_OPTM_HM_1A` scans each label for a `%s` placeholder. In
+the V2.0.1 stock code, when a `%` is found that is *not* followed by `s`, the
+scanner had already advanced past the `%` and then skipped the following
+character too - so a `%` at the very end of a label swallowed the backslash of
+the trailing `\n`, the newline check never fired, and the menu item counter
+desynced for every item below. The fix branches back to `_OPTM_HM_0` (re-examine
+the current character) instead of `_OPTM_HM_2` (skip it), leaving the `\n`
+intact. This surfaced when the Volume submenu added labels ending in `%`
+(`" 100%\n"` down to `" 0%\n"`). Ported from the same M2M V2.1.0 fix carried by
+the C64 and AExp cores (AExp commit `28298bc`); when updating to M2M V2.1 or
+later this fix is already upstream.
+
 QNICE
 -----
 
