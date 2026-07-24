@@ -195,11 +195,13 @@ constant C_CRTROMS_AUTO          : crtrom_buf_array := ( C_CRTROMTYPE_DEVICE, C_
 ----------------------------------------------------------------------------------------------------------
 
 -- The MiSTer Game Boy core uses the standard filter values of MiSTer's audio chain
--- (sys/sys_top.v defaults, same values that the C64 core uses)
+-- (sys/sys_top.v defaults; the cx0/cx1/cx2 numerator is the binomial 1,3,3,1).
+-- Do not copy these values from the M2M template or the C64 core: both carry a
+-- cx1=2 typo that costs the filtered path a uniform 0.4 dB.
 constant audio_flt_rate : std_logic_vector(31 downto 0) := std_logic_vector(to_signed(7056000, 32));
 constant audio_cx       : std_logic_vector(39 downto 0) := std_logic_vector(to_signed(4258969, 40));
 constant audio_cx0      : std_logic_vector( 7 downto 0) := std_logic_vector(to_signed(3, 8));
-constant audio_cx1      : std_logic_vector( 7 downto 0) := std_logic_vector(to_signed(2, 8));
+constant audio_cx1      : std_logic_vector( 7 downto 0) := std_logic_vector(to_signed(3, 8));
 constant audio_cx2      : std_logic_vector( 7 downto 0) := std_logic_vector(to_signed(1, 8));
 constant audio_cy0      : std_logic_vector(23 downto 0) := std_logic_vector(to_signed(-6216759, 24));
 constant audio_cy1      : std_logic_vector(23 downto 0) := std_logic_vector(to_signed( 6143386, 24));

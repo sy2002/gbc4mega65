@@ -301,6 +301,24 @@ file-browser refactor - the menu component uses no `SLL$` API), and `shell.asm`
 When updating to M2M V2.1 or later, delete these exception notes as the menu
 component becomes stock.
 
+### M2M/vhdl/av_pipeline/audio_out.v: 48 kHz sample cadence on the 12.288 MHz audio clock
+
+MiSTer clocks `sys/audio_out.v` at 24.576 MHz; the module derives its output
+sample cadence as clock/512 = 48 kHz. M2M V2.0.1 drives the identical module
+with its 12.288 MHz audio clock, which halved the cadence to 24 kHz: with the
+audio filters active ("Audio Improvements" in the OSM), everything above
+12 kHz was lost to the resulting zero-order hold and the 6 to 12 kHz range
+drooped by 2 to 4 dB - clearly audible on the Game Boy noise channel (snare
+drums, hi-hats). gbc4mega65 therefore shrinks the `sample_ce` divider `div`
+from 9 to 8 bits (clock/256 = 48 kHz at 12.288 MHz). Revisit the divider
+should a framework update ever change the audio clock rate.
+
+Related but left as-is: the IIR iteration rate requested via `audio_flt_rate`
+in `CORE/vhdl/globals.vhd` (2 x 7.056 MHz) exceeds the 12.288 MHz clock, so
+the filter iterates at 6.144 MHz per channel instead of MiSTer's 7.056 MHz.
+This moves the -3 dB point of the default filter from 20.6 kHz to 18.0 kHz,
+which is inaudible, and needs no code change.
+
 QNICE
 -----
 

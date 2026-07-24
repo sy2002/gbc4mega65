@@ -55,7 +55,9 @@ always @(posedge clk) begin
 end
 
 reg sample_ce;
-reg [8:0] div = 0;
+// M2M change: 8-bit divider (MiSTer: 9 bits). M2M clocks this module at 12.288 MHz
+// instead of MiSTer's 24.576 MHz, so dividing by 256 keeps sample_ce at 48 kHz.
+reg [7:0] div = 0;
 reg [1:0] add = 0;
 always @(posedge clk) begin
 

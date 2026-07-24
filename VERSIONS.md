@@ -11,6 +11,8 @@ WIP
   preserves the forward momentum and the jump height that quick stick flicks
   would otherwise lose.
 
+* Audio Improvements now deliver the full treble range.
+
 Version 1.0 - July 21, 2026
 ===========================
 
